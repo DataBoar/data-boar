@@ -27,11 +27,14 @@ Real behaviour against a personal OneDrive is only what the Phase 0 evidence rec
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import math
 import os
 import re
 import shutil
+import stat
 import sys
 import tempfile
 import threading
@@ -79,6 +82,7 @@ REQUIRED_KEYS = [
     "graph.base_url",
     "download_host_suffixes",
     "drive",
+    "include_names",
     "max_depth",
     "max_file_bytes",
     "page_size",
@@ -219,6 +223,8 @@ class _Settings(NamedTuple):
     max_pages: int
     http_timeout: int
     throttle_max_wait: int
+    include_names: frozenset[str]
+    token_cache_path: Path | None
 
 
 def _config_error(message: str) -> SharePointOnlineError:
@@ -338,6 +344,74 @@ def _operator_approves_hosts(cfg: dict[str, Any]) -> None:
         ) from None
 
 
+def _include_names(raw: Any) -> frozenset[str]:
+    """Exact, case-sensitive file names; an empty list means "no name filter"."""
+    if not isinstance(raw, list) or not all(
+        isinstance(n, str)
+        and n
+        and n.strip() == n
+        and n not in (".", "..")
+        and "/" not in n
+        and "\\" not in n
+        and n.isprintable()
+        for n in raw
+    ):
+        raise _config_error(
+            "include_names must be a list of exact file names ([] means no filter)"
+        )
+    return frozenset(raw)
+
+
+def _cache_refused(reason: str) -> SharePointOnlineError:
+    return _config_error(f"auth.token_cache_path is refused: {reason}")
+
+
+def _private_dir_problem(path: Path) -> str | None:
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
+        return "its directory is a symlink or not a directory"
+    if st.st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+        return "its directory must be mode 0700"
+    if hasattr(os, "getuid") and st.st_uid != os.getuid():
+        return "its directory is not owned by the current user"
+    return None
+
+
+def _token_cache_path(auth: dict[str, Any]) -> Path | None:
+    """Optional refresh-token cache (the only optional key; absent = memory only)."""
+    if "token_cache_path" not in auth:
+        return None
+    raw = auth.get("token_cache_path")
+    if not isinstance(raw, str) or not raw or not os.path.isabs(raw):
+        raise _cache_refused("it must be an absolute file path")
+    path = Path(raw)
+    parent = path.parent
+    if path.name in ("", ".", ".."):
+        raise _cache_refused("it must name a file")
+    for ancestor in (parent, *parent.parents):
+        if os.path.lexists(ancestor / ".git"):
+            raise _cache_refused("it is inside a git repository")
+    if os.path.lexists(parent):
+        problem = _private_dir_problem(parent)
+        if problem:
+            raise _cache_refused(problem)
+    elif not os.path.isdir(parent.parent) or os.path.islink(parent.parent):
+        raise _cache_refused("only its own directory may be created")
+    if os.path.lexists(path):
+        from core.l3_transformed_rows import (
+            L3ContainmentError,
+            verify_owner_containment,
+        )
+
+        try:
+            verify_owner_containment(path)
+        except L3ContainmentError:
+            raise _cache_refused(
+                "the file must be a regular 0600 file owned by the current user"
+            ) from None
+    return path
+
+
 def _validate(cfg: dict[str, Any]) -> _Settings:
     """Validate the target YAML; every key is required and nothing is assumed."""
     from core.connector_registry import missing_required_keys
@@ -381,6 +455,8 @@ def _validate(cfg: dict[str, Any]) -> _Settings:
             "download_host_suffixes must be a non-empty list of suffixes that start "
             "with a dot and have at least two labels"
         )
+    include_names = _include_names(cfg.get("include_names"))
+    token_cache_path = _token_cache_path(auth)
     if cfg.get("drive") != "me":
         raise _config_error("drive selection is not available yet (#2262)")
 
@@ -416,6 +492,8 @@ def _validate(cfg: dict[str, Any]) -> _Settings:
         root_folder=root_folder,
         root_segments=segments,
         root_folder_id=root_folder_id,
+        include_names=include_names,
+        token_cache_path=token_cache_path,
         max_depth=_int_key(cfg, "max_depth", 1, 256),
         max_file_bytes=_int_key(cfg, "max_file_bytes", 1, 2 * 1024**3),
         page_size=_int_key(cfg, "page_size", 1, 1000),
@@ -661,6 +739,8 @@ class SharePointOnlineConnector:
                     + ", ".join(f"{r}={counts[r]}" for r in IGNORED_REASONS),
                 )
         except SharePointOnlineError as failure:
+            if failure.reason == "auth_failed":
+                self._drop_cache()
             self._save_failure(failure.reason, failure.detail)
         except KeyboardInterrupt:
             raise
@@ -688,7 +768,9 @@ class SharePointOnlineConnector:
                 ]
             finally:
                 client.close()
-        except SharePointOnlineError:
+        except SharePointOnlineError as failure:
+            if failure.reason == "auth_failed":
+                self._drop_cache()
             raise
         except KeyboardInterrupt:
             raise
@@ -706,15 +788,103 @@ class SharePointOnlineConnector:
     def _session(self) -> httpx.Client:
         self._settings = _validate(self.config)
         install_download_log_filter(self._settings.download_suffixes)
-        if not self._interactive_allowed():
+        cached = self._load_cache()
+        if cached is None and not self._interactive_allowed():
             raise SharePointOnlineError("auth_required", AUTH_REQUIRED_MESSAGE)
         client = self._open_api_client()
         try:
-            self._device_code_sign_in(client)
+            if cached is not None:
+                # Renew from the cache: no device code, no new MFA.
+                self._tokens = _Tokens("", cached, self._monotonic())
+                cached = None
+                self._renew(client)
+            else:
+                self._device_code_sign_in(client)
         except BaseException:
             client.close()
             raise
         return client
+
+    # -- optional refresh-token cache (auth.token_cache_path) ----------------------
+
+    def _cache_binding(self) -> dict[str, str]:
+        settings = self._settings
+        assert settings is not None
+        return {
+            "client_id": settings.client_id,
+            "tenant": settings.tenant,
+            "login_host": settings.login_host,
+            "scopes_sha256": hashlib.sha256(settings.scopes.encode()).hexdigest(),
+        }
+
+    def _load_cache(self) -> str | None:
+        """Refresh token from the cache, or None (absent, unreadable or other config)."""
+        path = self._settings.token_cache_path if self._settings else None
+        if path is None or not os.path.lexists(path):
+            return None
+        from core.l3_transformed_rows import (
+            L3ContainmentError,
+            verify_owner_containment_fd,
+        )
+
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        data: Any = None
+        try:
+            fd = os.open(path, flags)
+            try:
+                verify_owner_containment_fd(fd)
+                raw = os.read(fd, 65_536)
+            finally:
+                os.close(fd)
+            data = json.loads(raw.decode("utf-8"))
+        except (OSError, ValueError, L3ContainmentError):
+            data = None
+        refresh = data.get("refresh_token") if isinstance(data, dict) else None
+        bound = isinstance(data, dict) and all(
+            data.get(k) == v for k, v in self._cache_binding().items()
+        )
+        if not bound or not isinstance(refresh, str) or not refresh:
+            self._drop_cache()
+            return None
+        return refresh
+
+    def _save_cache(self, refresh: str | None) -> None:
+        """Rotate the cache atomically (temp 0600 in the same dir, fsync, replace)."""
+        path = self._settings.token_cache_path if self._settings else None
+        if path is None:
+            return
+        if refresh is None:
+            self._drop_cache()
+            return
+        from core.l3_transformed_rows import L3ContainmentError, persist_l3_body
+
+        parent = path.parent
+        try:
+            if not os.path.lexists(parent):
+                os.mkdir(parent, 0o700)
+                os.chmod(parent, 0o700)
+            problem = _private_dir_problem(parent)
+            if problem:
+                raise _cache_refused(problem)
+            body = json.dumps({**self._cache_binding(), "refresh_token": refresh})
+            persist_l3_body(path, body)
+            dir_fd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except (OSError, L3ContainmentError):
+            raise _cache_refused("the cache could not be written safely") from None
+
+    def _drop_cache(self) -> None:
+        path = self._settings.token_cache_path if self._settings else None
+        if path is None:
+            return
+        try:
+            if os.path.lexists(path) and not os.path.islink(path):
+                os.unlink(path)
+        except OSError:
+            pass
 
     def _interactive_allowed(self) -> bool:
         enabled = (
@@ -937,6 +1107,7 @@ class SharePointOnlineConnector:
             refresh if isinstance(refresh, str) and refresh else None,
             self._monotonic() + lifetime,
         )
+        self._save_cache(self._tokens.refresh)
 
     def _access_token(self, client: httpx.Client) -> str:
         tokens = self._tokens
@@ -972,6 +1143,7 @@ class SharePointOnlineConnector:
             self._store_tokens(body)
             return
         if body.get("error") in ("invalid_grant", "interaction_required"):
+            self._drop_cache()
             self._sign_in_again(client)
             return
         raise _oauth_failure(body, status)
@@ -1150,6 +1322,14 @@ class SharePointOnlineConnector:
                         break
                     stats["listed"] += 1
                     item = self._to_item(value, display)
+                    names = self._settings.include_names
+                    if (
+                        names
+                        and item.kind == "file"
+                        and item.skipped_reason is None
+                        and item.name not in names
+                    ):
+                        continue  # outside include_names: never downloaded nor listed
                     if item.kind == "folder" and item.skipped_reason is None:
                         if item.item_id in seen:
                             continue

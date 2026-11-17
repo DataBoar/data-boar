@@ -1946,7 +1946,14 @@ def test_D2206_1_58_include_names_filters_files_by_exact_name(make_fake):
 
     fake3 = make_fake(tree_)
     out3 = scan(fake3, make_target(include_names=[]))
-    assert len(out3.paths) == 6
+    # .bak is outside the scanned extensions, so [] yields the five .txt files.
+    assert out3.paths == {
+        f"{PREFIX}/a.txt",
+        f"{PREFIX}/A.txt",
+        f"{PREFIX}/xa.txt",
+        f"{PREFIX}/real.txt",
+        f"{PREFIX}/sub/a.txt",
+    }
 
 
 def test_D2206_1_59_max_depth_one_reads_only_direct_files(make_fake):
@@ -1956,6 +1963,34 @@ def test_D2206_1_59_max_depth_one_reads_only_direct_files(make_fake):
     sub_id = fake.id_of(f"{ROOT}/sub")
     assert not any(f"{sub_id}/children" in r.url for r in fake.requests)
     assert out.paths == {f"{PREFIX}/a.txt"}
+
+
+@pytest.fixture
+def cache_dir(tmp_path: Path):
+    """A private base dir with no ``.git`` in any ancestor.
+
+    The reader refuses a cache under any ancestor holding ``.git`` (operator rule).
+    Some hosts keep a stray ``/tmp/.git``; then the base falls back to /dev/shm.
+    The fixture never skips: without a clean base it fails loudly.
+    """
+
+    def clean(base: Path) -> bool:
+        return not any(os.path.lexists(a / ".git") for a in (base, *base.parents))
+
+    if clean(tmp_path):
+        yield tmp_path
+        return
+    import shutil
+    import tempfile
+
+    shm = Path("/dev/shm")
+    if not (shm.is_dir() and clean(shm)):
+        pytest.fail("no temp base without a .git ancestor for the cache tests")
+    base = Path(tempfile.mkdtemp(dir=shm, prefix="databoar-m365-test-"))
+    try:
+        yield base
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
 
 
 def _cached_target(path: Path, **extra: Any) -> dict[str, Any]:
@@ -1977,9 +2012,11 @@ def test_D2206_1_60_no_cache_key_writes_nothing(make_fake, tmp_path, monkeypatch
     assert list(tmp_path.iterdir()) == []
 
 
-def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(make_fake, tmp_path):
+def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(
+    make_fake, cache_dir
+):
     """D2206.1-60: dir 0700 (created), file 0600, refresh token only, bound to config."""
-    cache = tmp_path / "cachedir" / "m365.json"
+    cache = cache_dir / "cachedir" / "m365.json"
     fake = make_fake()
     scan(fake, _cached_target(cache))
     assert _mode(cache.parent) == 0o700 and _mode(cache) == 0o600
@@ -1991,9 +2028,9 @@ def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(make_fake, tm
     assert sorted(p.name for p in cache.parent.iterdir()) == ["m365.json"]
 
 
-def test_D2206_1_60_second_run_renews_without_device_code(make_fake, tmp_path):
+def test_D2206_1_60_second_run_renews_without_device_code(make_fake, cache_dir):
     """D2206.1-60: a valid cache renews without a new device code and rotates."""
-    cache = tmp_path / "c" / "m365.json"
+    cache = cache_dir / "c" / "m365.json"
     fake = make_fake()
     scan(fake, _cached_target(cache))
     assert len(fake.device_requests) == 1
@@ -2007,10 +2044,10 @@ def test_D2206_1_60_second_run_renews_without_device_code(make_fake, tmp_path):
 
 
 @pytest.mark.parametrize("error", ["invalid_grant", "interaction_required"])
-def test_D2206_1_60_renewal_refused_deletes_cache(make_fake, tmp_path, error):
+def test_D2206_1_60_renewal_refused_deletes_cache(make_fake, cache_dir, error):
     """D2206.1-60: invalid_grant/interaction_required deletes the cache; with a
     terminal a new device code follows, without one auth_failed."""
-    cache = tmp_path / "c" / "m365.json"
+    cache = cache_dir / "c" / "m365.json"
     fake = make_fake()
     scan(fake, _cached_target(cache))
     fake.refresh_fails = error
@@ -2027,9 +2064,9 @@ def test_D2206_1_60_renewal_refused_deletes_cache(make_fake, tmp_path, error):
     assert cache.exists()
 
 
-def test_D2206_1_60_auth_failed_deletes_cache(make_fake, tmp_path):
+def test_D2206_1_60_auth_failed_deletes_cache(make_fake, cache_dir):
     """D2206.1-60: any auth_failed removes the cache file."""
-    cache = tmp_path / "c" / "m365.json"
+    cache = cache_dir / "c" / "m365.json"
     fake = make_fake()
     scan(fake, _cached_target(cache))
     fake.refresh_fails = "invalid_client"
@@ -2038,9 +2075,9 @@ def test_D2206_1_60_auth_failed_deletes_cache(make_fake, tmp_path):
     assert not cache.exists()
 
 
-def test_D2206_1_60_cache_of_another_config_is_refused(make_fake, tmp_path):
+def test_D2206_1_60_cache_of_another_config_is_refused(make_fake, cache_dir):
     """D2206.1-60: a cache bound to another client_id is deleted, never used."""
-    cache = tmp_path / "c" / "m365.json"
+    cache = cache_dir / "c" / "m365.json"
     fake = make_fake()
     scan(fake, _cached_target(cache))
     other = _cached_target(cache)
@@ -2052,15 +2089,15 @@ def test_D2206_1_60_cache_of_another_config_is_refused(make_fake, tmp_path):
     assert data["client_id"] == "0b0b0b0b-0000-4000-8000-000000000002"
 
 
-def test_D2206_1_60_unsafe_locations_are_refused(make_fake, tmp_path):
+def test_D2206_1_60_unsafe_locations_are_refused(make_fake, cache_dir):
     """D2206.1-60: open dir or file modes, symlinks and paths inside a git repo fail
     closed with config_error and no request."""
     cases: list[Path] = []
-    wide_dir = tmp_path / "wide"
+    wide_dir = cache_dir / "wide"
     wide_dir.mkdir(mode=0o755)
     os.chmod(wide_dir, 0o755)
     cases.append(wide_dir / "m365.json")
-    ok_dir = tmp_path / "ok"
+    ok_dir = cache_dir / "ok"
     ok_dir.mkdir(mode=0o700)
     wide_file = ok_dir / "wide.json"
     wide_file.write_text("{}", encoding="utf-8")
@@ -2072,10 +2109,10 @@ def test_D2206_1_60_unsafe_locations_are_refused(make_fake, tmp_path):
     link = ok_dir / "link.json"
     link.symlink_to(real)
     cases.append(link)
-    link_dir = tmp_path / "linkdir"
+    link_dir = cache_dir / "linkdir"
     link_dir.symlink_to(ok_dir, target_is_directory=True)
     cases.append(link_dir / "m365.json")
-    repo = tmp_path / "repo"
+    repo = cache_dir / "repo"
     (repo / ".git").mkdir(parents=True)
     (repo / "private").mkdir(mode=0o700)
     cases.append(repo / "private" / "m365.json")
@@ -2087,10 +2124,10 @@ def test_D2206_1_60_unsafe_locations_are_refused(make_fake, tmp_path):
     assert real.read_text(encoding="utf-8") == "{}"
 
 
-def test_D2206_1_60_cache_never_leaks(make_fake, tmp_path, caplog, capsys):
+def test_D2206_1_60_cache_never_leaks(make_fake, cache_dir, caplog, capsys):
     """D2206.1-60: cache use and rotation leak nothing to logs, output, failures or repr."""
     caplog.set_level(logging.DEBUG)
-    cache = tmp_path / "c" / "m365.json"
+    cache = cache_dir / "c" / "m365.json"
     fake = make_fake()
     outs = [scan(fake, _cached_target(cache))]
     outs.append(scan(fake, _cached_target(cache), interactive=False, tty=False))
