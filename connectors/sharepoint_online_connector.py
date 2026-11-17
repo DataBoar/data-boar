@@ -377,6 +377,39 @@ def _private_dir_problem(path: Path) -> str | None:
     return None
 
 
+def _windows_acl_platform() -> bool:
+    """True on Windows, where privacy comes from the DACL, not from mode bits."""
+    return os.name == "nt"
+
+
+def _restrict_temp_dir(path: str) -> None:
+    """Windows: restrict the download temp dir to the current user and prove it.
+
+    POSIX already gets 0700 from ``tempfile.mkdtemp``. On Windows the directory
+    inherits the profile ACL, so the reader reuses the repo's owner-only helpers
+    (icacls /grant:r and /inheritance:r, then a SID check of the DACL) and fails
+    closed when containment cannot be proven.
+    """
+    if not _windows_acl_platform():
+        return
+    from core.l3_transformed_rows import (
+        L3ContainmentError,
+        _restrict_to_owner,
+        _windows_acl_sid_snapshot,
+        classify_windows_acl_sids,
+    )
+
+    try:
+        _restrict_to_owner(Path(path))
+        current, aces = _windows_acl_sid_snapshot(Path(path))
+        classify_windows_acl_sids(aces, current)
+    except L3ContainmentError:
+        raise _config_error(
+            "the download temporary directory could not be restricted to the "
+            "current user"
+        ) from None
+
+
 def _posix_file_permissions() -> bool:
     """True where 0600/0700 mode bits exist and can be enforced (not Windows)."""
     return os.name == "posix"
@@ -734,6 +767,7 @@ class SharePointOnlineConnector:
             client = self._session()
             try:
                 self._tmpdir = tempfile.mkdtemp(prefix="databoar-m365-")
+                _restrict_temp_dir(self._tmpdir)
                 for item in self._walk(client, stats):
                     self._handle_item(client, item, counts, stats)
             finally:
