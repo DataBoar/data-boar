@@ -475,12 +475,23 @@ def _config_with(auth: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def test_A2206_1_16a_client_id_vem_da_variavel_de_ambiente(monkeypatch):
-    """A2206.1-16a (auth.client_id_from_env vira auth.client_id)."""
+def test_A2206_1_16a_client_id_fica_no_yaml_e_nao_vem_de_variavel(monkeypatch):
+    """A2206.1-16a, ajustado em 17/nov por ordem do operador (#2261, regra C).
+
+    Antes: ``auth.client_id_from_env`` virava ``auth.client_id``. O client_id nao e
+    segredo e fica no YAML; ``client_id_from_env`` foi removido. O loader preserva o
+    valor do YAML e nao resolve mais a variavel.
+    """
     from config.loader import normalize_config
 
-    monkeypatch.setenv("M365_CLIENT_ID", TEST_CLIENT_ID)
-    cfg = normalize_config(
+    monkeypatch.setenv("M365_CLIENT_ID", "11111111-2222-4333-8444-555555555555")
+    inline = normalize_config(
+        _config_with(
+            {"mode": "delegated", "tenant": "consumers", "client_id": TEST_CLIENT_ID}
+        )
+    )
+    assert inline["targets"][0]["auth"].get("client_id") == TEST_CLIENT_ID
+    from_env = normalize_config(
         _config_with(
             {
                 "mode": "delegated",
@@ -489,32 +500,29 @@ def test_A2206_1_16a_client_id_vem_da_variavel_de_ambiente(monkeypatch):
             }
         )
     )
-    assert cfg["targets"][0]["auth"].get("client_id") == TEST_CLIENT_ID
+    assert from_env["targets"][0]["auth"].get("client_id") is None
 
 
-def test_A2206_1_16b_gate_estrito_exige_login_e_graph(monkeypatch):
-    """A2206.1-16b (DATA_BOAR_CREDENTIAL_STRICT=1 sem graph.microsoft.com: ValueError)."""
+def test_A2206_1_16b_sem_segredo_nao_ha_gate_de_credencial(monkeypatch):
+    """A2206.1-16b, ajustado em 17/nov por ordem do operador (#2261, regra C).
+
+    Antes: o modo estrito exigia login e Graph em DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS
+    por causa do ``client_id_from_env``. No modo delegado nao ha segredo nenhum, entao
+    o gate de credencial de ambiente nao se aplica: o alvo carrega no modo estrito,
+    mesmo com a lista de hosts so com o login.
+    """
     from config.loader import normalize_config
 
-    monkeypatch.setenv("M365_CLIENT_ID", TEST_CLIENT_ID)
     monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
     monkeypatch.setenv(
         "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", "login.microsoftonline.com"
     )
-    err = None
-    try:
-        normalize_config(
-            _config_with(
-                {
-                    "mode": "delegated",
-                    "tenant": "consumers",
-                    "client_id_from_env": "M365_CLIENT_ID",
-                }
-            )
+    out = normalize_config(
+        _config_with(
+            {"mode": "delegated", "tenant": "consumers", "client_id": TEST_CLIENT_ID}
         )
-    except Exception as exc:  # noqa: BLE001 - the assertion below fixes the type
-        err = exc
-    assert isinstance(err, ValueError)
+    )
+    assert out["targets"][0]["auth"].get("client_id") == TEST_CLIENT_ID
 
 
 def _signed_license(tmp_path, dbtier: str) -> dict[str, Any]:

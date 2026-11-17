@@ -30,6 +30,7 @@ import pytest
 
 from tests.m365_fake_graph import (
     DEFAULT_DOWNLOAD_HOST,
+    DOWNLOAD_HOST_SUFFIXES,
     EVIL_HOST,
     GRAPH_HOST,
     LEAK_MARKERS,
@@ -284,7 +285,7 @@ def test_D2206_1_0a_api_client_does_not_follow_302_and_download_uses_second_clie
 def test_D2206_1_0b_httpx_log_filter_hides_download_path_and_query(caplog):
     """D2206.1-0b: with the filter installed, no record carries the download path/query."""
     m = mod()
-    m.install_download_log_filter()
+    m.install_download_log_filter(list(DOWNLOAD_HOST_SUFFIXES))
     caplog.set_level(logging.DEBUG)
 
     def ok(_req: httpx.Request) -> httpx.Response:
@@ -493,48 +494,42 @@ def _cfg(auth: dict[str, Any], **target_extra: Any) -> dict[str, Any]:
     }
 
 
-def test_D2206_1_7_client_id_from_env_and_reserved_names(monkeypatch):
-    """D2206.1-7: client_id_from_env fills auth.client_id; a reserved name is refused."""
-    from config.loader import normalize_config
+def test_D2206_1_7_client_id_is_read_from_the_yaml_only(make_fake, monkeypatch):
+    """D2206.1-7 (revised 2026-11-17, operator rule C on #2261).
 
-    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_STRICT", raising=False)
-    monkeypatch.setenv("M365_CLIENT_ID", TEST_CLIENT_ID)
-    out = normalize_config(
-        _cfg({"tenant": "consumers", "client_id_from_env": "M365_CLIENT_ID"})
-    )
-    assert out["targets"][0]["auth"]["client_id"] == TEST_CLIENT_ID
-
-    monkeypatch.setenv("DATA_BOAR_API_KEY", "x" * 40)
-    with pytest.raises(ValueError):
-        normalize_config(
-            _cfg({"tenant": "consumers", "client_id_from_env": "DATA_BOAR_API_KEY"})
-        )
-
-
-def test_D2206_1_8_strict_gate_requires_login_and_graph(monkeypatch):
-    """D2206.1-8: strict mode needs both vendor hosts; YAML allowed_hosts only narrows."""
+    The client id is not a secret: it stays in the YAML. ``client_id_from_env`` was
+    removed, so the loader no longer resolves it and the reader then fails closed on
+    the missing ``auth.client_id``.
+    """
     from config.loader import normalize_config
 
     monkeypatch.setenv("M365_CLIENT_ID", TEST_CLIENT_ID)
-    auth = {"tenant": "consumers", "client_id_from_env": "M365_CLIENT_ID"}
+    auth = {k: v for k, v in make_target()["auth"].items() if k != "client_id"}
+    out = normalize_config(_cfg({**auth, "client_id_from_env": "M365_CLIENT_ID"}))
+    target = out["targets"][0]
+    assert "client_id" not in target["auth"]
 
-    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_STRICT", raising=False)
-    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", raising=False)
-    assert normalize_config(_cfg(dict(auth)))["targets"][0]["auth"]["client_id"]
+    fake = make_fake()
+    full = make_target()
+    full["auth"] = target["auth"]
+    result = scan(fake, full)
+    _assert_config_error(fake, result)
+    assert "auth.client_id" in result.details("config_error")[0]
+
+
+def test_D2206_1_8_no_secret_means_no_credential_gate(monkeypatch):
+    """D2206.1-8 (revised 2026-11-17, operator rule C on #2261).
+
+    Delegated mode carries no secret, so the env-credential host gate does not apply:
+    the target loads in strict mode even when the operator list has only one host.
+    """
+    from config.loader import normalize_config
 
     monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
-    monkeypatch.setenv(
-        "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS",
-        f"{LOGIN_HOST},{GRAPH_HOST}",
-    )
-    assert normalize_config(_cfg(dict(auth)))["targets"][0]["auth"]["client_id"]
-
-    with pytest.raises(ValueError):
-        normalize_config(_cfg(dict(auth), allowed_hosts=[LOGIN_HOST]))
-
     monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", LOGIN_HOST)
-    with pytest.raises(ValueError):
-        normalize_config(_cfg(dict(auth)))
+    auth = dict(make_target()["auth"])
+    out = normalize_config(_cfg(auth))
+    assert out["targets"][0]["auth"]["client_id"] == TEST_CLIENT_ID
 
 
 # ----------------------------------------------------------------------------
@@ -1620,3 +1615,171 @@ def test_D2206_1_51_only_the_oneshot_cli_enables_interactive_sign_in(
             assert "enable_interactive_sign_in" not in path.read_text(
                 encoding="utf-8"
             ), path
+
+
+# ----------------------------------------------------------------------------
+# Nothing environment-specific in the code; every key comes from the YAML
+# (operator rule of 2026-11-17 on #2261, items A and B)
+# ----------------------------------------------------------------------------
+
+REQUIRED_KEYS = (
+    "auth.mode",
+    "auth.tenant",
+    "auth.client_id",
+    "auth.login_host",
+    "auth.allowed_login_hosts",
+    "auth.scopes",
+    "graph.base_url",
+    "graph.allowed_hosts",
+    "download_host_suffixes",
+    "drive",
+    "max_depth",
+    "max_file_bytes",
+    "page_size",
+    "max_pages_per_folder",
+    "http_timeout_seconds",
+    "throttle_max_wait_seconds",
+)
+
+# Environment-specific values that must never be literals in the reader.
+_FORBIDDEN_LITERALS = (
+    ("GUID", re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")),
+    ("tenant alias", re.compile(r"\b(?:consumers|organizations|common)\b")),
+    ("scope", re.compile(r"Files\.Read|offline_access|Sites\.\w+", re.I)),
+    (
+        "Microsoft host",
+        re.compile(
+            r"microsoftonline|graph\.microsoft|microsoft\.(?:com|us|cn)\b|"
+            r"chinacloudapi|1drv|microsoftpersonalcontent|sharepoint\.(?:com|us|cn)",
+            re.I,
+        ),
+    ),
+    ("API version", re.compile(r"\bv1\.0\b|/beta\b")),
+    ("folder, site or drive name", re.compile(r"DataBoar-|/sites/|Shared Documents")),
+)
+
+
+def _string_constants(source: str) -> list[str]:
+    out: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            out.append(node.value)
+    return out
+
+
+def test_D2206_1_52_no_environment_literal_in_the_reader():
+    """D2206.1-52: no GUID, tenant alias, scope, Microsoft host, API version or folder name.
+
+    Protocol constants (OAuth field names, grant types, Graph path segments such as
+    ``/me/drive``) are allowed; values that distinguish a cloud, tenant or customer
+    must come from the target YAML.
+    """
+    found = []
+    for text in _string_constants(MODULE_PATH.read_text(encoding="utf-8")):
+        for label, pattern in _FORBIDDEN_LITERALS:
+            if pattern.search(text):
+                found.append((label, text))
+    assert found == []
+
+
+def _without(target: dict[str, Any], dotted: str) -> dict[str, Any]:
+    import copy
+
+    clone = copy.deepcopy(target)
+    parent = clone
+    *head, last = dotted.split(".")
+    for part in head:
+        parent = parent[part]
+    del parent[last]
+    return clone
+
+
+@pytest.mark.parametrize("key", REQUIRED_KEYS)
+def test_D2206_1_53_every_key_is_required_and_cited(make_fake, key):
+    """D2206.1-53: removing a required key fails closed with a message citing it."""
+    fake = make_fake()
+    out = scan(fake, _without(make_target(), key))
+    _assert_config_error(fake, out)
+    assert key in out.details("config_error")[0]
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("auth.allowed_login_hosts", []),
+        ("auth.allowed_login_hosts", "login.example"),
+        ("auth.scopes", ""),
+        ("graph.allowed_hosts", []),
+        ("download_host_suffixes", []),
+        ("download_host_suffixes", ["files.1drv.example"]),
+        ("page_size", 0),
+        ("max_pages_per_folder", 0),
+        ("http_timeout_seconds", 0),
+        ("max_depth", True),
+    ],
+)
+def test_D2206_1_53_invalid_values_fail_closed(make_fake, key, value):
+    """D2206.1-53: a present but invalid value is refused, citing the key."""
+    fake = make_fake()
+    target = make_target()
+    parent = target
+    *head, last = key.split(".")
+    for part in head:
+        parent = parent[part]
+    parent[last] = value
+    out = scan(fake, target)
+    _assert_config_error(fake, out)
+    assert key in out.details("config_error")[0]
+
+
+def test_D2206_1_53_hosts_must_be_in_the_yaml_allowlists(make_fake):
+    """D2206.1-53: login host and Graph host outside their YAML allowlists are refused."""
+    fake = make_fake()
+    target = make_target()
+    target["auth"]["allowed_login_hosts"] = ["login.example"]
+    out = scan(fake, target)
+    _assert_config_error(fake, out)
+    assert "auth.login_host" in out.details("config_error")[0]
+
+    fake2 = make_fake()
+    target2 = make_target()
+    target2["graph"]["allowed_hosts"] = ["graph.example"]
+    out2 = scan(fake2, target2)
+    _assert_config_error(fake2, out2)
+    assert "graph.base_url" in out2.details("config_error")[0]
+
+
+def test_D2206_1_53_registry_declares_the_required_keys():
+    """D2206.1-53: the registry lists every required key (dotted) and the generic
+    helper reports the missing ones, the same check --validate-config runs."""
+    import core.engine  # noqa: F401
+    from core.connector_registry import connector_for_target, missing_required_keys
+
+    resolved = connector_for_target({"type": "sharepoint_online"})
+    assert resolved is not None
+    assert set(REQUIRED_KEYS) <= set(resolved[1])
+    target = _without(make_target(), "graph.base_url")
+    assert missing_required_keys(target, resolved[1]) == ["graph.base_url"]
+    # Top-level keys behave exactly as before (presence check).
+    assert missing_required_keys({"name": "x"}, ["name", "site_url"]) == ["site_url"]
+
+
+def test_D2206_1_54_microsoft_identity_takes_an_optional_allowlist():
+    """D2206.1-54: callers without allowed_hosts keep the #2007 behaviour; the reader
+    passes the YAML allowlist (sovereign clouds)."""
+    from connectors.microsoft_identity import assert_allowlisted_microsoft_token_url
+
+    assert_allowlisted_microsoft_token_url(
+        "https://login.microsoftonline.com/tenant/oauth2/v2.0/token"
+    )
+    sovereign = "https://login.microsoftonline.us/tenant/oauth2/v2.0/token"
+    with pytest.raises(ValueError):
+        assert_allowlisted_microsoft_token_url(sovereign)
+    assert_allowlisted_microsoft_token_url(
+        sovereign, allowed_hosts=["login.microsoftonline.us"]
+    )
+    with pytest.raises(ValueError):
+        assert_allowlisted_microsoft_token_url(
+            "https://login.microsoftonline.com/t/oauth2/v2.0/token",
+            allowed_hosts=["login.microsoftonline.us"],
+        )

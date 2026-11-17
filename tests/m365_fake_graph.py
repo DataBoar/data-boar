@@ -50,6 +50,11 @@ OTHER_DRIVE_ID = "DRIVE-OTHER-9"
 LEAK_MARKERS = (SECRET, TEST_CLIENT_ID)
 
 SCOPE = "https://graph.microsoft.com/Files.Read offline_access"
+DOWNLOAD_HOST_SUFFIXES = (
+    ".files.1drv.com",
+    ".microsoftpersonalcontent.com",
+    ".sharepoint.com",
+)
 
 
 class Req(NamedTuple):
@@ -649,6 +654,8 @@ def install_fake_dns(monkeypatch: Any, fake: FakeGraph) -> None:
 
 def make_target(**overrides: Any) -> dict[str, Any]:
     """A valid ``sharepoint_online`` target with obviously fake values."""
+    # Every key is required by the reader (no default anywhere, operator rule
+    # of 2026-11-17 on #2261): the test target spells all of them out.
     target: dict[str, Any] = {
         "name": "onedrive-sintetico",
         "type": "sharepoint_online",
@@ -656,9 +663,23 @@ def make_target(**overrides: Any) -> dict[str, Any]:
             "mode": "delegated",
             "tenant": TEST_TENANT,
             "client_id": TEST_CLIENT_ID,
+            "login_host": LOGIN_HOST,
+            "allowed_login_hosts": [LOGIN_HOST],
+            "scopes": SCOPE,
         },
+        "graph": {
+            "base_url": f"https://{GRAPH_HOST}/v1.0",
+            "allowed_hosts": [GRAPH_HOST],
+        },
+        "download_host_suffixes": list(DOWNLOAD_HOST_SUFFIXES),
         "drive": "me",
         "root_folder": "/DataBoar-Sintetico",
+        "max_depth": 32,
+        "max_file_bytes": 100 * 1024 * 1024,
+        "page_size": 200,
+        "max_pages_per_folder": 10_000,
+        "http_timeout_seconds": 30,
+        "throttle_max_wait_seconds": 120,
     }
     target.update(overrides)
     return target
