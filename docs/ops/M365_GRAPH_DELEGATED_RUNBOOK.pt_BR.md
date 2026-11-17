@@ -54,11 +54,9 @@ targets:
       tenant: consumers                     # contas pessoais
       client_id: <APP_CLIENT_ID>            # não é segredo, mas nunca vai para commit
       login_host: login.microsoftonline.com
-      allowed_login_hosts: [login.microsoftonline.com]
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
     graph:
       base_url: https://graph.microsoft.com/v1.0
-      allowed_hosts: [graph.microsoft.com]
     download_host_suffixes: [.files.1drv.com, .microsoftpersonalcontent.com]
     drive: me
     root_folder: /DataBoar-Sintetico
@@ -72,6 +70,8 @@ report:
   output_dir: /tmp/m365-phase0-report
 sqlite_path: /tmp/m365-phase0-report/audit.db
 ```
+
+Recomendado: deixe o operador aprovar os dois hosts, fora do YAML: `export DATA_BOAR_CREDENTIAL_STRICT=1` e `export DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`. Sem o modo estrito, nada aprova os hosts além do formato.
 
 ## 5. Rodar a varredura num terminal
 

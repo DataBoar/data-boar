@@ -51,11 +51,9 @@ Before the pilot, check two tenant settings (both are the administrator's decisi
          tenant: <TENANT_ID>
          client_id: <APP_CLIENT_ID>
          login_host: login.microsoftonline.com
-         allowed_login_hosts: [login.microsoftonline.com]
          scopes: "https://graph.microsoft.com/Files.Read offline_access"
        graph:
          base_url: https://graph.microsoft.com/v1.0
-         allowed_hosts: [graph.microsoft.com]
        download_host_suffixes: [.sharepoint.com]
        drive: me
        root_folder: /DataBoar-Pilot
@@ -66,6 +64,8 @@ Before the pilot, check two tenant settings (both are the administrator's decisi
        http_timeout_seconds: 30
        throttle_max_wait_seconds: 120
    ```
+
+   Approve the two hosts as the operator, outside the YAML: `DATA_BOAR_CREDENTIAL_STRICT=1` and `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=<login host>,<Graph host>`. Without strict mode, nothing approves them beyond their format.
 
 4. Run `python main.py --config <file>` from a terminal; the pilot user follows the printed instructions (address and code) in a browser.
 5. Compare the report with the synthetic files you placed. Record the outcome as it happened (ran, failed or blocked, and why).

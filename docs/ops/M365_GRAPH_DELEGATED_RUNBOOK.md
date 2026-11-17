@@ -54,11 +54,9 @@ targets:
       tenant: consumers                     # personal accounts
       client_id: <APP_CLIENT_ID>            # not a secret, but never commit it
       login_host: login.microsoftonline.com
-      allowed_login_hosts: [login.microsoftonline.com]
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
     graph:
       base_url: https://graph.microsoft.com/v1.0
-      allowed_hosts: [graph.microsoft.com]
     download_host_suffixes: [.files.1drv.com, .microsoftpersonalcontent.com]
     drive: me
     root_folder: /DataBoar-Sintetico
@@ -72,6 +70,8 @@ report:
   output_dir: /tmp/m365-phase0-report
 sqlite_path: /tmp/m365-phase0-report/audit.db
 ```
+
+Recommended: let the operator approve the two hosts, outside the YAML: `export DATA_BOAR_CREDENTIAL_STRICT=1` and `export DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`. Without strict mode, nothing approves the hosts beyond their format.
 
 ## 5. Run the scan from a terminal
 

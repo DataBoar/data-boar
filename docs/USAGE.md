@@ -1150,13 +1150,9 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
       tenant: consumers                     # tenant GUID or alias: <TENANT_ID>, consumers, organizations, common
       client_id: <APP_CLIENT_ID>            # Application (client) ID, a GUID; not a secret
       login_host: login.microsoftonline.com # Microsoft Entra authority host of your cloud
-      allowed_login_hosts:                  # allowlist; login_host must be in it
-        - login.microsoftonline.com
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
     graph:
       base_url: https://graph.microsoft.com/v1.0  # Graph endpoint and API version of your cloud
-      allowed_hosts:                        # allowlist; the base_url host must be in it
-        - graph.microsoft.com
     download_host_suffixes:                 # pre-authenticated download hosts (unconfirmed until Phase 0)
       - .files.1drv.com
       - .microsoftpersonalcontent.com
@@ -1170,9 +1166,11 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
     throttle_max_wait_seconds: 120          # 1..600, ceiling for Retry-After and backoff
 ```
 
-**Every key above is required; there is no default anywhere** (neither in the code nor in the configuration loader). A missing key stops the target before any network call with `config_error` "required key `<key>` is missing (sharepoint_online has no defaults)"; an invalid value fails the same way and cites the key (for example "auth.login_host is not in auth.allowed_login_hosts", "graph.base_url host is not in graph.allowed_hosts"). The only exception is the pair `root_folder` / `root_folder_id`: exactly one of them. The values shown are those of the Microsoft global cloud ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments)); for another cloud see [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph). `--validate-config` reports the missing keys too.
+**Every key above is required; there is no default anywhere** (neither in the code nor in the configuration loader). A missing key stops the target before any network call with `config_error` "required key `<key>` is missing (sharepoint_online has no defaults)"; an invalid value fails the same way and cites the key (for example "graph.base_url must be an https URL with a path and no port, userinfo, query or fragment"). The only exception is the pair `root_folder` / `root_folder_id`: exactly one of them. The values shown are those of the Microsoft global cloud ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments)); for another cloud see [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph). `--validate-config` reports the missing keys too.
 
 - **Sign-in:** OAuth device code, public client, **no client secret**. The reader prints the verification address and the code on standard error.
+- **Who approves the hosts:** the login host and the Graph host come from the YAML, but the YAML does not approve them. The operator does, outside the YAML, through the existing credential host gate: with `DATA_BOAR_CREDENTIAL_STRICT=1`, both hosts must be in `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (for the global cloud, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`), at load time and again when the scan starts; a YAML `allowed_hosts` can only narrow that list. **Without strict mode the gate does not run** (the same #2103 semantics as every other connector): the reader then checks only the host format, so production should set strict mode.
+- **Read-only scopes:** `auth.scopes` accepts only read permissions, `<Resource>.Read`, `.Read.All` or `.Read.Selected` (bare, or on the `graph.base_url` host), plus `offline_access`. Anything with `Write`, `Manage` or `FullControl`, or any other shape, fails with `config_error` citing `auth.scopes`.
 - **A human at a terminal is required.** Only the one-shot CLI scan (`python main.py --config ...`, or `docker run -it`) may sign in. The web dashboard, the API and schedulers never sign in: a target started from them fails with `auth_required`. Unattended scans need app-only mode ([#2262](https://github.com/DataBoar/data-boar/issues/2262), not available yet).
 - **Scope:** `Files.Read` gives the token read access to the **whole drive**. The reader, not the token, restricts the scan: it resolves `root_folder` once and walks only item ids below it. Shortcuts to other drives, packages, items flagged as malware or deleted and items from another drive are skipped and reported as one `skipped` failure with counts only.
 - **Tokens** stay in memory for the duration of the scan and are never written to disk, logs, reports or findings.

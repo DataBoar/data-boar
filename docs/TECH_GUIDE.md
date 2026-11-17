@@ -710,9 +710,9 @@ The reader has **no built-in Microsoft host, API version, scope or tenant**, and
 
 | Key | Global cloud | Notes |
 | --- | --- | --- |
-| `auth.login_host` and `auth.allowed_login_hosts` | `login.microsoftonline.com` | `login_host` must be in the allowlist (checked by the same helper Power BI and Dataverse use, `connectors/microsoft_identity.py`) |
-| `graph.base_url` and `graph.allowed_hosts` | `https://graph.microsoft.com/v1.0` and `graph.microsoft.com` | `@odata.nextLink` must stay on this host and path |
-| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | the resource part follows the Graph host of the cloud |
+| `auth.login_host` | `login.microsoftonline.com` | approved by the operator list `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` in strict mode, not by the YAML |
+| `graph.base_url` | `https://graph.microsoft.com/v1.0` | host approved like the login host; `@odata.nextLink` must stay on this host and path |
+| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | read permissions only; a resource prefix must be the `graph.base_url` host |
 | `download_host_suffixes` | `.files.1drv.com`, `.microsoftpersonalcontent.com` (personal OneDrive), `.sharepoint.com` (work OneDrive) | **[H]** not confirmed by a Microsoft page; Phase 0 records the real suffix |
 
 Example, US Government L4 (GCC High), from Microsoft's public endpoint tables ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments), [national cloud authentication endpoints](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Not tested** with this reader; the download suffix is a placeholder you must take from your own environment:
@@ -720,13 +720,13 @@ Example, US Government L4 (GCC High), from Microsoft's public endpoint tables ([
 ```yaml
 auth:
   login_host: login.microsoftonline.us
-  allowed_login_hosts: [login.microsoftonline.us]
   scopes: "https://graph.microsoft.us/Files.Read offline_access"
 graph:
   base_url: https://graph.microsoft.us/v1.0
-  allowed_hosts: [graph.microsoft.us]
 download_host_suffixes: [<DOWNLOAD_HOST_SUFFIX>]
 ```
+
+With `DATA_BOAR_CREDENTIAL_STRICT=1`, the operator then sets `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.us,graph.microsoft.us`.
 
 ### Device code sign-in
 

@@ -710,9 +710,9 @@ O leitor **não tem host da Microsoft, versão da API, escopo nem tenant embutid
 
 | Chave | Nuvem global | Observações |
 | --- | --- | --- |
-| `auth.login_host` e `auth.allowed_login_hosts` | `login.microsoftonline.com` | `login_host` precisa estar na allowlist (conferido pelo mesmo helper do Power BI e do Dataverse, `connectors/microsoft_identity.py`) |
-| `graph.base_url` e `graph.allowed_hosts` | `https://graph.microsoft.com/v1.0` e `graph.microsoft.com` | o `@odata.nextLink` precisa ficar nesse host e caminho |
-| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | a parte do recurso segue o host do Graph da nuvem |
+| `auth.login_host` | `login.microsoftonline.com` | aprovado pela lista do operador `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` no modo estrito, não pelo YAML |
+| `graph.base_url` | `https://graph.microsoft.com/v1.0` | host aprovado como o de login; o `@odata.nextLink` precisa ficar nesse host e caminho |
+| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | só permissões de leitura; um prefixo de recurso precisa ser o host do `graph.base_url` |
 | `download_host_suffixes` | `.files.1drv.com`, `.microsoftpersonalcontent.com` (OneDrive pessoal), `.sharepoint.com` (OneDrive de trabalho) | **[H]** não confirmado por página da Microsoft; a Fase 0 registra o sufixo real |
 
 Exemplo, governo dos EUA L4 (GCC High), a partir das tabelas públicas de endpoints da Microsoft ([implantações nacionais do Graph](https://learn.microsoft.com/en-us/graph/deployments), [endpoints de autenticação das nuvens nacionais](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Não testado** com este leitor; o sufixo de download é um placeholder que você precisa tirar do seu ambiente:
@@ -720,13 +720,13 @@ Exemplo, governo dos EUA L4 (GCC High), a partir das tabelas públicas de endpoi
 ```yaml
 auth:
   login_host: login.microsoftonline.us
-  allowed_login_hosts: [login.microsoftonline.us]
   scopes: "https://graph.microsoft.us/Files.Read offline_access"
 graph:
   base_url: https://graph.microsoft.us/v1.0
-  allowed_hosts: [graph.microsoft.us]
 download_host_suffixes: [<DOWNLOAD_HOST_SUFFIX>]
 ```
+
+Com `DATA_BOAR_CREDENTIAL_STRICT=1`, o operador define então `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.us,graph.microsoft.us`.
 
 ### Entrada por device code
 
