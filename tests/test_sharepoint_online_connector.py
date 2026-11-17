@@ -2313,3 +2313,187 @@ def test_D2206_1_63_no_octal_mode_literal_in_mode_calls():
     these tests (Semgrep insecure-file-permissions matched os.chmod(p, 0o700))."""
     assert _octal_mode_literals(MODULE_PATH) == []
     assert _octal_mode_literals(Path(__file__)) == []
+
+
+# ----------------------------------------------------------------------------
+# Real transports and real scanner (bug found by the PM's real scan, 2026-11-17)
+# ----------------------------------------------------------------------------
+
+
+class _RecordingHandler(http.server.BaseHTTPRequestHandler):
+    seen: list[dict[str, str]] = []
+
+    def do_GET(self) -> None:  # noqa: N802 - stdlib name
+        type(self).seen.append({k.lower(): v for k, v in self.headers.items()})
+        body = CPF_TXT.encode()
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *_args: Any) -> None:
+        return
+
+
+@pytest.fixture
+def loopback_server():
+    _RecordingHandler.seen = []
+    server = http.server.HTTPServer(("127.0.0.1", 0), _RecordingHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield server.server_address[1], _RecordingHandler.seen
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _real_transport_connector(target: dict[str, Any] | None = None) -> Any:
+    """Connector without _transport: it builds url_guard.build_pinned_httpx_client."""
+    m = mod()
+    conn = m.SharePointOnlineConnector(
+        target or make_target(), RegexScanner(), FakeDB(), _interactive=False
+    )
+    conn._settings = m._validate(conn.config)
+    return conn
+
+
+def test_D2206_1_64_download_with_the_real_pinned_transport(loopback_server):
+    """D2206.1-64: the download client built by url_guard.build_pinned_httpx_client
+    (PinnedIPTransport, which has no __enter__) downloads and is closed; no
+    Authorization reaches the download host. Loopback HTTP only: the pin maps the
+    host to 127.0.0.1 inside the test, no external network."""
+    import ipaddress
+    import tempfile
+
+    port, seen = loopback_server
+    conn = _real_transport_connector()
+    conn._tmpdir = tempfile.mkdtemp(prefix="databoar-m365-test-")
+    try:
+        status, path = conn._fetch_download(
+            httpx.URL(f"http://dl.test:{port}/item"),
+            "dl.test",
+            [ipaddress.ip_address("127.0.0.1")],
+            f"{PREFIX}/a.txt",
+            ".txt",
+        )
+        assert status == 200 and path is not None
+        assert Path(path).read_text(encoding="utf-8") == CPF_TXT
+    finally:
+        import shutil
+
+        shutil.rmtree(conn._tmpdir, ignore_errors=True)
+    assert len(seen) == 1
+    assert "authorization" not in seen[0] and "cookie" not in seen[0]
+    assert seen[0]["host"] == f"dl.test:{port}"
+
+
+def test_D2206_1_64_api_client_with_the_real_pinned_transport(
+    loopback_server, monkeypatch
+):
+    """D2206.1-64: the login/Graph client built by _open_api_client without
+    _transport is a pinned client the reader closes explicitly (no ``with``); it
+    reaches the configured hosts through the pin only. The test replaces the URL
+    guard so the hosts resolve to 127.0.0.1 (private network only in the test)."""
+    import ipaddress
+
+    m = mod()
+    port, seen = loopback_server
+    monkeypatch.setattr(
+        m.url_guard,
+        "resolve_and_validate_outbound_url",
+        lambda url, **_kw: (None, [ipaddress.ip_address("127.0.0.1")]),
+    )
+    target = make_target()
+    target["auth"]["login_host"] = "login.test"
+    target["graph"] = {"base_url": "https://graph.test/v1.0"}
+    target["auth"]["scopes"] = "Files.Read offline_access"
+    conn = _real_transport_connector(target)
+    client = conn._open_api_client()
+    try:
+        assert type(client._transport).__name__ == "PinnedIPTransport"
+        for host in ("login.test", "graph.test"):
+            resp = client.get(f"http://{host}:{port}/ping")
+            assert resp.status_code == 200
+        with pytest.raises(ValueError):
+            client.get(f"http://other.test:{port}/ping")  # not pinned: refused
+    finally:
+        client.close()
+    assert [h["host"] for h in seen] == [f"login.test:{port}", f"graph.test:{port}"]
+
+
+def _docx_bytes(text: str) -> bytes:
+    import docx
+
+    document = docx.Document()
+    document.add_paragraph(text)
+    buf = io.BytesIO()
+    document.save(buf)
+    return buf.getvalue()
+
+
+def test_D2206_1_65_real_scanner_and_sqlite(make_fake, tmp_path):
+    """D2206.1-65: the engine's DataScanner and a real LocalDBManager (temporary
+    SQLite) find LGPD_CPF in a .txt, EMAIL and PHONE_BR in a .csv, and LGPD_CPF and
+    PHONE_BR in a .docx."""
+    from core.database import LocalDBManager
+    from core.scanner import DataScanner
+
+    files = {
+        "a.txt": "Cliente cadastrado: CPF 123.456.789-09, ficha 77.\n",
+        "c.csv": "nome,contato,telefone\nPessoa Teste,pessoa.teste@exemplo.com,"
+        "(21) 98765-4321\n",
+        "d.docx": _docx_bytes(
+            "Funcionario: CPF 987.654.321-00, telefone (11) 91234-5678."
+        ),
+    }
+    fake = make_fake({"DataBoar-Sintetico": files})
+    db = LocalDBManager(str(tmp_path / "audit.db"))
+    try:
+        db.create_session_record("sess-m365")
+        db.set_current_session_id("sess-m365")
+        out = build(fake, scanner=DataScanner(), db=db)
+        out.conn.run()
+        _db_rows, fs_rows, _app, failures = db.get_findings("sess-m365")
+    finally:
+        db.dispose()
+    assert failures == []
+    patterns = {
+        row["file_name"]: set(str(row["pattern_detected"]).split(", "))
+        for row in fs_rows
+    }
+    assert patterns == {
+        "a.txt": {"LGPD_CPF"},
+        "c.csv": {"EMAIL", "PHONE_BR"},
+        "d.docx": {"LGPD_CPF", "PHONE_BR"},
+    }
+    assert {row["path"] for row in fs_rows} == {f"{PREFIX}/{n}" for n in files}
+
+
+def test_D2206_1_66_download_and_extraction_failures_are_told_apart(
+    make_fake, monkeypatch
+):
+    """D2206.1-66: an unexpected error while downloading says "download failed",
+    one while extracting says "content could not be extracted"; neither leaks."""
+    m = mod()
+
+    def broken_download(*_a: Any, **_kw: Any) -> Any:
+        raise AttributeError(f"no __enter__ for {SECRET}x")
+
+    monkeypatch.setattr(m.SharePointOnlineConnector, "_fetch_download", broken_download)
+    fake = make_fake({"DataBoar-Sintetico": {"a.txt": CPF_TXT}})
+    out = scan(fake)
+    (detail,) = [d for _t, _r, d in out.db.failures]
+    assert detail == f"{PREFIX}/a.txt: download failed (AttributeError)"
+    assert SECRET not in out.db.as_text()
+    monkeypatch.undo()
+
+    def explode(*_a: Any, **_kw: Any) -> str:
+        raise RuntimeError(f"extractor crash {SECRET}x")
+
+    monkeypatch.setattr(m, "_read_text_sample", explode)
+    fake2 = make_fake({"DataBoar-Sintetico": {"a.txt": CPF_TXT}})
+    out2 = scan(fake2)
+    (detail2,) = [d for _t, _r, d in out2.db.failures]
+    assert detail2 == f"{PREFIX}/a.txt: content could not be extracted (RuntimeError)"
