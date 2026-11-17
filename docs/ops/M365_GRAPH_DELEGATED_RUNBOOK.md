@@ -130,7 +130,7 @@ Checklist for Phase 0:
 
 ## 7. Revoke access afterwards
 
-1. In your Microsoft account privacy settings, open the list of apps that have access to your account and remove the app.
+1. Remove the app from your personal Microsoft account at [account.live.com/consent/Manage](https://account.live.com/consent/Manage). Work or school tenants: see [TECH_GUIDE.md, "Microsoft 365 via Graph"](../TECH_GUIDE.md#microsoft-365-via-graph).
 2. Delete the app registration (and the temporary tenant, if you created one only for this).
 3. Delete the synthetic folder and the local temporary files and report.
 

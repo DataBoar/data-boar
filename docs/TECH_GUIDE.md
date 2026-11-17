@@ -686,6 +686,46 @@ For a **single run** without editing the saved config, use CLI **`--content-type
 
 **Strong crypto / controls validation (`scan.validate_crypto`, `--validate-crypto`):** Opt-in flag (off by default). When enabled via config, CLI, dashboard checkbox, or API body **`validate_crypto: true`**, the engine enables strong-crypto validation for that run (CLI / API / dashboard override config). When off or absent, that path is skipped — no behaviour change. **Phase 2 + Phase 3:** connectors honor transport crypto options and probe after connect; SQL/Mongo/Redis also run Phase 3 name-pattern inference (count-by-category into **`inferred_controls_summary`** — heuristic only, human review required). Persist in **`crypto_controls_audit`**; Excel sheet **Crypto & controls** (allowlisted details only — no secrets, tokens, URLs, or raw identifier lists). See [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 
+## Microsoft 365 via Graph
+
+**Status (read this first).** The `sharepoint_online` reader runs in **delegated** mode only and has been tested **only against a simulated Microsoft Graph**. The real-account proof (Phase 0, [#2260](https://github.com/DataBoar/data-boar/issues/2260)) covers a **personal OneDrive** and **has not run yet**. Nothing here states that the reader reads SharePoint Online or a work or school tenant. Operator runbook: [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md). Customer admin pilot: [M365_GRAPH_CUSTOMER_PILOT.md](ops/M365_GRAPH_CUSTOMER_PILOT.md). Configuration keys: [USAGE.md](USAGE.md).
+
+### App registration in Microsoft Entra
+
+The reader needs an **app registration** whose Application (client) ID you pass through an environment variable (`auth.client_id_from_env`). Placeholders only in any document or ticket: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
+
+| Setting | Value | Microsoft reference |
+| --- | --- | --- |
+| Supported account types | **Personal Microsoft accounts only** for the Phase 0 personal OneDrive (`tenant: consumers`). For a customer tenant: an app registered in **that** tenant ("this organizational directory only", `tenant: <TENANT_ID>`), or a multitenant app ("any Microsoft Entra directory and personal Microsoft accounts") hosted by the vendor. Neither customer variant has been validated. | [Supported account types](https://learn.microsoft.com/en-us/entra/identity-platform/supported-accounts-validation) |
+| Public client | **Allow public client flows = Yes** (Authentication, Advanced settings). The device code flow is a public-client flow; the reader never sends a client secret. | [Desktop app registration](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-registration) |
+| API permissions | Microsoft Graph, **delegated**: `Files.Read`. `offline_access` is requested at sign-in to obtain a refresh token. Remove `User.Read` if the portal added it. No application permissions. | [Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference) |
+| Secrets and certificates | **None.** | — |
+| Redirect URI | None for the device code flow (Phase 0 confirms this; [H]). | [Device code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code) |
+
+`Files.Read` "allows the app to read the signed-in user's files" and also grants access to files shared with that user ([permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference)). The token can therefore read the **whole drive**; the reader, not the token, restricts the scan to `root_folder` (it walks item ids below the resolved folder and skips shortcuts to other drives).
+
+### Device code sign-in
+
+- The reader asks the Microsoft identity platform for a device code and prints the verification address and the user code on standard error. The user opens the address in any browser, types the code and signs in ([device code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code)). With a personal account through `consumers` or `common`, Microsoft asks the user to sign in again in the browser (same page).
+- Only the one-shot CLI scan run from a terminal may start the sign-in. The web dashboard, the API and schedulers never do: their targets fail with `auth_required`.
+- Tokens stay in memory for the duration of the scan. Nothing is written to disk.
+- **Work and school tenants may block device code flow** through Conditional Access; Microsoft recommends organizations get as close as possible to a unilateral block ([block authentication flows](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-block-authentication-flows)). In such a tenant the delegated reader cannot sign in. This is a limit of the delegated mode, not something the reader works around.
+
+### Consent and the unverified publisher limit
+
+- **User consent** to `Files.Read` does not need an administrator by default (`AdminConsentRequired: No` in the [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference)), but each organization decides whether its users may consent at all ([configure user consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)).
+- **Unverified publisher.** Microsoft states that, if risk-based step-up consent is enabled, users can't consent to most multitenant apps registered after 8 November 2020 that aren't publisher verified, when the app requests permissions beyond basic sign-in and profile from users of another tenant ([publisher verification](https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview)). The built-in policy "allow user consent for apps from verified publishers" also excludes unverified apps from other tenants ([configure user consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)). In practice, for a multitenant app without a verified publisher, **the customer's administrator grants consent** ([grant admin consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/grant-admin-consent)) **or the vendor completes publisher verification**. An app registered by the customer in its own tenant is not a cross-tenant consent. Data Boar does not have a verified publisher today.
+
+### Revoking consent
+
+- **Personal account:** the user removes the app at [account.live.com/consent/Manage](https://account.live.com/consent/Manage).
+- **Work or school tenant:** an administrator reviews and revokes permissions granted to the app (for the whole organization or one user) under Enterprise applications ([review permissions granted to enterprise applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions)), and can delete the enterprise application ([delete an enterprise application](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/delete-application-portal)).
+- Deleting the app registration stops any new sign-in with its client ID.
+
+### App-only mode: planned, not delivered
+
+Unattended scans of a work tenant would use **app-only** access with a **certificate** credential and the `Sites.Selected` permission, which limits the app to site collections (and, per Microsoft, lists, folders or files) that an administrator grants explicitly ([selected permissions overview](https://learn.microsoft.com/en-us/graph/permissions-selected-overview)). This is **planned** in [#2262](https://github.com/DataBoar/data-boar/issues/2262): **not delivered and not validated**. Today `auth.mode: app_only` fails with `config_error`.
+
 ## Adding new connectors
 
 To support a new data source (e.g. another database driver or API), see **[ADDING_CONNECTORS.md](ADDING_CONNECTORS.md)** (English) or **[ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md)** (Português – Brasil). The guide describes the connector contract, how to register a new type (or driver), optional dependencies, and includes step-by-step instructions plus examples (database-style and API-style).

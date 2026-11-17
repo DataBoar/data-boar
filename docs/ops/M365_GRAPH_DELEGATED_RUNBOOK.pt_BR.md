@@ -130,7 +130,7 @@ Roteiro da Fase 0:
 
 ## 7. Revogar o acesso depois
 
-1. Nas configurações de privacidade da sua conta Microsoft, abra a lista de aplicativos com acesso à conta e remova o aplicativo.
+1. Remova o aplicativo da sua conta Microsoft pessoal em [account.live.com/consent/Manage](https://account.live.com/consent/Manage). Tenants de trabalho ou escola: ver [TECH_GUIDE.pt_BR.md, "Microsoft 365 via Graph"](../TECH_GUIDE.pt_BR.md#microsoft-365-via-graph).
 2. Apague o registro do aplicativo (e o tenant temporário, se você criou um só para isto).
 3. Apague a pasta sintética e os arquivos e o relatório temporários locais.
 

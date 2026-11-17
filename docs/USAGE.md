@@ -1160,9 +1160,10 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
 - **A human at a terminal is required.** Only the one-shot CLI scan (`python main.py --config ...`, or `docker run -it`) may sign in. The web dashboard, the API and schedulers never sign in: a target started from them fails with `auth_required`. Unattended scans need app-only mode ([#2262](https://github.com/DataBoar/data-boar/issues/2262), not available yet).
 - **Scope:** `Files.Read` gives the token read access to the **whole drive**. The reader, not the token, restricts the scan: it resolves `root_folder` once and walks only item ids below it. Shortcuts to other drives, packages, items flagged as malware or deleted and items from another drive are skipped and reported as one `skipped` failure with counts only.
 - **Tokens** stay in memory for the duration of the scan and are never written to disk, logs, reports or findings.
+- **Client ID handling:** pass it only through an environment variable (`auth.client_id_from_env`) or an ephemeral configuration kept by the customer outside any repository. Never commit it; use placeholders such as `<APP_CLIENT_ID>` in documents and tickets.
 - **Credential gate:** with `DATA_BOAR_CREDENTIAL_STRICT=1`, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` must list both `login.microsoftonline.com` and `graph.microsoft.com`.
 - **Findings** go to the **Filesystem findings** sheet with paths such as `onedrive:/DataBoar-Sintetico/sub/a.txt` (no item ids, account names or URLs).
-- Operator steps (app registration, consent, revocation, evidence): [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md).
+- Operator steps (app registration, consent, revocation, evidence): [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md). Customer administrator pilot: [M365_GRAPH_CUSTOMER_PILOT.md](ops/M365_GRAPH_CUSTOMER_PILOT.md). Entra registration, consent and the unverified publisher limit: [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph).
 
 ### Global options (excerpt)
 

@@ -686,6 +686,46 @@ Para **uma única execução** sem alterar o config gravado: CLI **`--content-ty
 
 **Validação de criptografia forte / controles (`scan.validate_crypto`, `--validate-crypto`):** Flag opt-in (desligada por padrão). Quando ativa via config, CLI, caixa no dashboard ou corpo da API **`validate_crypto: true`**, o motor liga a validação de criptografia forte nessa execução (CLI / API / dashboard sobrescrevem o config). Quando off ou ausente, esse caminho é ignorado — sem mudança de comportamento. **Fase 2 + Fase 3:** conectores honram opções de transporte e fazem probe; SQL/Mongo/Redis também aplicam inferência Fase 3 por padrão de nome (contagem por categoria em **`inferred_controls_summary`** — heurística; exige revisão humana). Grava **`crypto_controls_audit`**; planilha Excel **Crypto & controls** (detalhes allowlisted — sem segredos, tokens, URLs ou listas de identificadores). Ver [USAGE.pt_BR.md](USAGE.pt_BR.md) e [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 
+## Microsoft 365 via Graph
+
+**Situação (leia primeiro).** O leitor `sharepoint_online` roda só em modo **delegado** e foi testado **só contra um Microsoft Graph simulado**. A prova com conta real (Fase 0, [#2260](https://github.com/DataBoar/data-boar/issues/2260)) cobre um **OneDrive pessoal** e **ainda não rodou**. Nada aqui afirma que o leitor lê SharePoint Online ou tenant de trabalho ou escola. Runbook do operador: [M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.pt_BR.md). Piloto do admin do cliente: [M365_GRAPH_CUSTOMER_PILOT.pt_BR.md](ops/M365_GRAPH_CUSTOMER_PILOT.pt_BR.md). Chaves de configuração: [USAGE.pt_BR.md](USAGE.pt_BR.md).
+
+### Registro do aplicativo no Microsoft Entra
+
+O leitor precisa de um **registro de aplicativo** cujo ID do aplicativo (cliente) vai por variável de ambiente (`auth.client_id_from_env`). Em qualquer documento ou chamado, só placeholders: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
+
+| Configuração | Valor | Referência da Microsoft |
+| --- | --- | --- |
+| Tipos de conta | **Somente contas pessoais da Microsoft** para o OneDrive pessoal da Fase 0 (`tenant: consumers`). Para o tenant de um cliente: um aplicativo registrado **naquele** tenant ("somente este diretório organizacional", `tenant: <TENANT_ID>`), ou um aplicativo multitenant ("qualquer diretório do Microsoft Entra e contas pessoais da Microsoft") hospedado pelo fornecedor. Nenhuma das variantes de cliente foi validada. | [Tipos de conta suportados](https://learn.microsoft.com/en-us/entra/identity-platform/supported-accounts-validation) |
+| Cliente público | **Permitir fluxos de cliente público ("Allow public client flows") = Sim** (Autenticação, Configurações avançadas). O device code é um fluxo de cliente público; o leitor nunca envia client secret. | [Registro de app desktop](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-registration) |
+| Permissões de API | Microsoft Graph, **delegada**: `Files.Read`. O `offline_access` é pedido na entrada para obter um refresh token. Remova `User.Read` se o portal acrescentar. Nenhuma permissão de aplicativo. | [Referência de permissões do Graph](https://learn.microsoft.com/en-us/graph/permissions-reference) |
+| Segredos e certificados | **Nenhum.** | — |
+| URI de redirecionamento | Nenhuma para o device code (a Fase 0 confirma; [H]). | [Fluxo de device code](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code) |
+
+`Files.Read` permite "ler os arquivos do usuário que entrou" e também dá acesso aos arquivos compartilhados com esse usuário ([referência de permissões](https://learn.microsoft.com/en-us/graph/permissions-reference)). Ou seja, o token consegue ler o **drive inteiro**; quem restringe a varredura ao `root_folder` é o leitor, não o token (ele anda pelos ids dos itens abaixo da pasta resolvida e ignora atalhos para outros drives).
+
+### Entrada por device code
+
+- O leitor pede um device code à plataforma de identidade da Microsoft e escreve o endereço de verificação e o código do usuário na saída de erro padrão. O usuário abre o endereço em qualquer navegador, digita o código e entra ([fluxo de device code](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code)). Com conta pessoal por `consumers` ou `common`, a Microsoft pede uma nova entrada no navegador (mesma página).
+- Só a varredura única da CLI, rodada num terminal, pode iniciar a entrada. O dashboard web, a API e os agendadores nunca iniciam: os alvos deles falham com `auth_required`.
+- Os tokens ficam na memória durante a varredura. Nada vai para o disco.
+- **Tenants de trabalho e escola podem bloquear o device code** por acesso condicional; a Microsoft recomenda às organizações chegar o mais perto possível de um bloqueio total ([bloquear fluxos de autenticação](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-block-authentication-flows)). Num tenant assim, o leitor delegado não consegue entrar. É um limite do modo delegado, e o leitor não o contorna.
+
+### Consentimento e o limite do publicador não verificado
+
+- **Consentimento do usuário** para `Files.Read` não exige administrador por padrão (`AdminConsentRequired: No` na [referência de permissões](https://learn.microsoft.com/en-us/graph/permissions-reference)), mas cada organização decide se os usuários podem consentir ([configurar o consentimento do usuário](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)).
+- **Publicador não verificado.** A Microsoft informa que, com o consentimento com elevação baseada em risco habilitado, os usuários não conseguem consentir na maioria dos aplicativos multitenant registrados depois de 8 de novembro de 2020 sem publicador verificado, quando o aplicativo pede permissões além da entrada e do perfil básico a usuários de outro tenant ([verificação do publicador](https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview)). A política nativa "permitir consentimento do usuário para aplicativos de publicadores verificados" também exclui aplicativos não verificados de outros tenants ([configurar o consentimento do usuário](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)). Na prática, para um aplicativo multitenant sem publicador verificado, **o administrador do cliente concede o consentimento** ([conceder consentimento de administrador](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/grant-admin-consent)) **ou o fornecedor conclui a verificação do publicador**. Um aplicativo registrado pelo cliente no próprio tenant não é consentimento entre tenants. O Data Boar não tem publicador verificado hoje.
+
+### Revogar o consentimento
+
+- **Conta pessoal:** o usuário remove o aplicativo em [account.live.com/consent/Manage](https://account.live.com/consent/Manage).
+- **Tenant de trabalho ou escola:** um administrador revê e revoga as permissões concedidas ao aplicativo (para a organização toda ou um usuário) em Aplicativos empresariais ([rever permissões concedidas a aplicativos empresariais](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions)) e pode apagar o aplicativo empresarial ([apagar um aplicativo empresarial](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/delete-application-portal)).
+- Apagar o registro do aplicativo impede qualquer nova entrada com aquele client ID.
+
+### Modo app-only: planejado, não entregue
+
+Varreduras sem pessoa de um tenant de trabalho usariam acesso **app-only** com credencial de **certificado** e a permissão `Sites.Selected`, que limita o aplicativo aos conjuntos de sites (e, segundo a Microsoft, listas, pastas ou arquivos) que um administrador concede explicitamente ([visão geral das permissões Selected](https://learn.microsoft.com/en-us/graph/permissions-selected-overview)). Isso está **planejado** na [#2262](https://github.com/DataBoar/data-boar/issues/2262): **não entregue e não validado**. Hoje `auth.mode: app_only` falha com `config_error`.
+
 ## Adicionando novos conectores
 
 Para suportar uma nova fonte de dados (ex.: outro driver de banco ou API), veja **[ADDING_CONNECTORS.md](ADDING_CONNECTORS.md)** (inglês) ou **[ADDING_CONNECTORS.pt_BR.md](ADDING_CONNECTORS.pt_BR.md)** (Português – Brasil). O guia descreve o contrato do conector, como registrar um novo tipo (ou driver), dependências opcionais e inclui instruções passo a passo e exemplos (estilo banco e estilo API).
