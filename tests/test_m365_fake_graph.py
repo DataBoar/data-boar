@@ -6,6 +6,8 @@ simulator honest: an acceptance test that passes against a broken simulator prov
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 import httpx
 import pytest
 
@@ -217,7 +219,9 @@ def test_download_redirect_and_download_host_rules() -> None:
         r = c.get(f"{BASE}/items/{item}/content", headers=h)
         assert r.status_code == 302
         loc = r.headers["Location"]
-        assert loc.startswith(f"https://{DEFAULT_DOWNLOAD_HOST}/") and SECRET in loc
+        parts = urlsplit(loc)
+        assert parts.scheme == "https" and parts.hostname == DEFAULT_DOWNLOAD_HOST
+        assert SECRET in loc
         assert c.get(loc).content == b"conteudo"
         assert fake.violations == []
         c.get(loc, headers=h)  # leaking Authorization to the download host

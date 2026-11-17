@@ -1268,7 +1268,8 @@ def test_D2206_1_39_location_on_unknown_host_is_refused(make_fake):
     out = scan(fake)
     assert fake.requests_to(EVIL_HOST) == []
     details = out.details("scope_violation")
-    assert details and all(EVIL_HOST in d for d in details)
+    # The detail ends with ": <host>"; compare the host exactly, not by substring.
+    assert details and all(d.rsplit(": ", 1)[-1] == EVIL_HOST for d in details)
     assert all(SECRET not in d and "tempauth" not in d for d in details)
     assert out.db.findings == []
 
@@ -1818,7 +1819,9 @@ def test_D2206_1_55_without_strict_mode_the_gate_does_not_run(make_fake, monkeyp
     out = normalize_config(
         {"targets": [dict(target)], "api": {}, "report": {"output_dir": "."}}
     )
-    assert out["targets"][0]["graph"]["base_url"].startswith("https://graph.other")
+    loaded = out["targets"][0]["graph"]["base_url"]
+    assert loaded == "https://graph.other.example/v1.0"
+    assert urlsplit(loaded).hostname == "graph.other.example"
     fake = make_fake()
     result = scan(fake, target)
     assert "config_error" not in result.db.reasons()
