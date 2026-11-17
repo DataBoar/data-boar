@@ -190,7 +190,6 @@ def make_fake(monkeypatch: pytest.MonkeyPatch):
 # ----------------------------------------------------------------------------
 
 
-@pending("A2206.1-1")
 def test_A2206_1_1_pasta_sintetica_gera_achados_so_dos_arquivos_com_dado(make_fake):
     """A2206.1-1 (device code pendente e depois concluido; so a pasta configurada)."""
     scanner = RegexScanner()
@@ -211,7 +210,6 @@ def test_A2206_1_1_pasta_sintetica_gera_achados_so_dos_arquivos_com_dado(make_fa
     assert all("authorization" in r.headers for r in fake.graph_requests())
 
 
-@pending("A2206.1-2")
 def test_A2206_1_2_pasta_irma_nunca_e_tocada(make_fake):
     """A2206.1-2 (travessia por id, sem confundir prefixo de nome)."""
     fake = make_fake()
@@ -228,7 +226,6 @@ def test_A2206_1_2_pasta_irma_nunca_e_tocada(make_fake):
     )
 
 
-@pending("A2206.1-3")
 def test_A2206_1_3_pasta_raiz_invalida_e_recusada_sem_rede(make_fake):
     """A2206.1-3 (root_folder igual a /, com .. ou ausente)."""
     absent = make_target()
@@ -245,7 +242,6 @@ def test_A2206_1_3_pasta_raiz_invalida_e_recusada_sem_rede(make_fake):
         assert fake.requests == []
 
 
-@pending("A2206.1-4")
 def test_A2206_1_4_atalho_para_outro_drive_nao_e_baixado(make_fake):
     """A2206.1-4 (remoteItem: nada de listagem interna, download ou achado)."""
     inside = {
@@ -269,7 +265,6 @@ def test_A2206_1_4_atalho_para_outro_drive_nao_e_baixado(make_fake):
     assert entries[f"{PREFIX}/a.txt"].skipped_reason in (None, "")
 
 
-@pending("A2206.1-5")
 def test_A2206_1_5_login_negado(make_fake):
     """A2206.1-5 (declined: aviso mostrado, auth_failed, nada ao Graph)."""
     fake = make_fake(device_script=["declined"])
@@ -280,7 +275,6 @@ def test_A2206_1_5_login_negado(make_fake):
     assert out.db.findings == []
 
 
-@pending("A2206.1-6")
 def test_A2206_1_6_codigo_expirado(make_fake):
     """A2206.1-6 (expired: auth_failed, nada ao Graph)."""
     fake = make_fake(device_script=["expired"])
@@ -290,7 +284,6 @@ def test_A2206_1_6_codigo_expirado(make_fake):
     assert out.db.findings == []
 
 
-@pending("A2206.1-7")
 def test_A2206_1_7_sem_sessao_interativa_falha_na_hora(make_fake):
     """A2206.1-7 (auth_required, zero requisicoes ao login) e a segunda condicao (terminal)."""
     fake = make_fake()
@@ -307,7 +300,6 @@ def test_A2206_1_7_sem_sessao_interativa_falha_na_hora(make_fake):
     assert fake2.requests == []
 
 
-@pending("A2206.1-8")
 def test_A2206_1_8_token_vence_no_meio_da_varredura(make_fake):
     """A2206.1-8 (401 -> refresh -> mesmos achados do A-1)."""
     fake = make_fake()
@@ -318,7 +310,6 @@ def test_A2206_1_8_token_vence_no_meio_da_varredura(make_fake):
     assert out.db.failures == []
 
 
-@pending("A2206.1-9")
 def test_A2206_1_9_403_na_raiz_encerra_e_403_em_subpasta_segue(make_fake):
     """A2206.1-9 (permission_denied na raiz; so na subpasta, o resto continua)."""
     fake = make_fake()
@@ -336,7 +327,6 @@ def test_A2206_1_9_403_na_raiz_encerra_e_403_em_subpasta_segue(make_fake):
     assert any(f"{ROOT}/sub" in d for d in details)
 
 
-@pending("A2206.1-10")
 def test_A2206_1_10_429_com_retry_after_espera_e_segue(make_fake):
     """A2206.1-10 (Retry-After: 7 na primeira listagem)."""
     fake = make_fake()
@@ -346,7 +336,6 @@ def test_A2206_1_10_429_com_retry_after_espera_e_segue(make_fake):
     assert paths(out.db) == EXPECTED_PATHS
 
 
-@pending("A2206.1-11")
 def test_A2206_1_11_paginacao_nextlink_450_arquivos(make_fake):
     """A2206.1-11 (450 arquivos, pagina de 200)."""
     many = {f"p{i:03d}.txt": A_TXT for i in range(450)}
@@ -361,7 +350,6 @@ def test_A2206_1_11_paginacao_nextlink_450_arquivos(make_fake):
     assert len(listings) >= 3
 
 
-@pending("A2206.1-12")
 def test_A2206_1_12_nextlink_para_host_estranho_e_recusado(make_fake):
     """A2206.1-12 (nada sai para evil.example; scope_violation)."""
     fake = make_fake()
@@ -371,7 +359,6 @@ def test_A2206_1_12_nextlink_para_host_estranho_e_recusado(make_fake):
     assert "scope_violation" in out.db.reasons()
 
 
-@pending("A2206.1-13a")
 def test_A2206_1_13a_download_normal_sem_authorization_no_host_pre_autenticado(
     make_fake,
 ):
@@ -387,7 +374,6 @@ def test_A2206_1_13a_download_normal_sem_authorization_no_host_pre_autenticado(
     assert all("authorization" in r.headers for r in content_calls)
 
 
-@pending("A2206.1-13b")
 def test_A2206_1_13b_location_em_host_estranho_e_recusada(make_fake):
     """A2206.1-13 (b): Location fora da allowlist."""
     fake = make_fake()
@@ -398,7 +384,6 @@ def test_A2206_1_13b_location_em_host_estranho_e_recusada(make_fake):
     assert out.db.findings == []
 
 
-@pending("A2206.1-13c")
 def test_A2206_1_13c_host_de_download_que_resolve_para_ip_interno_e_recusado(make_fake):
     """A2206.1-13 (c): host da allowlist resolvendo para link-local, mesmo com opt-in de rede privada."""
     fake = make_fake()
@@ -409,7 +394,6 @@ def test_A2206_1_13c_host_de_download_que_resolve_para_ip_interno_e_recusado(mak
     assert out.db.findings == []
 
 
-@pending("A2206.1-14")
 def test_A2206_1_14_segredo_nunca_vaza(make_fake, caplog, capsys):
     """A2206.1-14 (logs em DEBUG, saida, falhas, achados, repr; UCODE-1 so no aviso)."""
     caplog.set_level(logging.DEBUG)
@@ -450,7 +434,6 @@ def test_A2206_1_14_segredo_nunca_vaza(make_fake, caplog, capsys):
         assert USER_CODE not in out.db.as_text()
 
 
-@pending("A2206.1-17")
 def test_A2206_1_17_app_only_ainda_nao_existe(make_fake):
     """A2206.1-17 (auth.mode app_only: config_error citando #2262)."""
     fake = make_fake()
@@ -462,7 +445,6 @@ def test_A2206_1_17_app_only_ainda_nao_existe(make_fake):
     assert fake.requests == []
 
 
-@pending("REQ-2261-outro-drive")
 def test_REQ_2261_item_de_outro_drive_dentro_da_pasta_e_ignorado(make_fake):
     """Requisito da #2261 sem numero A no desenho (D2206.1-29): item com outro driveId."""
     inside = {"estranho.txt": File(PII_TXT, drive_id=OTHER_DRIVE_ID)}
