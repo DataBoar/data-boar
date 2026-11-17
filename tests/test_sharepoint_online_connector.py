@@ -1342,12 +1342,40 @@ def test_D2206_1_43_size_cap_before_and_during_download(make_fake):
     assert any("file larger than max_file_bytes" in d for d in out2.details("skipped"))
 
 
+_WORLD_SIDS = {"S-1-1-0", "S-1-5-32-545", "S-1-5-11"}
+
+
+def _windows_private_dir_label(path: str) -> str:
+    """Windows only: the temp dir is the user's, usable by the owner, and private."""
+    import tempfile
+
+    from core.l3_transformed_rows import (
+        _windows_acl_sid_snapshot,
+        classify_windows_acl_sids,
+    )
+
+    base = os.path.normcase(os.path.realpath(tempfile.gettempdir()))
+    here = os.path.normcase(os.path.realpath(path))
+    assert os.path.commonpath([base, here]) == base
+    assert os.access(path, os.R_OK | os.W_OK | os.X_OK)
+    current, aces = _windows_acl_sid_snapshot(Path(path))
+    sids = {sid for sid, _inherited in aces}
+    assert not (sids & _WORLD_SIDS), sids
+    assert not any(inherited for _sid, inherited in aces), aces
+    return classify_windows_acl_sids(aces, current)
+
+
 def test_D2206_1_44_temp_dir_is_private_and_removed(make_fake, monkeypatch):
     """D2206.1-44: private during the scan; removed after success and after a crash.
 
     POSIX checks the 0700 mode bits. Windows has no POSIX mode bits (os.stat reports
-    0o777 for a directory there), so it checks what it can: the directory exists
-    during the scan, is the one this run created, and is gone afterwards.
+    0o777 there: 511 in the "Test Windows (Python 3.12)" log of run 44187424201), so
+    the Windows branch checks the real guarantee instead: the directory is under the
+    user's tempfile.gettempdir(), the owner can use it, and its DACL, read as SIDs
+    (Get-Acl through the existing core.l3_transformed_rows helper, which does not
+    depend on the Windows display language), has no ACE for Everyone (S-1-1-0),
+    BUILTIN\\Users (S-1-5-32-545) or Authenticated Users (S-1-5-11), and no inherited
+    ACE (the reader restricts it to the current user, D2206.1-62).
     """
     m = mod()
     made: list[str] = []
@@ -1361,9 +1389,13 @@ def test_D2206_1_44_temp_dir_is_private_and_removed(make_fake, monkeypatch):
     monkeypatch.setattr(m.tempfile, "mkdtemp", spy)
     modes: list[int] = []
 
+    acl_checked: list[str] = []
+
     def hook(_c: str, _p: Any) -> None:
         assert os.path.isdir(made[-1])
         modes.append(stat.S_IMODE(os.stat(made[-1]).st_mode))
+        if os.name == "nt" and not acl_checked:
+            acl_checked.append(_windows_private_dir_label(made[-1]))
 
     fake = make_fake()
     scan(fake, scanner=HookScanner(hook))
@@ -1371,6 +1403,8 @@ def test_D2206_1_44_temp_dir_is_private_and_removed(make_fake, monkeypatch):
     assert os.path.basename(made[-1]).startswith("databoar-m365-")
     if os.name == "posix":
         assert all(mode == 0o700 for mode in modes)
+    else:
+        assert acl_checked, "the Windows ACL check did not run"
     assert not os.path.exists(made[-1])
 
     def explode(*_a: Any, **_kw: Any) -> str:
@@ -2198,3 +2232,51 @@ def test_D2206_1_61_token_cache_is_refused_without_posix_permissions(
     fake2 = make_fake()
     assert scan(fake2).paths == EXPECTED
     assert len(fake2.device_requests) == 1
+
+
+def test_D2206_1_62_windows_temp_dir_is_restricted_to_the_user(make_fake, monkeypatch):
+    """D2206.1-62: on Windows the reader restricts the download temp dir to the
+    current user (reusing core.l3_transformed_rows: icacls /grant:r and
+    /inheritance:r, then a SID check of the DACL) before any download; if that
+    cannot be proven, the target fails closed and nothing is downloaded.
+    Runs on every platform by simulating the Windows branch."""
+    import core.l3_transformed_rows as l3
+
+    m = mod()
+    monkeypatch.setattr(m, "_windows_acl_platform", lambda: True)
+    restricted: list[str] = []
+    monkeypatch.setattr(l3, "_restrict_to_owner", lambda p: restricted.append(str(p)))
+    monkeypatch.setattr(
+        l3,
+        "_windows_acl_sid_snapshot",
+        lambda p: ("S-1-5-21-1", [("S-1-5-21-1", False)]),
+    )
+    fake = make_fake()
+    out = scan(fake)
+    assert len(restricted) == 1
+    assert os.path.basename(restricted[0]).startswith("databoar-m365-")
+    assert not os.path.exists(restricted[0])
+    assert out.paths == EXPECTED
+
+    def refuse(_p: Any) -> None:
+        raise l3.L3ContainmentError(f"icacls failed for {SECRET}x")
+
+    monkeypatch.setattr(l3, "_restrict_to_owner", refuse)
+    fake2 = make_fake()
+    out2 = scan(fake2)
+    assert out2.db.reasons() == ["config_error"]
+    assert "temporary directory" in out2.details("config_error")[0]
+    assert SECRET not in out2.db.as_text()
+    assert fake2.download_requests() == []
+    assert not any(is_content(r) for r in fake2.requests)
+
+    monkeypatch.setattr(l3, "_restrict_to_owner", lambda p: None)
+    monkeypatch.setattr(
+        l3,
+        "_windows_acl_sid_snapshot",
+        lambda p: ("S-1-5-21-1", [("S-1-5-21-1", False), ("S-1-5-32-545", True)]),
+    )
+    fake3 = make_fake()
+    out3 = scan(fake3)
+    assert out3.db.reasons() == ["config_error"]
+    assert fake3.download_requests() == []
