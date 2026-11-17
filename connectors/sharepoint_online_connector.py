@@ -1437,9 +1437,11 @@ class SharePointOnlineConnector:
             )
             return
         temp_path: str | None = None
+        stage = "download"
         try:
             temp_path = self._download(client, item, ext)
             stats["downloaded"] += 1
+            stage = "extract"
             self._extract(temp_path, item, ext)
         except SharePointOnlineError as failure:
             if failure.reason in _TARGET_ENDING_REASONS:
@@ -1447,12 +1449,20 @@ class SharePointOnlineConnector:
             self._save_failure(failure.reason, failure.detail)
         except KeyboardInterrupt:
             raise
-        except Exception as extraction:  # noqa: BLE001 - one bad file never stops the scan
-            self._save_failure(
-                "skipped",
-                f"{item.display_path}: content could not be extracted "
-                f"({type(extraction).__name__})",
-            )
+        except Exception as unexpected:  # noqa: BLE001 - one bad file never stops the scan
+            # Two stages, two labels; only the class name, never the message.
+            if stage == "download":
+                self._save_failure(
+                    "unreachable",
+                    f"{item.display_path}: download failed "
+                    f"({type(unexpected).__name__})",
+                )
+            else:
+                self._save_failure(
+                    "skipped",
+                    f"{item.display_path}: content could not be extracted "
+                    f"({type(unexpected).__name__})",
+                )
         finally:
             if temp_path:
                 try:
@@ -1535,7 +1545,10 @@ class SharePointOnlineConnector:
                 follow_redirects=False,
                 timeout=timeout,
             )
-        with downloader:
+        # No ``with``: url_guard's PinnedIPTransport has no __enter__/__exit__
+        # (the real transport broke ``with downloader:``); close explicitly, as
+        # the API client does.
+        try:
             request = downloader.build_request(
                 "GET", url, headers={"User-Agent": self._user_agent}
             )
@@ -1552,6 +1565,8 @@ class SharePointOnlineConnector:
                 return resp.status_code, None
             finally:
                 resp.close()
+        finally:
+            downloader.close()
 
     def _write_body(self, resp: httpx.Response, where: str, ext: str) -> str:
         """Stream the body into the temp dir, aborting above ``max_file_bytes``."""
