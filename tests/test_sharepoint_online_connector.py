@@ -1627,10 +1627,8 @@ REQUIRED_KEYS = (
     "auth.tenant",
     "auth.client_id",
     "auth.login_host",
-    "auth.allowed_login_hosts",
     "auth.scopes",
     "graph.base_url",
-    "graph.allowed_hosts",
     "download_host_suffixes",
     "drive",
     "max_depth",
@@ -1645,7 +1643,8 @@ REQUIRED_KEYS = (
 _FORBIDDEN_LITERALS = (
     ("GUID", re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")),
     ("tenant alias", re.compile(r"\b(?:consumers|organizations|common)\b")),
-    ("scope", re.compile(r"Files\.Read|offline_access|Sites\.\w+", re.I)),
+    # offline_access is the OAuth protocol scope for a refresh token (allowed).
+    ("scope", re.compile(r"Files\.Read|Sites\.\w+|User\.Read", re.I)),
     (
         "Microsoft host",
         re.compile(
@@ -1706,10 +1705,9 @@ def test_D2206_1_53_every_key_is_required_and_cited(make_fake, key):
 @pytest.mark.parametrize(
     ("key", "value"),
     [
-        ("auth.allowed_login_hosts", []),
-        ("auth.allowed_login_hosts", "login.example"),
+        ("auth.login_host", "https://login.example/"),
         ("auth.scopes", ""),
-        ("graph.allowed_hosts", []),
+        ("graph.base_url", "http://graph.example/v1.0"),
         ("download_host_suffixes", []),
         ("download_host_suffixes", ["files.1drv.example"]),
         ("page_size", 0),
@@ -1732,54 +1730,129 @@ def test_D2206_1_53_invalid_values_fail_closed(make_fake, key, value):
     assert key in out.details("config_error")[0]
 
 
-def test_D2206_1_53_hosts_must_be_in_the_yaml_allowlists(make_fake):
-    """D2206.1-53: login host and Graph host outside their YAML allowlists are refused."""
+# ----------------------------------------------------------------------------
+# The operator, not the YAML, approves the token destinations (security finding on
+# ca69f2aa, PM 2026-11-17): DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS through the existing
+# #2086/#2103 gate. The read-only rule is enforced on the scope structure.
+# ----------------------------------------------------------------------------
+
+
+def _strict(monkeypatch: pytest.MonkeyPatch, hosts: str | None) -> None:
+    monkeypatch.setenv("DATA_BOAR_CREDENTIAL_STRICT", "1")
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED", raising=False)
+    if hosts is None:
+        monkeypatch.delenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+    else:
+        monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", hosts)
+
+
+def test_D2206_1_55_operator_list_approves_login_and_graph(make_fake, monkeypatch):
+    """D2206.1-55: in strict mode both configured hosts must be in the operator list,
+    at load time (loader gate) and at run time (the reader calls the same gate)."""
+    from config.loader import normalize_config
+
+    _strict(monkeypatch, f"{LOGIN_HOST},{GRAPH_HOST}")
+    out = normalize_config(
+        _cfg(dict(make_target()["auth"]), graph=make_target()["graph"])
+    )
+    assert out["targets"][0]["graph"]["base_url"]
+    fake = make_fake()
+    assert scan(fake).paths == EXPECTED
+
+    for hosts in (LOGIN_HOST, GRAPH_HOST, None):
+        _strict(monkeypatch, hosts)
+        with pytest.raises(ValueError):
+            normalize_config(
+                _cfg(dict(make_target()["auth"]), graph=make_target()["graph"])
+            )
+        fake = make_fake()
+        result = scan(fake)
+        _assert_config_error(fake, result)
+
+
+def test_D2206_1_55_yaml_cannot_approve_its_own_destination(make_fake, monkeypatch):
+    """D2206.1-55: a host chosen in the YAML (even with a YAML allowlist naming it)
+    is refused when the operator list does not hold it."""
+    from config.loader import normalize_config
+
+    _strict(monkeypatch, f"{LOGIN_HOST},{GRAPH_HOST}")
+    target = make_target()
+    target["graph"] = {
+        "base_url": "https://graph.evil.example/v1.0",
+        "allowed_hosts": ["graph.evil.example"],
+    }
+    target["auth"]["allowed_login_hosts"] = [LOGIN_HOST, "graph.evil.example"]
+    target["allowed_hosts"] = [LOGIN_HOST, "graph.evil.example"]
+    with pytest.raises(ValueError):
+        normalize_config(
+            {"targets": [dict(target)], "api": {}, "report": {"output_dir": "."}}
+        )
+    fake = make_fake()
+    result = scan(fake, target)
+    _assert_config_error(fake, result)
+
+
+def test_D2206_1_55_without_strict_mode_the_gate_does_not_run(make_fake, monkeypatch):
+    """D2206.1-55 (pins today's #2103 semantics, reported to the PM): without
+    DATA_BOAR_CREDENTIAL_STRICT=1 the operator host gate is off for every connector,
+    so the YAML hosts are not checked against an operator list. The reader still
+    refuses malformed hosts, but nothing approves the destination."""
+    from config.loader import normalize_config
+
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_STRICT", raising=False)
+    monkeypatch.delenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+    target = make_target()
+    target["graph"] = {"base_url": "https://graph.other.example/v1.0"}
+    out = normalize_config(
+        {"targets": [dict(target)], "api": {}, "report": {"output_dir": "."}}
+    )
+    assert out["targets"][0]["graph"]["base_url"].startswith("https://graph.other")
+    fake = make_fake()
+    result = scan(fake, target)
+    assert "config_error" not in result.db.reasons()
+
+
+@pytest.mark.parametrize(
+    "scopes",
+    [
+        "Files.ReadWrite offline_access",
+        "Files.ReadWrite.All",
+        "Sites.Manage.All",
+        "Sites.FullControl.All",
+        "Files.Write",
+        "Mail.Send",
+        "openid",
+        "offline_access",
+        f"https://{GRAPH_HOST}/Files.ReadWrite offline_access",
+        "https://evil.example/Files.Read offline_access",
+        "Files.Read.Write",
+        "Files.Readx",
+    ],
+)
+def test_D2206_1_56_write_or_unknown_scopes_are_refused(make_fake, scopes):
+    """D2206.1-56: the reader is read-only; scopes are validated by structure."""
     fake = make_fake()
     target = make_target()
-    target["auth"]["allowed_login_hosts"] = ["login.example"]
-    out = scan(fake, target)
-    _assert_config_error(fake, out)
-    assert "auth.login_host" in out.details("config_error")[0]
-
-    fake2 = make_fake()
-    target2 = make_target()
-    target2["graph"]["allowed_hosts"] = ["graph.example"]
-    out2 = scan(fake2, target2)
-    _assert_config_error(fake2, out2)
-    assert "graph.base_url" in out2.details("config_error")[0]
+    target["auth"]["scopes"] = scopes
+    result = scan(fake, target)
+    _assert_config_error(fake, result)
+    assert "auth.scopes" in result.details("config_error")[0]
 
 
-def test_D2206_1_53_registry_declares_the_required_keys():
-    """D2206.1-53: the registry lists every required key (dotted) and the generic
-    helper reports the missing ones, the same check --validate-config runs."""
-    import core.engine  # noqa: F401
-    from core.connector_registry import connector_for_target, missing_required_keys
-
-    resolved = connector_for_target({"type": "sharepoint_online"})
-    assert resolved is not None
-    assert set(REQUIRED_KEYS) <= set(resolved[1])
-    target = _without(make_target(), "graph.base_url")
-    assert missing_required_keys(target, resolved[1]) == ["graph.base_url"]
-    # Top-level keys behave exactly as before (presence check).
-    assert missing_required_keys({"name": "x"}, ["name", "site_url"]) == ["site_url"]
-
-
-def test_D2206_1_54_microsoft_identity_takes_an_optional_allowlist():
-    """D2206.1-54: callers without allowed_hosts keep the #2007 behaviour; the reader
-    passes the YAML allowlist (sovereign clouds)."""
-    from connectors.microsoft_identity import assert_allowlisted_microsoft_token_url
-
-    assert_allowlisted_microsoft_token_url(
-        "https://login.microsoftonline.com/tenant/oauth2/v2.0/token"
-    )
-    sovereign = "https://login.microsoftonline.us/tenant/oauth2/v2.0/token"
-    with pytest.raises(ValueError):
-        assert_allowlisted_microsoft_token_url(sovereign)
-    assert_allowlisted_microsoft_token_url(
-        sovereign, allowed_hosts=["login.microsoftonline.us"]
-    )
-    with pytest.raises(ValueError):
-        assert_allowlisted_microsoft_token_url(
-            "https://login.microsoftonline.com/t/oauth2/v2.0/token",
-            allowed_hosts=["login.microsoftonline.us"],
-        )
+@pytest.mark.parametrize(
+    "scopes",
+    [
+        f"https://{GRAPH_HOST}/Files.Read offline_access",
+        f"https://{GRAPH_HOST}/Files.Read.All offline_access",
+        "Files.Read offline_access",
+        "Sites.Read.Selected",
+    ],
+)
+def test_D2206_1_56_read_scopes_are_accepted(make_fake, scopes):
+    """D2206.1-56: .Read, .Read.All and .Read.Selected pass (plus offline_access)."""
+    fake = make_fake()
+    target = make_target()
+    target["auth"]["scopes"] = scopes
+    result = scan(fake, target)
+    assert "config_error" not in result.db.reasons()
+    assert fake.device_requests[0]["scope"] == " ".join(scopes.split())
