@@ -1301,7 +1301,7 @@ Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo
       client_id: <APP_CLIENT_ID>            # ID do aplicativo (cliente), um GUID; não é segredo
       login_host: login.microsoftonline.com # host de autoridade do Microsoft Entra da sua nuvem
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
-      # token_cache_path: /home/<usuario>/.config/data-boar-m365/token.json  # OPCIONAL; ausente = só memória
+      # token_cache_path: /var/lib/data-boar/m365/token.json  # OPCIONAL; ausente = só memória
     graph:
       base_url: https://graph.microsoft.com/v1.0  # endpoint e versão da API do Graph da sua nuvem
     download_host_suffixes:                 # hosts de download pré-autenticados

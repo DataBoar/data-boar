@@ -776,6 +776,12 @@ The Windows check reads the ACL as security identifiers, not as display names, s
 - the file is deleted on `auth_failed` and when Microsoft answers `invalid_grant` or `interaction_required`; then a terminal gets a new device code, and a run without one fails with `auth_failed`;
 - **Windows:** there are no POSIX mode bits, so `0600`/`0700` cannot be guaranteed and the key is refused (`config_error` "token cache needs POSIX file permissions"). On Windows the reader signs in with a device code on every run.
 
+**Where to put it.** The path is explicit configuration with no default. The reader refuses any path with a `.git` in an ancestor, so a home directory that is itself a git repository cannot hold it.
+
+- `/run/user/<uid>` is a tmpfs: the cache disappears at logout or reboot, and the next scan asks for a device code again.
+- Persistent, recommended: a directory created by the administrator for the scanning user, owned by that user and `0700`, for example `/var/lib/data-boar/m365/` (`token_cache_path: /var/lib/data-boar/m365/token.json`).
+- In a container: a dedicated volume mounted only for this purpose, owned by the container user and `0700`. For the demo VPS (Podman rootless), a host directory such as `~/demo/m365-token/` (`0700`, outside any `.git`) mounted into the container. Never use the shared `data` volume.
+
 **Risk.** Refresh tokens are valid for 90 days for this kind of client and replace themselves on every use ([refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)); with `Files.Read` the file is a credential that reads the user's whole drive at rest. Keep it on an encrypted disk of the scanning host, outside any repository or backup that leaves the host. To revoke it: delete the file **and** revoke the consent as above (personal account, work user, or the administrator under Enterprise applications).
 
 ### App-only mode: planned, not delivered

@@ -1151,7 +1151,7 @@ Read-only reader for **one folder of the signed-in user's OneDrive** through Mic
       client_id: <APP_CLIENT_ID>            # Application (client) ID, a GUID; not a secret
       login_host: login.microsoftonline.com # Microsoft Entra authority host of your cloud
       scopes: "https://graph.microsoft.com/Files.Read offline_access"
-      # token_cache_path: /home/<user>/.config/data-boar-m365/token.json  # OPTIONAL; absent = memory only
+      # token_cache_path: /var/lib/data-boar/m365/token.json  # OPTIONAL; absent = memory only
     graph:
       base_url: https://graph.microsoft.com/v1.0  # Graph endpoint and API version of your cloud
     download_host_suffixes:                 # pre-authenticated download hosts

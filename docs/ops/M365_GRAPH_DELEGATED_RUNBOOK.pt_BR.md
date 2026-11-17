@@ -78,7 +78,7 @@ Recomendado: deixe o operador aprovar os dois hosts, fora do YAML: `export DATA_
 
 **Escopo do scan real:** se a pasta tiver subpastas ou arquivos que não são sintéticos, use `include_names` com os nomes exatos dos arquivos sintéticos e `max_depth: 1` (só os arquivos diretos da pasta). Arquivo fora da lista não é baixado nem aparece no `list_scope()` nem nos achados.
 
-**Cache opcional:** sem `auth.token_cache_path`, nada é gravado e cada execução pede um device code (inclusive o trecho de evidência abaixo). Com a chave, a segunda execução renova sem device code; leia o risco antes, em [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md#cache-opcional-do-refresh-token), e apague o arquivo no fim da Fase 0.
+**Cache opcional:** sem `auth.token_cache_path`, nada é gravado e cada execução pede um device code (inclusive o trecho de evidência abaixo). Com a chave, a segunda execução renova sem device code; leia o risco antes, em [TECH_GUIDE.pt_BR.md](../TECH_GUIDE.pt_BR.md#cache-opcional-do-refresh-token), e apague o arquivo no fim da Fase 0. Caminho: fora de `/run/user/<uid>` se tiver de sobreviver a um logout (tmpfs), nunca dentro de repositório git (recusado), nunca o volume `data` compartilhado; por exemplo `/var/lib/data-boar/m365/token.json` num diretório `0700` do usuário da varredura, ou `~/demo/m365-token/` montado no contêiner na VPS de demo.
 
 ## 5. Rodar a varredura num terminal
 

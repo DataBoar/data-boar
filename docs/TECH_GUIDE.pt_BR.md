@@ -776,6 +776,12 @@ A conferência no Windows lê a ACL como identificadores de segurança (SIDs), n
 - o arquivo é apagado em `auth_failed` e quando a Microsoft responde `invalid_grant` ou `interaction_required`; depois, com terminal, vem um novo device code, e sem terminal a execução falha com `auth_failed`;
 - **Windows:** não há bits de modo POSIX, então `0600`/`0700` não podem ser garantidos e a chave é recusada (`config_error` "token cache needs POSIX file permissions"). No Windows, o leitor pede um device code a cada execução.
 
+**Onde guardar.** O caminho é configuração explícita, sem default. O leitor recusa qualquer caminho com `.git` num ancestral, então um diretório home que seja um repositório git não serve.
+
+- `/run/user/<uid>` é tmpfs: o cache some no logout ou no reboot, e a próxima varredura pede device code de novo.
+- Persistente, recomendado: um diretório criado pelo administrador para o usuário da varredura, desse usuário e `0700`, por exemplo `/var/lib/data-boar/m365/` (`token_cache_path: /var/lib/data-boar/m365/token.json`).
+- Em contêiner: um volume dedicado, montado só para isso, do usuário do contêiner e `0700`. Na VPS de demo (Podman rootless), um diretório do host como `~/demo/m365-token/` (`0700`, fora de qualquer `.git`) montado no contêiner. Nunca o volume `data` compartilhado.
+
 **Risco.** O refresh token vale 90 dias para esse tipo de cliente e se renova a cada uso ([refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)); com `Files.Read`, o arquivo é uma credencial em repouso que lê o drive inteiro do usuário. Guarde-o em disco criptografado do host da varredura, fora de qualquer repositório ou backup que saia do host. Para revogar: apague o arquivo **e** revogue o consentimento como acima (conta pessoal, usuário de trabalho ou o administrador em Aplicativos empresariais).
 
 ### Modo app-only: planejado, não entregue

@@ -78,7 +78,7 @@ Recommended: let the operator approve the two hosts, outside the YAML: `export D
 
 **Real scan scope:** if the folder holds subfolders or files that are not synthetic, use `include_names` with the exact names of the synthetic files and `max_depth: 1` (direct files of the folder only). A file outside the list is neither downloaded, listed by `list_scope()` nor reported.
 
-**Optional cache:** without `auth.token_cache_path` nothing is written and each run asks for a device code (including the evidence snippet below). With the key, the second run renews without a device code; read the risk first in [TECH_GUIDE.md](../TECH_GUIDE.md#optional-refresh-token-cache), and delete the file at the end of Phase 0.
+**Optional cache:** without `auth.token_cache_path` nothing is written and each run asks for a device code (including the evidence snippet below). With the key, the second run renews without a device code; read the risk first in [TECH_GUIDE.md](../TECH_GUIDE.md#optional-refresh-token-cache), and delete the file at the end of Phase 0. Path: not under `/run/user/<uid>` if it must survive a logout (tmpfs), never inside a git repository (refused), never the shared `data` volume; for example `/var/lib/data-boar/m365/token.json` in a `0700` directory owned by the scanning user, or `~/demo/m365-token/` mounted into the container on the demo VPS.
 
 ## 5. Run the scan from a terminal
 
