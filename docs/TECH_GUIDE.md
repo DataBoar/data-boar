@@ -23,7 +23,8 @@ Do **not** start from scattered snippets: use one tracked sample and edit paths/
 - **SQL databases**: PostgreSQL, MySQL, MariaDB, SQLite, Microsoft SQL Server, Oracle (via SQLAlchemy drivers).
 - **Power BI (optional)**: Discover workspaces, datasets, and tables via Power BI REST API; sample with DAX. Azure AD OAuth2 (client credentials). Findings in **Database findings** sheet; inventory metadata in **Data source inventory**.
 - **Power Apps / Dataverse (optional)**: Discover entities and attributes via Dataverse Web API; sample rows. Azure AD OAuth2 (client credentials). Findings in **Database findings** sheet; inventory metadata in **Data source inventory**.
-- **Remote shares (optional)**: SharePoint, WebDAV, SMB/CIFS, NFS — by FQDN or IP with credentials in config; install `.[shares]`.
+- **Remote shares (optional)**: SharePoint on-prem, WebDAV, SMB/CIFS, NFS — by FQDN or IP with credentials in config; install `.[shares]`.
+- **Microsoft Graph, delegated mode (`sharepoint_online`, Enterprise)**: one folder of the signed-in user's OneDrive, device code sign-in from a terminal; tested against a simulated Graph, real proof pending (see the table below).
 - **NoSQL (optional)**: MongoDB, Redis — install optional deps: `uv pip install -e ".[nosql]"`.
 - **Filesystem**: Recursive scan of local (or mounted) directories; permission check before reading. Supports many extensions: text (`.txt`, `.csv`, `.json`, `.xml`, `.html`, `.md`, `.yml`, `.log`, `.ini`, `.sql`, `.rtf`, subtitle sidecars **`.srt` / `.vtt` / `.ass` / `.ssa`**, etc.), documents (`.pdf`, `.doc`, `.docx`, `.odt`, `.ods`, `.odp`, `.xls`, `.xlsx`, `.xlsm`, `.ppt`, `.pptx`, **`.epub`**), email (`.eml`, `.msg`), and data (`.sqlite`, `.db`, **`.parquet`**, **`.feather`**, **`.orc`**, **`.avro`**, **`.dbf`** when optional **`.[dataformats]`** deps are installed). **Optional rich media:** `file_scan.scan_rich_media_metadata` and `scan_image_ocr` (default off) add EXIF/audio-tag/video-tag text and optional Tesseract OCR; install `.[richmedia]`, and for OCR/video tags ensure **tesseract** / **ffprobe** on `PATH`. When **`licensing.mode: enforced`**, those flags and **`.[dataformats]`** extractors (parquet/avro/dbf, not EPUB) require **Pro or higher**. **Optional stego hints:** `file_scan.scan_for_stego` (or CLI `--scan-stego` / dashboard / `POST /scan`) appends a short entropy heuristic on image/audio/video — not a stego extractor. **SQLite files** (`.sqlite`, `.sqlite3`, `.db`) found on disk are opened and scanned as databases (discover tables/columns, sample and detect); set `file_scan.scan_sqlite_as_db: false` to skip. Set `file_scan.extensions` to a list of suffixes, or `"*"` / `"all"` for all supported types.
 - **Sensitivity detection**: Regex (configurable) + **ML** (TF-IDF + RandomForest) + optional **DL** (sentence embeddings + classifier) on column names and sampled content; no raw data is stored. You can set **ML and DL training terms** in the config (inline or via `ml_patterns_file` / `dl_patterns_file`). See [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md) (English) or [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md) (Português – Brasil) for examples. Built-in **`CREDIT_CARD`** is **IIN-anchored** (16-digit 4-4-4-4, Amex 15, Diners 14) plus **Luhn on the match span** (TAB/NBSP separators allowed). SQL/FS distinct samples join with **U+241F**, not spaces. **Lyrics and music tablature** are detected via heuristics so that date-like or digit sequences in song lyrics and guitar tabs are downgraded to MEDIUM/LOW to reduce false positives; strong PII (CPF, email, etc.) still reports HIGH.
@@ -625,7 +626,8 @@ You can scan remote file shares by **FQDN or IP** with credentials in config. In
 
 | Type               | Host / URL                                                         | Credentials                       | Notes                                                                   |
 | ------             | ------------                                                       | -------------                     | --------                                                                |
-| **sharepoint**     | `site_url`: `<https://host/sites/sitenam>e`                        | `user`, `pass`; NTLM or basic     | On-prem or URL; path = server-relative folder (e.g. `Shared Documents`) |
+| **sharepoint**     | `site_url`: `<https://host/sites/sitenam>e`                        | `user`, `pass`; NTLM or basic     | On-prem only; path = server-relative folder (e.g. `Shared Documents`) |
+| **sharepoint_online** | Microsoft Graph hosts and allowlists from the YAML; `root_folder` in the user's OneDrive | device code (public client, no secret); `auth.client_id` in the YAML | Delegated, Enterprise, no `shares` extra; tested against a simulated Graph only, see [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md) |
 | **webdav**         | `base_url`: `<https://host/pat>h`                                  | `user`, `pass`                    | Recursive list and download                                             |
 | **smb** / **cifs** | `host`: FQDN or IP, `share`: share name, `path`: path inside share | `user`, `pass`, optional `domain` | Port 445 default                                                        |
 | **nfs**            | `path`: **local mount point** (NFS must be mounted first)          | —                                 | `host` / `export_path` for reporting only                               |
@@ -658,7 +660,7 @@ targets:
   recursive: true
   verify_ssl: true
 
-  # SharePoint (on-prem or URL; NTLM or basic)
+  # SharePoint (on-prem only; NTLM or basic)
 - name: "SharePoint HR"
 
   type: sharepoint
@@ -683,6 +685,108 @@ When you enable `file_scan.use_content_type: true`, the share connectors use the
 For a **single run** without editing the saved config, use CLI **`--content-type-check`**, or **`POST /scan`** / **`POST /start`** with **`content_type_check: true`**, or the dashboard checkbox next to **Start scan** (same semantics as **`--scan-compressed`** / **`scan_compressed`** for archives).
 
 **Strong crypto / controls validation (`scan.validate_crypto`, `--validate-crypto`):** Opt-in flag (off by default). When enabled via config, CLI, dashboard checkbox, or API body **`validate_crypto: true`**, the engine enables strong-crypto validation for that run (CLI / API / dashboard override config). When off or absent, that path is skipped — no behaviour change. **Phase 2 + Phase 3:** connectors honor transport crypto options and probe after connect; SQL/Mongo/Redis also run Phase 3 name-pattern inference (count-by-category into **`inferred_controls_summary`** — heuristic only, human review required). Persist in **`crypto_controls_audit`**; Excel sheet **Crypto & controls** (allowlisted details only — no secrets, tokens, URLs, or raw identifier lists). See [USAGE.md](USAGE.md) (*Strong crypto / controls*).
+
+## Microsoft 365 via Graph
+
+**Status (read this first).** The `sharepoint_online` reader runs in **delegated** mode only and has been tested **only against a simulated Microsoft Graph**. The real-account proof (Phase 0, [#2260](https://github.com/DataBoar/data-boar/issues/2260)) covers a **personal OneDrive** and **has not run yet**. Nothing here states that the reader reads SharePoint Online or a work or school tenant. Operator runbook: [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md). Customer admin pilot: [M365_GRAPH_CUSTOMER_PILOT.md](ops/M365_GRAPH_CUSTOMER_PILOT.md). Configuration keys: [USAGE.md](USAGE.md).
+
+### App registration in Microsoft Entra
+
+The reader needs an **app registration**. Its Application (client) ID goes into `auth.client_id` of the target YAML (it is not a secret; keep the customer's file outside any repository). Placeholders only in any document or ticket: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`.
+
+| Setting | Value | Microsoft reference |
+| --- | --- | --- |
+| Supported account types | **Personal Microsoft accounts only** for the Phase 0 personal OneDrive (`tenant: consumers`). For a customer tenant: an app registered in **that** tenant ("this organizational directory only", `tenant: <TENANT_ID>`), or a multitenant app ("any Microsoft Entra directory and personal Microsoft accounts") hosted by the vendor. Neither customer variant has been validated. | [Supported account types](https://learn.microsoft.com/en-us/entra/identity-platform/supported-accounts-validation) |
+| Public client | **Allow public client flows = Yes** (Authentication, Advanced settings). The device code flow is a public-client flow; the reader never sends a client secret. | [Desktop app registration](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-registration) |
+| API permissions | Microsoft Graph, **delegated**: `Files.Read`. `offline_access` is requested at sign-in to obtain a refresh token. Remove `User.Read` if the portal added it. No application permissions. | [Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference) |
+| Secrets and certificates | **None.** | — |
+| Redirect URI | None for the device code flow (Phase 0 confirms this; [H]). | [Device code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code) |
+
+`Files.Read` "allows the app to read the signed-in user's files" and also grants access to files shared with that user ([permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference)). The token can therefore read the **whole drive**; the reader, not the token, restricts the scan to `root_folder` (it walks item ids below the resolved folder and skips shortcuts to other drives).
+
+### Configuration keys and sovereign clouds
+
+The reader has **no built-in Microsoft host, API version, scope or tenant**, and no default for any key: everything comes from the target YAML, and a missing key fails closed with `config_error` citing it. The complete example and the error messages are in [USAGE.md](USAGE.md). The keys that change between Microsoft clouds:
+
+| Key | Global cloud | Notes |
+| --- | --- | --- |
+| `auth.login_host` | `login.microsoftonline.com` | approved by the operator list `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` in strict mode, not by the YAML |
+| `graph.base_url` | `https://graph.microsoft.com/v1.0` | host approved like the login host; `@odata.nextLink` must stay on this host and path |
+| `auth.scopes` | `https://graph.microsoft.com/Files.Read offline_access` | read permissions only; a resource prefix must be the `graph.base_url` host |
+| `download_host_suffixes` | `.microsoftpersonalcontent.com` (personal OneDrive, **observed** on 2026-11-17: `my.microsoftpersonalcontent.com`) | `.files.1drv.com` and `.sharepoint.com` were **not observed** ([H]); no Microsoft page lists these hosts |
+
+Example, US Government L4 (GCC High), from Microsoft's public endpoint tables ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments), [national cloud authentication endpoints](https://learn.microsoft.com/en-us/entra/identity-platform/authentication-national-cloud)). **Not tested** with this reader; the download suffix is a placeholder you must take from your own environment:
+
+```yaml
+auth:
+  login_host: login.microsoftonline.us
+  scopes: "https://graph.microsoft.us/Files.Read offline_access"
+graph:
+  base_url: https://graph.microsoft.us/v1.0
+download_host_suffixes: [<DOWNLOAD_HOST_SUFFIX>]
+```
+
+With `DATA_BOAR_CREDENTIAL_STRICT=1`, the operator then sets `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.us,graph.microsoft.us`.
+
+### Device code sign-in
+
+- The reader asks the Microsoft identity platform for a device code and prints the verification address and the user code on standard error. The user opens the address in any browser, types the code and signs in ([device code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-device-code)). With a personal account through `consumers` or `common`, Microsoft asks the user to sign in again in the browser (same page).
+- Only the one-shot CLI scan run from a terminal may start the sign-in. The web dashboard, the API and schedulers never do: their targets fail with `auth_required`.
+- Tokens stay in memory for the duration of the scan. Nothing is written to disk.
+- **Work and school tenants may block device code flow** through Conditional Access; Microsoft recommends organizations get as close as possible to a unilateral block ([block authentication flows](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-block-authentication-flows)). In such a tenant the delegated reader cannot sign in. This is a limit of the delegated mode, not something the reader works around.
+
+### Consent and the unverified publisher limit
+
+- **User consent** to `Files.Read` does not need an administrator by default (`AdminConsentRequired: No` in the [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference)), but each organization decides whether its users may consent at all ([configure user consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)).
+- **Unverified publisher.** Microsoft states that, if risk-based step-up consent is enabled, users can't consent to most multitenant apps registered after 8 November 2020 that aren't publisher verified, when the app requests permissions beyond basic sign-in and profile from users of another tenant ([publisher verification](https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview)). The built-in policy "allow user consent for apps from verified publishers" also excludes unverified apps from other tenants ([configure user consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent)). In practice, for a multitenant app without a verified publisher, **the customer's administrator grants consent** ([grant admin consent](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/grant-admin-consent)) **or the vendor completes publisher verification**. An app registered by the customer in its own tenant is not a cross-tenant consent. Data Boar does not have a verified publisher today.
+
+### Revoking consent
+
+- **Personal account:** the user removes the app at [account.live.com/consent/Manage](https://account.live.com/consent/Manage) ([H]: operator information; no Microsoft Learn page found that documents this address).
+- **Work or school user:** the user may review apps in [My Apps](https://myapplications.microsoft.com) ([H]: Microsoft Learn describes My Apps as the app portal; a user-side revoke there was not confirmed).
+- **Work or school tenant:** an administrator reviews and revokes permissions granted to the app (for the whole organization or one user) under Enterprise applications ([review permissions granted to enterprise applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions)), and can delete the enterprise application ([delete an enterprise application](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/delete-application-portal)).
+- Deleting the app registration stops any new sign-in with its client ID.
+
+### Download discovery (2026-11-17)
+
+A probe on the operator's personal OneDrive (Phase 0 preparation, [#2260](https://github.com/DataBoar/data-boar/issues/2260)) observed:
+
+- `GET /me/drive/items/{id}/content` without following redirects answered `302` with an https `Location` on `my.microsoftpersonalcontent.com`; a `GET` on that URL **without** `Authorization` (with a `Range` header) answered `206`, and the five files matched their local SHA-256.
+- The `@microsoft.graph.downloadUrl` annotation came back in a children listing **without** `$select` and disappeared **with** `$select` (even when the annotation was requested); on a single item it came back with `?select=id,@microsoft.graph.downloadUrl` (no `$`) and disappeared with `?$select=...`; `@content.downloadUrl` never came back.
+
+The reader therefore never uses the annotation: it downloads through the `Location` of `/content` with redirects disabled, which is the flow the probe proved.
+
+### Local files: POSIX and Windows
+
+| What | POSIX (Linux, macOS) | Windows |
+| --- | --- | --- |
+| Download temporary directory (one per run, deleted at the end) | `tempfile.mkdtemp`, mode `0700` | under the user's `tempfile.gettempdir()`; the reader restricts its DACL to the current user (`icacls /grant:r` with the user SID and `/inheritance:r`) and checks the result by SID; if that cannot be proven, the target fails with `config_error` before any download |
+| Refresh-token cache (`auth.token_cache_path`) | file `0600` in a directory `0700` (see below) | **refused** (`config_error` "token cache needs POSIX file permissions"); one device code per run |
+
+The Windows check reads the ACL as security identifiers, not as display names, so it does not depend on the language of the system.
+
+### Optional refresh-token cache
+
+`auth.token_cache_path` (absolute path) is the only optional key. **Absent, nothing is written**: tokens live in memory and each run asks for a device code. Present:
+
+- the first sign-in writes the **refresh token only** (never the access token) together with the client ID, tenant, login host and a hash of the scopes; a cache written for another configuration is deleted and never used;
+- the next run renews from it **without a device code and without a new MFA prompt**, even without a terminal (scheduler, dashboard); without a cache those still fail with `auth_required`;
+- the file is `0600` and its directory `0700`, both owned by the current user; the reader creates only that last directory. An existing file or directory with wider permissions, another owner, a symlink, a relative path and any path with a `.git` in an ancestor are refused with `config_error`;
+- each renewal rotates the file atomically (exclusive temporary file with `O_NOFOLLOW` in the same directory, `fsync`, `os.replace`, `fsync` of the directory), through the repository's existing writer (`core/l3_transformed_rows.persist_l3_body`);
+- the file is deleted on `auth_failed` and when Microsoft answers `invalid_grant` or `interaction_required`; then a terminal gets a new device code, and a run without one fails with `auth_failed`;
+- **Windows:** there are no POSIX mode bits, so `0600`/`0700` cannot be guaranteed and the key is refused (`config_error` "token cache needs POSIX file permissions"). On Windows the reader signs in with a device code on every run.
+
+**Where to put it.** The path is explicit configuration with no default. The reader refuses any path with a `.git` in an ancestor, so a home directory that is itself a git repository cannot hold it.
+
+- `/run/user/<uid>` is a tmpfs: the cache disappears at logout or reboot, and the next scan asks for a device code again.
+- Persistent, recommended: a directory created by the administrator for the scanning user, owned by that user and `0700`, for example `/var/lib/data-boar/m365/` (`token_cache_path: /var/lib/data-boar/m365/token.json`).
+- In a container: a dedicated volume mounted only for this purpose, owned by the container user and `0700`. For the demo VPS (Podman rootless), a host directory such as `~/demo/m365-token/` (`0700`, outside any `.git`) mounted into the container. Never use the shared `data` volume.
+
+**Risk.** Refresh tokens are valid for 90 days for this kind of client and replace themselves on every use ([refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)); with `Files.Read` the file is a credential that reads the user's whole drive at rest. Keep it on an encrypted disk of the scanning host, outside any repository or backup that leaves the host. To revoke it: delete the file **and** revoke the consent as above (personal account, work user, or the administrator under Enterprise applications).
+
+### App-only mode: planned, not delivered
+
+Unattended scans of a work tenant would use **app-only** access with a **certificate** credential and the `Sites.Selected` permission, which limits the app to site collections (and, per Microsoft, lists, folders or files) that an administrator grants explicitly ([selected permissions overview](https://learn.microsoft.com/en-us/graph/permissions-selected-overview)). This is **planned** in [#2262](https://github.com/DataBoar/data-boar/issues/2262): **not delivered and not validated**. Today `auth.mode: app_only` fails with `config_error`.
 
 ## Adding new connectors
 

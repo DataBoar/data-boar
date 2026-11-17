@@ -270,6 +270,10 @@ def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None
 
     if kind == "hubspot":
         return None
+    if kind == "sharepoint_online":
+        # Login and Graph hosts come from the target YAML (2206.1, #2261); the
+        # operator list approves them (see _vendor_fixed_destination_groups).
+        return None
     if kind == "powerbi":
         if not token_url:
             return None
@@ -429,6 +433,14 @@ def _vendor_fixed_destination_groups(cfg: dict[str, Any]) -> list[set[str]]:
         return [{_operator_host_key(raw)}]
     if kind == "powerbi" and not str(auth.get("token_url") or "").strip():
         return [{"login.microsoftonline.com"}]
+    if kind == "sharepoint_online":
+        # Two distinct destinations, both from the YAML: the bearer token goes to
+        # the Graph host and the device code exchange to the login host. An
+        # absent host is an empty group, so strict mode fails closed.
+        graph = cfg.get("graph") if isinstance(cfg.get("graph"), dict) else {}
+        login = _operator_host_key(str(auth.get("login_host") or ""))
+        graph_host = _operator_host_key(str(graph.get("base_url") or ""))
+        return [{login} if login else set(), {graph_host} if graph_host else set()]
     return [set()]
 
 
@@ -1563,6 +1575,10 @@ def _normalize_config_body(
     for t in out.get("targets") or []:
         if not isinstance(t, dict):
             continue
+        if _credential_target_kind(t) == "sharepoint_online":
+            # No env secret, but a runtime bearer token: the operator host list
+            # approves the YAML login and Graph hosts (#2103 semantics, 2206.1).
+            assert_explicit_destination_allowlisted(t, "sharepoint_online target")
         env_pass_key = (
             t.get("pass_from_env") or t.get("password_from_env") or ""
         ).strip()

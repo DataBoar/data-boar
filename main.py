@@ -174,9 +174,10 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
             continue
 
         _, required_keys = result
-        for key in required_keys:
-            if key not in target:
-                errors.append(f'target "{name}": required key "{key}" missing')
+        from core.connector_registry import missing_required_keys
+
+        for key in missing_required_keys(target, required_keys):
+            errors.append(f'target "{name}": required key "{key}" missing')
 
         for field in _ENV_FIELDS_TARGET:
             env_name = target.get(field)
@@ -2478,6 +2479,11 @@ def main() -> None:
     _install_scan_interrupt_signal_handlers()
     try:
         _emit_runtime_trust_info(runtime_trust, to_stdout=True, to_stderr=True)
+        # Delegated Microsoft sign-in (device code) is allowed only in this one-shot
+        # CLI scan; --web, the API and schedulers never enable it (2206.1, DEC-5).
+        import connectors.sharepoint_online_connector as _sharepoint_online
+
+        _sharepoint_online.enable_interactive_sign_in()
         with otel_span("scan", mode="oneshot"):
             session_id = engine.start_audit(
                 tenant_name=tenant,

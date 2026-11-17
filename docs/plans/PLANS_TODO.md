@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 307  (Done: 189 | Incomplete: 118)
-- **Incomplete breakdown:** Pending `⬜`=98, Tracked `🔄` / `Tracked (partially done)`=20, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 308  (Done: 189 | Incomplete: 119)
+- **Incomplete breakdown:** Pending `⬜`=98, Tracked `🔄` / `Tracked (partially done)`=21, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 78 | 51 | 27 |
+| `H1` | 79 | 51 | 28 |
 | `H2` | 4 | 4 | 0 |
 | `H3` | 144 | 79 | 65 |
 | `H4` | 0 | 0 | 0 |
@@ -525,8 +525,9 @@ No capacity or timing claim is made without a measurement.
 | # | To-do | Status |
 | - | ----- | ------ |
 | 1 | PLAN written (design, least privilege, fail-closed tier entry) | ✅ Done |
-| 2 | Phase 0: validate or discard the WebDAV/rclone workaround (needs a development tenant) | ⬜ Pending (blocked on tenant) |
-| 3 | Phase 1: SharePoint Online + OneDrive, app-only, simulated-Graph tests | ⬜ Pending |
+| 2 | Phase 0 ([#2260](https://github.com/DataBoar/data-boar/issues/2260)): real proof against a personal OneDrive, delegated device-code mode, synthetic folder (rclone/WebDAV discarded) | ⬜ Pending (needs the operator's app registration) |
+| 3 | Phase 1 ([#2261](https://github.com/DataBoar/data-boar/issues/2261)): `sharepoint_online` reader, delegated mode, simulated-Graph tests | 🔄 In progress (implemented and tested against a simulated Graph only; not merged; no real-account proof) |
+| 3b | Phase 1c ([#2262](https://github.com/DataBoar/data-boar/issues/2262)): app-only (client credentials) for a work tenant | ⬜ Blocked: no work-tenant available; roadmap, no proof |
 | 4 | Phase 2: Exchange Online mail; permission and consent guide (en_US + pt_BR) | ⬜ Pending |
 
 ### Windows endpoint agent and SMB desktop recipe – [PLAN_ENDPOINT_AGENT.md](PLAN_ENDPOINT_AGENT.md)

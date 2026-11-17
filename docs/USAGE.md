@@ -1136,6 +1136,52 @@ Install optional deps: `uv pip install -e ".[shares]"`.
 
 All share types use the same `file_scan` settings (extensions, recursive, scan_sqlite_as_db, `sample_limit`, `file_sample_max_chars`, file_passwords). Findings appear in the **Filesystem findings** sheet.
 
+### Microsoft Graph, delegated mode (`type: sharepoint_online`)
+
+Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. Status: implemented and tested against a **simulated** Microsoft Graph; real proof against a personal OneDrive is pending ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). It has **not** been validated against SharePoint Online or a work tenant.
+
+```yaml
+
+- name: "onedrive-sintetico"
+
+    type: sharepoint_online
+    auth:
+      mode: delegated                       # only value accepted now; app_only is #2262
+      tenant: consumers                     # tenant GUID or alias: <TENANT_ID>, consumers, organizations, common
+      client_id: <APP_CLIENT_ID>            # Application (client) ID, a GUID; not a secret
+      login_host: login.microsoftonline.com # Microsoft Entra authority host of your cloud
+      scopes: "https://graph.microsoft.com/Files.Read offline_access"
+      # token_cache_path: /var/lib/data-boar/m365/token.json  # OPTIONAL; absent = memory only
+    graph:
+      base_url: https://graph.microsoft.com/v1.0  # Graph endpoint and API version of your cloud
+    download_host_suffixes:                 # pre-authenticated download hosts
+      - .microsoftpersonalcontent.com       # personal OneDrive, observed on 2026-11-17
+    drive: me                               # only value accepted now
+    root_folder: /DataBoar-Sintetico        # or root_folder_id (exactly one); never the drive root
+    include_names: []                       # exact file names; [] = no name filter (explicit)
+    max_depth: 32                           # 1..256; 1 = only the direct files of root_folder
+    max_file_bytes: 104857600               # 1 byte..2 GiB
+    page_size: 200                          # 1..1000, children per Graph page
+    max_pages_per_folder: 10000             # 1..1000000
+    http_timeout_seconds: 30                # 1..600
+    throttle_max_wait_seconds: 120          # 1..600, ceiling for Retry-After and backoff
+```
+
+**Every key above is required except `auth.token_cache_path`; there is no default anywhere** (neither in the code nor in the configuration loader). A missing key stops the target before any network call with `config_error` "required key `<key>` is missing (sharepoint_online has no defaults)"; an invalid value fails the same way and cites the key (for example "graph.base_url must be an https URL with a path and no port, userinfo, query or fragment"). The only exception is the pair `root_folder` / `root_folder_id`: exactly one of them. The values shown are those of the Microsoft global cloud ([Graph national cloud deployments](https://learn.microsoft.com/en-us/graph/deployments)); for another cloud see [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph). `--validate-config` reports the missing keys too.
+
+- **Sign-in:** OAuth device code, public client, **no client secret**. The reader prints the verification address and the code on standard error.
+- **Name filter and depth:** `include_names` lists exact, case-sensitive file names; any other file is neither downloaded, reported nor listed by `list_scope()`, and a similar name (`A.txt`, `a.txt.bak`, `xa.txt`) does not match. `[]` means no name filter and must be written explicitly. `max_depth: 1` reads only the files directly in `root_folder` and never enters a subfolder.
+- **Download hosts:** on 2026-11-17 a probe on a personal OneDrive saw `/content` answer `302` with a `Location` on `my.microsoftpersonalcontent.com`; the files downloaded from it without `Authorization` and their SHA-256 matched the local copies. `.files.1drv.com` and `.sharepoint.com` were **not observed** and stay hypotheses; add them only after seeing them in your environment.
+- **Optional token cache:** `auth.token_cache_path` is the only optional key. Absent, nothing is written anywhere and the refresh token lives in memory only (one device code per run). Present, the refresh token is kept in that file so the next run renews **without** a device code or a new MFA prompt, including a run without a terminal. Refused on Windows (no POSIX permissions). Rules and risk: [TECH_GUIDE.md](TECH_GUIDE.md#optional-refresh-token-cache).
+- **Who approves the hosts:** the login host and the Graph host come from the YAML, but the YAML does not approve them. The operator does, outside the YAML, through the existing credential host gate: with `DATA_BOAR_CREDENTIAL_STRICT=1`, both hosts must be in `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS` (for the global cloud, `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS=login.microsoftonline.com,graph.microsoft.com`), at load time and again when the scan starts; a YAML `allowed_hosts` can only narrow that list. **Without strict mode the gate does not run** (the same #2103 semantics as every other connector): the reader then checks only the host format, so production should set strict mode.
+- **Read-only scopes:** `auth.scopes` accepts only read permissions, `<Resource>.Read`, `.Read.All` or `.Read.Selected` (bare, or on the `graph.base_url` host), plus `offline_access`. Anything with `Write`, `Manage` or `FullControl`, or any other shape, fails with `config_error` citing `auth.scopes`.
+- **A human at a terminal is required.** Only the one-shot CLI scan (`python main.py --config ...`, or `docker run -it`) may sign in. The web dashboard, the API and schedulers never sign in: a target started from them fails with `auth_required`. Unattended scans need app-only mode ([#2262](https://github.com/DataBoar/data-boar/issues/2262), not available yet).
+- **Scope:** `Files.Read` gives the token read access to the **whole drive**. The reader, not the token, restricts the scan: it resolves `root_folder` once and walks only item ids below it. Shortcuts to other drives, packages, items flagged as malware or deleted and items from another drive are skipped and reported as one `skipped` failure with counts only.
+- **Tokens** stay in memory for the duration of the scan and are never written to disk, logs, reports or findings.
+- **No secret:** delegated mode has none. The client ID is not a secret and stays in the YAML; keep the customer's configuration (with its tenant and client ID) outside any repository, and use placeholders such as `<APP_CLIENT_ID>` and `<TENANT_ID>` in documents and tickets.
+- **Findings** go to the **Filesystem findings** sheet with paths such as `onedrive:/DataBoar-Sintetico/sub/a.txt` (no item ids, account names or URLs).
+- Operator steps (app registration, consent, revocation, evidence): [M365_GRAPH_DELEGATED_RUNBOOK.md](ops/M365_GRAPH_DELEGATED_RUNBOOK.md). Customer administrator pilot: [M365_GRAPH_CUSTOMER_PILOT.md](ops/M365_GRAPH_CUSTOMER_PILOT.md). Entra registration, consent and the unverified publisher limit: [TECH_GUIDE.md](TECH_GUIDE.md#microsoft-365-via-graph).
+
 ### Global options (excerpt)
 
 ```yaml
