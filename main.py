@@ -126,7 +126,7 @@ _ENV_FIELDS_TARGET = (
     "token_from_env",
     "api_key_from_env",
 )
-_ENV_FIELDS_AUTH = ("client_secret_from_env", "client_id_from_env")
+_ENV_FIELDS_AUTH = ("client_secret_from_env",)
 _SENSITIVE_FIELDS = frozenset(
     {
         "pass_from_env",
@@ -174,9 +174,10 @@ def _validate_config_and_exit(config: dict[str, Any], config_path: str) -> None:
             continue
 
         _, required_keys = result
-        for key in required_keys:
-            if key not in target:
-                errors.append(f'target "{name}": required key "{key}" missing')
+        from core.connector_registry import missing_required_keys
+
+        for key in missing_required_keys(target, required_keys):
+            errors.append(f'target "{name}": required key "{key}" missing')
 
         for field in _ENV_FIELDS_TARGET:
             env_name = target.get(field)

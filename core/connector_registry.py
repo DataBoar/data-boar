@@ -19,6 +19,23 @@ def register(
     _REGISTRY[connector_type] = (connector_class, required_keys or [])
 
 
+def missing_required_keys(target: dict[str, Any], required: list[str]) -> list[str]:
+    """Required keys absent from *target*, in order; ``a.b`` walks nested mappings.
+
+    A plain key is a presence check (``key in target``), exactly as before; a dotted
+    key needs every parent to be a mapping that holds the next part.
+    """
+    missing: list[str] = []
+    for key in required:
+        node: Any = target
+        for part in key.split("."):
+            if not isinstance(node, dict) or part not in node:
+                missing.append(key)
+                break
+            node = node[part]
+    return missing
+
+
 def get_connector(connector_type: str) -> tuple[Type[Any], list[str]]:
     """Return (connector_class, required_config_keys) for type. Raises KeyError if unknown."""
     return _REGISTRY[connector_type]

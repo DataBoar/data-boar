@@ -3,16 +3,20 @@ Microsoft Graph reader, type ``sharepoint_online``, delegated mode (device code)
 
 Contract: ``docs/desenho/2206.1.md`` (task 2206.1, #2261; real proof in #2260).
 
+* Nothing environment-specific lives here: tenant, client id, scopes, login host,
+  Graph base URL, the host allowlists, the download host suffixes, the folder and
+  every limit come from the target YAML. A missing key is a ``config_error`` citing
+  it; there is no default (operator rule on #2261).
 * Read-only. A human signs in with the OAuth device code flow (public client, no
-  secret, scopes ``Files.Read`` + ``offline_access``) and only from an interactive
-  one-shot CLI scan (``enable_interactive_sign_in()`` plus a terminal on the prompt
-  stream). Tokens live in memory for the duration of ``run()`` only.
-* ``Files.Read`` lets the token read the whole drive; the folder restriction is
-  enforced here: the configured root folder is resolved once to ``(driveId, itemId)``
-  and the walk only follows item ids below it.
+  secret) and only from an interactive one-shot CLI scan
+  (``enable_interactive_sign_in()`` plus a terminal on the prompt stream). Tokens
+  live in memory for the duration of ``run()`` only.
+* The delegated file permission lets the token read the whole drive; the folder
+  restriction is enforced here: the configured root folder is resolved once to
+  ``(driveId, itemId)`` and the walk only follows item ids below it.
 * Downloads use the pre-authenticated ``Location`` of ``/content`` through a second
-  client without ``Authorization``, after a host-suffix allowlist and the outbound URL
-  guard (no private-network opt-in).
+  client without ``Authorization``, after the YAML host-suffix allowlist and the
+  outbound URL guard (no private-network opt-in).
 * Tokens, the device code, the client id and download URLs never reach a log, a
   failure, a finding, an exception that leaves ``run()`` or ``repr()``. Every failure
   detail is a fixed message from the design.
@@ -59,21 +63,31 @@ from core.content_type import (
     choose_effective_rich_media_extension,
 )
 
-LOGIN_HOST = "login.microsoftonline.com"
-GRAPH_HOST = "graph.microsoft.com"
-GRAPH_ROOT = f"https://{GRAPH_HOST}/v1.0"
-SCOPE = "https://graph.microsoft.com/Files.Read offline_access"
+# Protocol constants (OAuth 2.0 device authorization grant, RFC 8628 / Entra v2.0).
 DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
-# Pre-authenticated download hosts (hypothesis until the Phase 0 records the real one).
-DOWNLOAD_HOST_SUFFIXES = (
-    ".files.1drv.com",
-    ".microsoftpersonalcontent.com",
-    ".sharepoint.com",
-)
+OAUTH_PATH = "oauth2/v2.0"
 
-HTTP_TIMEOUT_SECONDS = 30.0
-PAGE_SIZE = 200
-MAX_PAGES_PER_FOLDER = 10_000
+# Keys the reader requires; there is no default for any of them (#2261).
+REQUIRED_KEYS = [
+    "name",
+    "auth.mode",
+    "auth.tenant",
+    "auth.client_id",
+    "auth.login_host",
+    "auth.allowed_login_hosts",
+    "auth.scopes",
+    "graph.base_url",
+    "graph.allowed_hosts",
+    "download_host_suffixes",
+    "drive",
+    "max_depth",
+    "max_file_bytes",
+    "page_size",
+    "max_pages_per_folder",
+    "http_timeout_seconds",
+    "throttle_max_wait_seconds",
+]
+
 REFRESH_MARGIN_SECONDS = 300
 THROTTLE_BACKOFF_SECONDS = (1, 2, 4, 8, 16)  # one wait per throttled attempt (5)
 SERVER_ERROR_BACKOFF_SECONDS = (1, 2, 4)  # one wait per failed attempt (3)
@@ -93,7 +107,11 @@ IGNORED_REASONS = ("remote", "package", "other_drive", "malware", "deleted", "no
 _TARGET_ENDING_REASONS = frozenset({"auth_failed", "auth_required", "config_error"})
 
 _GUID = re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")
-_NAMED_TENANTS = frozenset({"consumers", "organizations", "common"})
+_TENANT = re.compile(r"[A-Za-z0-9-]{1,64}")
+_HOST = re.compile(
+    r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?)+"
+)
+_HOST_SUFFIX = re.compile(r"(?:\.[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?){2,}")
 _ITEM_ID = re.compile(r"[A-Za-z0-9!._-]{1,256}")
 _FORBIDDEN_SEGMENT_CHARS = frozenset("\\*<>?:|")
 _OAUTH_ERROR = re.compile(r"[a-z_]{1,64}")
@@ -102,6 +120,7 @@ _LOGGED_URL = re.compile(r"https?://([A-Za-z0-9.-]+)(?::\d+)?(?:[/?#][^\s\"'<>]*
 _interactive_enabled = False
 _DEVICE_CODE_LOCK = threading.Lock()
 _LOG_FILTER_LOCK = threading.Lock()
+_REDACTED_SUFFIXES: set[str] = set()
 
 
 class SharePointOnlineError(Exception):
@@ -131,17 +150,16 @@ def enable_interactive_sign_in() -> None:
 # ----------------------------------------------------------------------------
 
 
-def _is_download_host(host: str) -> bool:
+def _is_download_host(host: str, suffixes: Any) -> bool:
     host = host.lower()
-    return any(
-        host.endswith(suffix) and len(host) > len(suffix)
-        for suffix in DOWNLOAD_HOST_SUFFIXES
-    )
+    return any(host.endswith(suffix) and len(host) > len(suffix) for suffix in suffixes)
 
 
 def _redact_logged_url(match: re.Match[str]) -> str:
     host = match.group(1).lower()
-    if _is_download_host(host):
+    with _LOG_FILTER_LOCK:
+        suffixes = tuple(_REDACTED_SUFFIXES)
+    if _is_download_host(host, suffixes):
         return f"https://{host}/<redacted>"
     return match.group(0)
 
@@ -161,9 +179,14 @@ class _DownloadUrlRedactor(logging.Filter):
         return True
 
 
-def install_download_log_filter() -> None:
-    """Install the download-URL redactor on the ``httpx`` logger (idempotent)."""
+def install_download_log_filter(suffixes: Any) -> None:
+    """Install the download-URL redactor on the ``httpx`` logger (idempotent).
+
+    ``suffixes`` are the download host suffixes of a target YAML; they are added to
+    the set the redactor covers for the rest of the process.
+    """
     with _LOG_FILTER_LOCK:
+        _REDACTED_SUFFIXES.update(str(x).lower() for x in suffixes)
         httpx_logger = logging.getLogger("httpx")
         if not any(isinstance(f, _DownloadUrlRedactor) for f in httpx_logger.filters):
             httpx_logger.addFilter(_DownloadUrlRedactor())
@@ -177,11 +200,20 @@ def install_download_log_filter() -> None:
 class _Settings(NamedTuple):
     tenant: str
     client_id: str
+    login_host: str
+    scopes: str
+    graph_root: str
+    graph_host: str
+    graph_prefix: bytes
+    download_suffixes: tuple[str, ...]
     root_folder: str | None
     root_segments: tuple[str, ...]
     root_folder_id: str | None
     max_depth: int
     max_file_bytes: int
+    page_size: int
+    max_pages: int
+    http_timeout: int
     throttle_max_wait: int
 
 
@@ -189,22 +221,34 @@ def _config_error(message: str) -> SharePointOnlineError:
     return SharePointOnlineError("config_error", message)
 
 
-def _int_option(
-    cfg: dict[str, Any], key: str, default: int, low: int, high: int
-) -> int:
-    raw = cfg.get(key)
-    if raw is None:
-        return default
+def _lookup(cfg: dict[str, Any], dotted: str) -> Any:
+    node: Any = cfg
+    for part in dotted.split("."):
+        node = node.get(part) if isinstance(node, dict) else None
+    return node
+
+
+def _int_key(cfg: dict[str, Any], key: str, low: int, high: int) -> int:
+    raw = _lookup(cfg, key)
     if isinstance(raw, bool) or not isinstance(raw, int) or not low <= raw <= high:
         raise _config_error(f"{key} must be an integer between {low} and {high}")
     return raw
 
 
+def _host_list(cfg: dict[str, Any], key: str) -> tuple[str, ...]:
+    raw = _lookup(cfg, key)
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or not all(isinstance(h, str) and _HOST.fullmatch(h.lower()) for h in raw)
+    ):
+        raise _config_error(f"{key} must be a non-empty list of host names")
+    return tuple(h.lower() for h in raw)
+
+
 def _root_segments(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, str) or not raw.startswith("/"):
-        raise _config_error(
-            "root_folder must be an absolute folder path such as /DataBoar-Sintetico"
-        )
+        raise _config_error("root_folder must be an absolute folder path")
     body = raw[1:].rstrip("/")
     if not body:
         raise _config_error("root_folder must be a folder, never the drive root")
@@ -220,38 +264,93 @@ def _root_segments(raw: Any) -> tuple[str, ...]:
     return segments
 
 
+def _graph_base(cfg: dict[str, Any]) -> tuple[str, str, bytes]:
+    allowed = _host_list(cfg, "graph.allowed_hosts")
+    raw = _lookup(cfg, "graph.base_url")
+    try:
+        url = httpx.URL(raw) if isinstance(raw, str) else None
+    except (httpx.InvalidURL, TypeError, ValueError):
+        url = None
+    host = ((url.host if url is not None else "") or "").lower()
+    path = url.raw_path if url is not None else b""
+    if (
+        url is None
+        or url.scheme != "https"
+        or url.userinfo
+        or url.port not in (None, 443)
+        or url.query
+        or url.fragment
+        or not path.startswith(b"/")
+        or b".." in path.split(b"/")
+    ):
+        raise _config_error(
+            "graph.base_url must be an https URL with a path and no port, "
+            "userinfo, query or fragment"
+        )
+    if host not in allowed:
+        raise _config_error("graph.base_url host is not in graph.allowed_hosts")
+    prefix = path.rstrip(b"/")
+    return f"https://{host}{prefix.decode('ascii')}", host, prefix + b"/"
+
+
 def _validate(cfg: dict[str, Any]) -> _Settings:
+    """Validate the target YAML; every key is required and nothing is assumed."""
+    from core.connector_registry import missing_required_keys
+
+    missing = missing_required_keys(cfg, REQUIRED_KEYS)
+    if missing:
+        raise _config_error(
+            f"required key {missing[0]} is missing (sharepoint_online has no defaults)"
+        )
     auth = cfg.get("auth")
-    if auth is None:
-        auth = {}
     if not isinstance(auth, dict):
         raise _config_error("auth must be a mapping")
     mode = auth.get("mode")
-    if mode is None:
-        mode = "delegated"
     if mode == "app_only":
         raise _config_error("auth.mode app_only is not available yet (#2262)")
     if mode != "delegated":
         raise _config_error("auth.mode must be 'delegated'")
     tenant = auth.get("tenant")
-    if not isinstance(tenant, str) or not (
-        tenant in _NAMED_TENANTS or _GUID.fullmatch(tenant)
-    ):
+    if not isinstance(tenant, str) or not _TENANT.fullmatch(tenant):
         raise _config_error(
-            "auth.tenant must be consumers, organizations, common or a tenant GUID"
+            "auth.tenant must be a tenant id or alias (letters, digits and hyphens)"
         )
     client_id = auth.get("client_id")
-    if not client_id:
-        raise _config_error(
-            "auth.client_id is required (set auth.client_id_from_env to an "
-            "environment variable)"
-        )
     if not isinstance(client_id, str) or not _GUID.fullmatch(client_id):
         raise _config_error("auth.client_id must be a GUID")
-    drive = cfg.get("drive")
-    if drive is None:
-        drive = "me"
-    if drive != "me":
+    allowed_login = _host_list(cfg, "auth.allowed_login_hosts")
+    login_host = auth.get("login_host")
+    if not isinstance(login_host, str) or not _HOST.fullmatch(login_host.lower()):
+        raise _config_error("auth.login_host must be a host name")
+    from connectors.microsoft_identity import assert_allowlisted_microsoft_token_url
+
+    try:
+        assert_allowlisted_microsoft_token_url(
+            f"https://{login_host.lower()}/",
+            allowed_hosts=allowed_login,
+            label="auth.login_host",
+        )
+    except ValueError:
+        raise _config_error(
+            "auth.login_host is not in auth.allowed_login_hosts"
+        ) from None
+    scopes = auth.get("scopes")
+    if not isinstance(scopes, str) or not scopes.strip() or not scopes.isprintable():
+        raise _config_error("auth.scopes must be a non-empty space-separated string")
+    graph_root, graph_host, graph_prefix = _graph_base(cfg)
+    suffixes = cfg.get("download_host_suffixes")
+    if (
+        not isinstance(suffixes, list)
+        or not suffixes
+        or not all(
+            isinstance(x, str) and _HOST_SUFFIX.fullmatch(x.lower()) for x in suffixes
+        )
+    ):
+        raise _config_error(
+            "download_host_suffixes must be a non-empty list of suffixes that start "
+            "with a dot and have at least two labels"
+        )
+    if cfg.get("drive") != "me":
         raise _config_error("drive selection is not available yet (#2262)")
 
     has_path = cfg.get("root_folder") is not None
@@ -277,14 +376,21 @@ def _validate(cfg: dict[str, Any]) -> _Settings:
     return _Settings(
         tenant=tenant,
         client_id=client_id,
+        login_host=login_host.lower(),
+        scopes=" ".join(scopes.split()),
+        graph_root=graph_root,
+        graph_host=graph_host,
+        graph_prefix=graph_prefix,
+        download_suffixes=tuple(x.lower() for x in suffixes),
         root_folder=root_folder,
         root_segments=segments,
         root_folder_id=root_folder_id,
-        max_depth=_int_option(cfg, "max_depth", 32, 1, 256),
-        max_file_bytes=_int_option(
-            cfg, "max_file_bytes", 100 * 1024 * 1024, 1, 2 * 1024**3
-        ),
-        throttle_max_wait=_int_option(cfg, "throttle_max_wait_seconds", 120, 1, 600),
+        max_depth=_int_key(cfg, "max_depth", 1, 256),
+        max_file_bytes=_int_key(cfg, "max_file_bytes", 1, 2 * 1024**3),
+        page_size=_int_key(cfg, "page_size", 1, 1000),
+        max_pages=_int_key(cfg, "max_pages_per_folder", 1, 1_000_000),
+        http_timeout=_int_key(cfg, "http_timeout_seconds", 1, 600),
+        throttle_max_wait=_int_key(cfg, "throttle_max_wait_seconds", 1, 600),
     )
 
 
@@ -367,8 +473,8 @@ def _download_failure(status: int, where: str) -> SharePointOnlineError:
     )
 
 
-def _safe_next_link(link: Any) -> httpx.URL | None:
-    """The nextLink as a URL only if it stays on https://graph.microsoft.com/v1.0/."""
+def _safe_next_link(link: Any, host: str, prefix: bytes) -> httpx.URL | None:
+    """The nextLink as a URL only if it stays under the configured Graph base URL."""
     if not isinstance(link, str):
         return None
     try:
@@ -378,10 +484,10 @@ def _safe_next_link(link: Any) -> httpx.URL | None:
     path = url.raw_path.split(b"?", 1)[0]
     if (
         url.scheme != "https"
-        or (url.host or "").lower() != GRAPH_HOST
+        or (url.host or "").lower() != host
         or url.port not in (None, 443)
         or url.userinfo
-        or not path.startswith(b"/v1.0/")
+        or not path.startswith(prefix)
         or b".." in path.split(b"/")
         or b"%2e" in path.lower()
     ):
@@ -495,7 +601,6 @@ class SharePointOnlineConnector:
             self.extensions = set(self.extensions) | set(RICH_MEDIA_SCAN_EXTENSIONS)
         elif self.scan_image_ocr:
             self.extensions = set(self.extensions) | set(IMAGE_EXTENSIONS)
-        install_download_log_filter()
 
     def __repr__(self) -> str:
         return f"SharePointOnlineConnector(name={_printable(self._name)!r})"
@@ -569,6 +674,7 @@ class SharePointOnlineConnector:
 
     def _session(self) -> httpx.Client:
         self._settings = _validate(self.config)
+        install_download_log_filter(self._settings.download_suffixes)
         if not self._interactive_allowed():
             raise SharePointOnlineError("auth_required", AUTH_REQUIRED_MESSAGE)
         client = self._open_api_client()
@@ -600,8 +706,10 @@ class SharePointOnlineConnector:
         return self._prompt_stream if self._prompt_stream is not None else sys.stderr
 
     def _open_api_client(self) -> httpx.Client:
+        assert self._settings is not None
+        timeout = float(self._settings.http_timeout)
         pins: dict[str, list[str]] = {}
-        for host in (LOGIN_HOST, GRAPH_HOST):
+        for host in (self._settings.login_host, self._settings.graph_host):
             err, ips = url_guard.resolve_and_validate_outbound_url(
                 f"https://{host}/", allow_private=False, label=host
             )
@@ -614,10 +722,10 @@ class SharePointOnlineConnector:
             return httpx.Client(
                 transport=self._transport,
                 follow_redirects=False,
-                timeout=HTTP_TIMEOUT_SECONDS,
+                timeout=timeout,
             )
         return url_guard.build_pinned_httpx_client(
-            host_to_ips=pins, follow_redirects=False, timeout=HTTP_TIMEOUT_SECONDS
+            host_to_ips=pins, follow_redirects=False, timeout=timeout
         )
 
     # -- HTTP with retry policies --------------------------------------------------
@@ -688,7 +796,8 @@ class SharePointOnlineConnector:
         assert self._settings is not None
         request = client.build_request(
             "POST",
-            f"https://{LOGIN_HOST}/{self._settings.tenant}/oauth2/v2.0/{endpoint}",
+            f"https://{self._settings.login_host}/{self._settings.tenant}/"
+            f"{OAUTH_PATH}/{endpoint}",
             data=form,
             headers={"User-Agent": self._user_agent, "Accept": "application/json"},
         )
@@ -716,7 +825,7 @@ class SharePointOnlineConnector:
             status, body = self._login_post(
                 client,
                 "devicecode",
-                {"client_id": self._settings.client_id, "scope": SCOPE},
+                {"client_id": self._settings.client_id, "scope": self._settings.scopes},
             )
             if status != 200:
                 raise _oauth_failure(body, status)
@@ -824,7 +933,7 @@ class SharePointOnlineConnector:
             {
                 "grant_type": "refresh_token",
                 "client_id": self._settings.client_id,
-                "scope": SCOPE,
+                "scope": self._settings.scopes,
                 "refresh_token": refresh,
             },
         )
@@ -901,12 +1010,12 @@ class SharePointOnlineConnector:
             encoded = "".join(
                 "/" + quote(seg, safe="") for seg in settings.root_segments
             )
-            url = httpx.URL(f"{GRAPH_ROOT}/me/drive/root:{encoded}")
+            url = httpx.URL(f"{settings.graph_root}/me/drive/root:{encoded}")
             where = "root_folder"
         else:
             assert settings.root_folder_id is not None
             url = httpx.URL(
-                f"{GRAPH_ROOT}/me/drive/items/{quote(settings.root_folder_id, safe='')}"
+                f"{settings.graph_root}/me/drive/items/{quote(settings.root_folder_id, safe='')}"
             )
             where = "root_folder_id"
         body = self._graph_json(client, url, where)
@@ -934,9 +1043,11 @@ class SharePointOnlineConnector:
     def _children(
         self, client: httpx.Client, folder_id: str, where: str
     ) -> Iterator[dict[str, Any] | _ListingViolation]:
+        settings = self._settings
+        assert settings is not None
         url = httpx.URL(
-            f"{GRAPH_ROOT}/me/drive/items/{quote(folder_id, safe='')}/children"
-            f"?$top={PAGE_SIZE}"
+            f"{settings.graph_root}/me/drive/items/{quote(folder_id, safe='')}/children"
+            f"?$top={settings.page_size}"
         )
         seen_links = {str(url)}
         pages = 0
@@ -949,11 +1060,11 @@ class SharePointOnlineConnector:
             link = body.get("@odata.nextLink")
             if link is None:
                 return
-            next_url = _safe_next_link(link)
+            next_url = _safe_next_link(link, settings.graph_host, settings.graph_prefix)
             if next_url is None or str(next_url) in seen_links:
                 yield _ListingViolation(f"{where}: unexpected @odata.nextLink rejected")
                 return
-            if pages >= MAX_PAGES_PER_FOLDER:
+            if pages >= settings.max_pages:
                 yield _ListingViolation(
                     f"{where}: too many pages in one folder listing"
                 )
@@ -1098,8 +1209,10 @@ class SharePointOnlineConnector:
 
     def _download(self, client: httpx.Client, item: _Item, ext: str) -> str:
         """Download one file to the private temp dir; return the temp path."""
+        settings = self._settings
+        assert settings is not None
         content_url = httpx.URL(
-            f"{GRAPH_ROOT}/me/drive/items/{quote(item.item_id, safe='')}/content"
+            f"{settings.graph_root}/me/drive/items/{quote(item.item_id, safe='')}/content"
         )
         where = item.display_path
         for attempt in (1, 2):
@@ -1132,7 +1245,8 @@ class SharePointOnlineConnector:
             ) from None
         host = (url.host or "").lower()
         shown = _printable(host) or "<none>"
-        if not host or not _is_download_host(host):
+        assert self._settings is not None
+        if not host or not _is_download_host(host, self._settings.download_suffixes):
             raise SharePointOnlineError(
                 "scope_violation", f"{where}: download host not allowlisted: {shown}"
             )
@@ -1154,17 +1268,19 @@ class SharePointOnlineConnector:
         self, url: httpx.URL, host: str, ips: list[Any], where: str, ext: str
     ) -> tuple[int, str | None]:
         """GET the pre-authenticated URL with a separate client (no Authorization)."""
+        assert self._settings is not None
+        timeout = float(self._settings.http_timeout)
         if self._transport is not None:
             downloader = httpx.Client(
                 transport=self._transport,
                 follow_redirects=False,
-                timeout=HTTP_TIMEOUT_SECONDS,
+                timeout=timeout,
             )
         else:
             downloader = url_guard.build_pinned_httpx_client(
                 host_to_ips={host: [str(ip) for ip in ips]},
                 follow_redirects=False,
-                timeout=HTTP_TIMEOUT_SECONDS,
+                timeout=timeout,
             )
         with downloader:
             request = downloader.build_request(
@@ -1312,4 +1428,4 @@ class SharePointOnlineConnector:
         )
 
 
-register("sharepoint_online", SharePointOnlineConnector, ["name"])
+register("sharepoint_online", SharePointOnlineConnector, REQUIRED_KEYS)
