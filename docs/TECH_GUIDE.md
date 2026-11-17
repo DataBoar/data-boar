@@ -756,6 +756,15 @@ A probe on the operator's personal OneDrive (Phase 0 preparation, [#2260](https:
 
 The reader therefore never uses the annotation: it downloads through the `Location` of `/content` with redirects disabled, which is the flow the probe proved.
 
+### Local files: POSIX and Windows
+
+| What | POSIX (Linux, macOS) | Windows |
+| --- | --- | --- |
+| Download temporary directory (one per run, deleted at the end) | `tempfile.mkdtemp`, mode `0700` | under the user's `tempfile.gettempdir()`; the reader restricts its DACL to the current user (`icacls /grant:r` with the user SID and `/inheritance:r`) and checks the result by SID; if that cannot be proven, the target fails with `config_error` before any download |
+| Refresh-token cache (`auth.token_cache_path`) | file `0600` in a directory `0700` (see below) | **refused** (`config_error` "token cache needs POSIX file permissions"); one device code per run |
+
+The Windows check reads the ACL as security identifiers, not as display names, so it does not depend on the language of the system.
+
 ### Optional refresh-token cache
 
 `auth.token_cache_path` (absolute path) is the only optional key. **Absent, nothing is written**: tokens live in memory and each run asks for a device code. Present:

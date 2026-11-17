@@ -756,6 +756,15 @@ Uma sonda no OneDrive pessoal do operador (preparação da Fase 0, [#2260](https
 
 Por isso o leitor nunca usa a anotação: ele baixa pela `Location` do `/content`, com redirecionamento desligado, que é o fluxo que a sonda provou.
 
+### Arquivos locais: POSIX e Windows
+
+| O quê | POSIX (Linux, macOS) | Windows |
+| --- | --- | --- |
+| Diretório temporário de download (um por execução, apagado no fim) | `tempfile.mkdtemp`, modo `0700` | sob o `tempfile.gettempdir()` do usuário; o leitor restringe a DACL ao usuário atual (`icacls /grant:r` com o SID do usuário e `/inheritance:r`) e confere o resultado por SID; se não conseguir provar, o alvo falha com `config_error` antes de qualquer download |
+| Cache do refresh token (`auth.token_cache_path`) | arquivo `0600` num diretório `0700` (ver abaixo) | **recusado** (`config_error` "token cache needs POSIX file permissions"); um device code por execução |
+
+A conferência no Windows lê a ACL como identificadores de segurança (SIDs), não como nomes de exibição, por isso não depende do idioma do sistema.
+
 ### Cache opcional do refresh token
 
 `auth.token_cache_path` (caminho absoluto) é a única chave opcional. **Ausente, nada é gravado**: os tokens ficam na memória e cada execução pede um device code. Presente:
