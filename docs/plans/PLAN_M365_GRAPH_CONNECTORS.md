@@ -1,14 +1,14 @@
 # Plan: Microsoft 365 read-only connectors via Microsoft Graph (SharePoint Online, OneDrive, Exchange Online)
 
-**Status:** Pending (design only; no connector code yet)
-**Date:** 2026-11-10
+**Status:** In progress (design and Phase 0/1 delegated mode; no connector code merged yet)
+**Date:** 2026-11-10 (updated 2026-11-17)
 **Authors:** Fabio Leitao
 **Priority:** H1
 **GitHub:** [#2206](https://github.com/DataBoar/data-boar/issues/2206)
 **Depends on:** [PLAN_CONNECTOR_TIER_GATING.md](PLAN_CONNECTOR_TIER_GATING.md) (fail-closed tier map, #854); token-host allowlist (#2007, done)
 **Tier (default for new features):** Enterprise. New features start at Enterprise and are lowered only after validation, by operator decision. The SharePoint on-prem, PowerBI and Dataverse connectors are Pro today; this connector is not assumed to follow them.
 
-<!-- plans-hub-summary: Read-only Microsoft 365 inventory via Microsoft Graph (app-only): SharePoint Online and OneDrive files first, Exchange Online mail second; least-privilege consent, Graph throttling, simulated-Graph tests; starts at Enterprise until validated. -->
+<!-- plans-hub-summary: Read-only Microsoft 365 inventory via Microsoft Graph: SharePoint Online and OneDrive files first (delegated device-code mode proven on a personal OneDrive, then app-only for work tenants), Exchange Online mail later; least-privilege consent, Graph throttling, simulated-Graph tests; starts at Enterprise until validated. -->
 <!-- plans-hub-related: PLAN_CONNECTOR_TIER_GATING.md, PLAN_PRODUCT_TIERS_AND_OPEN_CORE.md, PLAN_MULTI_INSTANCE_REPORT_HUB.md -->
 
 ## Context
@@ -27,15 +27,32 @@ has no reader for these today.
   client credentials against Azure AD, so the authentication base exists.
 - The only Graph issue is #2050, a **remediation writer** (P3). There is **no reader** and no
   Exchange/mail connector (#885 is research only).
-- Workaround candidate: mount OneDrive/SharePoint through WebDAV or rclone and use
-  `connectors/webdav_connector.py`. **There is no recorded proof that this works.**
+- The WebDAV/rclone mount workaround is **discarded** (operator decision, 2026-11-17): the
+  product needs native cloud access that a company can trust, not a third-party mount.
+
+## Decisions (2026-11-17, operator; reversible in Phase 0)
+
+- New connector type `sharepoint_online` in `connectors/sharepoint_online_connector.py`; one type
+  for SharePoint Online and OneDrive; the on-prem `sharepoint_connector.py` does not change.
+  Reason: the tier map is keyed by `type` and fail-closed (#854), the on-prem type is Pro while this one
+  starts at Enterprise, and the credential-host gate (`config/loader.py`, #2086) must point at the
+  Microsoft login and Graph hosts, not at `site_url`.
+- Tier: Enterprise until validated. Minimal sharing: one file; no refactor of `sharepoint`,
+  `webdav` or `smb` now.
+- **Delegated mode first** (device code flow, public client, no secret, scopes `Files.Read` +
+  `offline_access`), proven against a personal OneDrive restricted to a synthetic folder. The
+  folder restriction is enforced by the connector (the scope alone reads the whole drive).
+  **App-only (client credentials) for a work tenant is the next phase.**
+- Tokens only in memory or in an ephemeral `0600` file outside the repository; never in the repo,
+  logs, reports or findings. Documentation (en_US + pt_BR) ships in the repository.
 
 ## Phases
 
 | Phase | Deliverable | Status |
 | ----- | ----------- | ------ |
-| 0 | Validate or discard the WebDAV/rclone workaround against a development tenant; record the result either way. **Blocked: no tenant available.** Until then the workaround is documented as *unvalidated*. | ⬜ Pending (blocked on tenant) |
-| 1 | SharePoint Online + OneDrive files: app-only (client credentials) auth, list sites/drives, download to temp, reuse the file-connector extraction and detection, `@odata.nextLink` paging, honour `429` + `Retry-After` | ⬜ Pending |
+| 0 | Real proof against a personal OneDrive in delegated mode (device code, `Files.Read` + `offline_access`, synthetic folder): Graph listing, file in OneDrive, Boar report. Issue [#2260](https://github.com/DataBoar/data-boar/issues/2260). | ⬜ Pending (needs the operator's app registration) |
+| 1 | `sharepoint_online` reader, delegated mode: device code flow, list/download inside the configured folder, reuse the file-connector extraction and detection, `@odata.nextLink` paging, honour `429` + `Retry-After`, simulated-Graph tests. Issue [#2261](https://github.com/DataBoar/data-boar/issues/2261). | ⬜ Pending |
+| 1c | App-only (client credentials) for a work tenant, `Sites.Selected` vs `Sites.Read.All` to be confirmed. Issue [#2262](https://github.com/DataBoar/data-boar/issues/2262). | ⬜ Pending |
 | 1b | Incremental scan through Graph delta queries | ⬜ Pending |
 | 2 | Exchange Online mail: body and attachments, scoped by mailbox or group, application permission restricted by the tenant access policy | ⬜ Pending |
 | 3 | Permission and consent guide (en_US + pt_BR) ready for the customer DPO and IT team | ⬜ Pending |
