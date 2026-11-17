@@ -1343,7 +1343,12 @@ def test_D2206_1_43_size_cap_before_and_during_download(make_fake):
 
 
 def test_D2206_1_44_temp_dir_is_private_and_removed(make_fake, monkeypatch):
-    """D2206.1-44: mode 0700 during the scan; removed after success and after a crash."""
+    """D2206.1-44: private during the scan; removed after success and after a crash.
+
+    POSIX checks the 0700 mode bits. Windows has no POSIX mode bits (os.stat reports
+    0o777 for a directory there), so it checks what it can: the directory exists
+    during the scan, is the one this run created, and is gone afterwards.
+    """
     m = mod()
     made: list[str] = []
     real_mkdtemp = m.tempfile.mkdtemp
@@ -1357,11 +1362,15 @@ def test_D2206_1_44_temp_dir_is_private_and_removed(make_fake, monkeypatch):
     modes: list[int] = []
 
     def hook(_c: str, _p: Any) -> None:
+        assert os.path.isdir(made[-1])
         modes.append(stat.S_IMODE(os.stat(made[-1]).st_mode))
 
     fake = make_fake()
     scan(fake, scanner=HookScanner(hook))
-    assert made and modes and all(mode == 0o700 for mode in modes)
+    assert len(made) == 1 and modes
+    assert os.path.basename(made[-1]).startswith("databoar-m365-")
+    if os.name == "posix":
+        assert all(mode == 0o700 for mode in modes)
     assert not os.path.exists(made[-1])
 
     def explode(*_a: Any, **_kw: Any) -> str:
@@ -2012,6 +2021,10 @@ def test_D2206_1_60_no_cache_key_writes_nothing(make_fake, tmp_path, monkeypatch
     assert list(tmp_path.iterdir()) == []
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(
     make_fake, cache_dir
 ):
@@ -2028,6 +2041,10 @@ def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(
     assert sorted(p.name for p in cache.parent.iterdir()) == ["m365.json"]
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 def test_D2206_1_60_second_run_renews_without_device_code(make_fake, cache_dir):
     """D2206.1-60: a valid cache renews without a new device code and rotates."""
     cache = cache_dir / "c" / "m365.json"
@@ -2043,6 +2060,10 @@ def test_D2206_1_60_second_run_renews_without_device_code(make_fake, cache_dir):
     assert _mode(cache) == 0o600
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 @pytest.mark.parametrize("error", ["invalid_grant", "interaction_required"])
 def test_D2206_1_60_renewal_refused_deletes_cache(make_fake, cache_dir, error):
     """D2206.1-60: invalid_grant/interaction_required deletes the cache; with a
@@ -2064,6 +2085,10 @@ def test_D2206_1_60_renewal_refused_deletes_cache(make_fake, cache_dir, error):
     assert cache.exists()
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 def test_D2206_1_60_auth_failed_deletes_cache(make_fake, cache_dir):
     """D2206.1-60: any auth_failed removes the cache file."""
     cache = cache_dir / "c" / "m365.json"
@@ -2075,6 +2100,10 @@ def test_D2206_1_60_auth_failed_deletes_cache(make_fake, cache_dir):
     assert not cache.exists()
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 def test_D2206_1_60_cache_of_another_config_is_refused(make_fake, cache_dir):
     """D2206.1-60: a cache bound to another client_id is deleted, never used."""
     cache = cache_dir / "c" / "m365.json"
@@ -2089,6 +2118,10 @@ def test_D2206_1_60_cache_of_another_config_is_refused(make_fake, cache_dir):
     assert data["client_id"] == "0b0b0b0b-0000-4000-8000-000000000002"
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 def test_D2206_1_60_unsafe_locations_are_refused(make_fake, cache_dir):
     """D2206.1-60: open dir or file modes, symlinks and paths inside a git repo fail
     closed with config_error and no request."""
@@ -2124,6 +2157,10 @@ def test_D2206_1_60_unsafe_locations_are_refused(make_fake, cache_dir):
     assert real.read_text(encoding="utf-8") == "{}"
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
 def test_D2206_1_60_cache_never_leaks(make_fake, cache_dir, caplog, capsys):
     """D2206.1-60: cache use and rotation leak nothing to logs, output, failures or repr."""
     caplog.set_level(logging.DEBUG)
@@ -2140,3 +2177,24 @@ def test_D2206_1_60_cache_never_leaks(make_fake, cache_dir, caplog, capsys):
         for out in outs:
             assert marker not in out.db.as_text()
             assert marker not in repr(out.conn) + str(out.conn)
+
+
+def test_D2206_1_61_token_cache_is_refused_without_posix_permissions(
+    make_fake, tmp_path, monkeypatch
+):
+    """D2206.1-61: without POSIX permissions (Windows) 0600/0700 cannot be
+    guaranteed, so auth.token_cache_path fails closed; runs on every platform by
+    simulating the platform check. Without the key, sign-in is per run, as before."""
+    m = mod()
+    monkeypatch.setattr(m, "_posix_file_permissions", lambda: False)
+    fake = make_fake()
+    out = scan(fake, _cached_target(tmp_path / "c" / "m365.json"))
+    _assert_config_error(fake, out)
+    detail = out.details("config_error")[0]
+    assert "auth.token_cache_path" in detail
+    assert "token cache needs POSIX file permissions" in detail
+    assert not (tmp_path / "c").exists()
+
+    fake2 = make_fake()
+    assert scan(fake2).paths == EXPECTED
+    assert len(fake2.device_requests) == 1
