@@ -2052,12 +2052,22 @@ def _mode(path: Path) -> int:
 
 
 def test_D2206_1_60_no_cache_key_writes_nothing(make_fake, tmp_path, monkeypatch):
-    """D2206.1-60: without auth.token_cache_path nothing is written anywhere."""
+    """D2206.1-60: without auth.token_cache_path nothing is written anywhere.
+
+    The product audit logger (utils.logger) opens audit_<date>.log in the cwd the
+    first time it runs in the process; run alone, that happens inside this test.
+    That log is not a token store: it is excluded by name and checked for leaks.
+    """
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("HOME", str(tmp_path))
     fake = make_fake()
     assert scan(fake).paths == EXPECTED
-    assert list(tmp_path.iterdir()) == []
+    written = list(tmp_path.iterdir())
+    audit_logs = [p for p in written if re.fullmatch(r"audit_\d{8}\.log", p.name)]
+    assert [p for p in written if p not in audit_logs] == []
+    for log in audit_logs:
+        text = log.read_text(encoding="utf-8")
+        assert all(marker not in text for marker in LEAK_MARKERS)
 
 
 @pytest.mark.skipif(
@@ -2076,6 +2086,7 @@ def test_D2206_1_60_cache_is_private_bound_and_has_no_access_token(
     assert data["refresh_token"] == f"{SECRET}RT-1"
     assert f"{SECRET}AT-" not in cache.read_text(encoding="utf-8")
     assert data["client_id"] == TEST_CLIENT_ID
+    assert data["format"] == CACHE_FORMAT and data["version"] == 1
     assert {"tenant", "login_host", "scopes_sha256"} <= set(data)
     assert sorted(p.name for p in cache.parent.iterdir()) == ["m365.json"]
 
@@ -2497,3 +2508,108 @@ def test_D2206_1_66_download_and_extraction_failures_are_told_apart(
     out2 = scan(fake2)
     (detail2,) = [d for _t, _r, d in out2.db.failures]
     assert detail2 == f"{PREFIX}/a.txt: content could not be extracted (RuntimeError)"
+
+
+# ----------------------------------------------------------------------------
+# B1 of the PR #2265 review (#2269): only a recognised cache is ever touched
+# ----------------------------------------------------------------------------
+
+CACHE_FORMAT = "data-boar/sharepoint_online-token-cache"
+
+_POSIX_ONLY = pytest.mark.skipif(
+    os.name != "posix",
+    reason="token cache needs POSIX file permissions (refused on Windows, see D-61)",
+)
+
+
+def _private_file(directory: Path, name: str, data: bytes) -> Path:
+    directory.mkdir(mode=stat.S_IRWXU, exist_ok=True)
+    os.chmod(directory, stat.S_IRWXU)
+    path = directory / name
+    path.write_bytes(data)
+    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+    return path
+
+
+def _old_cache_without_marker() -> bytes:
+    import hashlib
+
+    return json.dumps(
+        {
+            "client_id": TEST_CLIENT_ID,
+            "tenant": "consumers",
+            "login_host": LOGIN_HOST,
+            "scopes_sha256": hashlib.sha256(SCOPE.encode()).hexdigest(),
+            "refresh_token": f"{SECRET}RT-old",
+        }
+    ).encode()
+
+
+_FOREIGN_FILES = {
+    "id_ed25519": b"operator file, not a cache\n\x00\x01\x02 arbitrary bytes\n",
+    "empty.json": b"",
+    "other-app.json": b'{"theme": "dark", "recent": ["a", "b"]}',
+    "old-cache.json": _old_cache_without_marker(),
+    "wrong-format.json": json.dumps(
+        {"format": "someone-else/cache", "version": 1, "refresh_token": "x"}
+    ).encode(),
+    "unknown-version.json": json.dumps(
+        {"format": CACHE_FORMAT, "version": 99, "refresh_token": "x"}
+    ).encode(),
+}
+
+
+@_POSIX_ONLY
+@pytest.mark.parametrize("name", sorted(_FOREIGN_FILES))
+def test_D2206_1_67_unrecognised_file_is_never_deleted(make_fake, cache_dir, name):
+    """D2206.1-67 (B1, #2269): a 0600 file at token_cache_path that is not a Data
+    Boar token cache (or has another format or version, or predates the marker)
+    stays byte for byte; the target fails with config_error, with no request and
+    no terminal."""
+    content = _FOREIGN_FILES[name]
+    path = _private_file(cache_dir / "keys", name, content)
+    fake = make_fake()
+    out = scan(fake, _cached_target(path), interactive=False, tty=False)
+    _assert_config_error(fake, out)
+    detail = out.details("config_error")[0]
+    assert "auth.token_cache_path" in detail
+    assert "remove it manually" in detail
+    assert path.read_bytes() == content
+    assert _mode(path) == 0o600
+
+
+@_POSIX_ONLY
+def test_D2206_1_67_writer_and_cleanup_never_touch_a_foreign_file(make_fake, cache_dir):
+    """D2206.1-67: the rotation and the cleanup check the marker too (a file that
+    appears after the start is refused, not replaced nor removed)."""
+    m = mod()
+    content = _FOREIGN_FILES["id_ed25519"]
+    path = _private_file(cache_dir / "keys", "id_ed25519", content)
+    conn = m.SharePointOnlineConnector(
+        _cached_target(path), RegexScanner(), FakeDB(), _interactive=False
+    )
+    conn._settings = m._validate(conn.config)
+    with pytest.raises(m.SharePointOnlineError) as err:
+        conn._save_cache(f"{SECRET}RT-new")
+    assert err.value.reason == "config_error"
+    conn._drop_cache()
+    assert path.read_bytes() == content
+
+
+@_POSIX_ONLY
+def test_D2206_1_67_marked_cache_still_works(make_fake, cache_dir):
+    """D2206.1-67: a cache with the marker is read, rotated and, when its binding
+    differs, removed, as before."""
+    cache = cache_dir / "c" / "m365.json"
+    fake = make_fake()
+    scan(fake, _cached_target(cache))
+    out = scan(fake, _cached_target(cache), interactive=False, tty=False)
+    assert out.paths == EXPECTED and len(fake.device_requests) == 1
+    data = json.loads(cache.read_text(encoding="utf-8"))
+    assert data["format"] == CACHE_FORMAT and data["version"] == 1
+    assert data["refresh_token"] == f"{SECRET}RT-2"
+    other = _cached_target(cache)
+    other["auth"]["client_id"] = "0b0b0b0b-0000-4000-8000-000000000002"
+    out2 = scan(fake, other, interactive=False, tty=False)
+    assert out2.db.reasons() == ["auth_required"]
+    assert not cache.exists()
