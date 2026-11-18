@@ -50,12 +50,12 @@ Conferência: 249 + 31 + 10 + 467 = 757 fechadas; 303 + 11 + 1 = 315 abertas; to
 | 2206.7 (#2269) | Correção do cache do token (só toca arquivo com marcador do Boar) | Concluída: PR #2271 mesclada em 18/nov [V] |
 | 2206.2 (#2262) | Fase 1c: app-only para tenant de trabalho | Desenho local (`design/m365-app-only`); decisões O-1 a O-7 do operador pendentes; sem prova real, por falta de tenant [H] |
 | 2206.3 (#2263) | ADR das decisões DEC-1 a DEC-8 | Pendente; precisa do selo do operador |
-| 2206.4 (#2264) | Ocultar Bearer e URLs pré-autenticadas nos logs | Pendente |
+| 2206.4 (#2264) | Ocultar Bearer e URLs pré-autenticadas nos logs | Pendente; dev externo: opencode (plano B: pi), depois do desenho e dos testes do QA |
 | 2206.5 (#2266) | Documentação de governança, pitches CISO e DPO | Branch `docs/m365-governance` (03f1ecf7), local; falta o `check-all` completo e a decisão sobre uma PR só |
-| 2206.10 (a criar) | Raiz do OneDrive por chave explícita no config (sem default) | Proposta; aguarda a confirmação do operador (P3) |
+| 2206.10 (a criar) | Raiz do OneDrive por chave explícita no config (sem default) | Proposta; aguarda a confirmação do operador (P3). Já destinada ao dev normal (backend-dev-senior) |
 | 2206.9 (#2272) | Rótulo de origem do conector nos achados e relatórios | Pendente |
 | #2273 | Inventário de fontes inclui filesystem, SMB e Graph | Pendente |
-| #2270 | Sugestões S1 a S8 da revisão | Pendente |
+| #2270 | Sugestões S1 a S8 da revisão | Pendente; dev externo: opencode (plano B: pi), depois do desenho e dos testes do QA |
 | Fase 1b | Varredura incremental por delta do Graph | Pendente |
 | Fase 2 | Exchange Online (e-mail) | Pendente |
 | Fase 3 | Guia de permissão e consentimento para o DPO e a TI do cliente | Pendente |
