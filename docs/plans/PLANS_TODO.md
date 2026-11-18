@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 308  (Done: 189 | Incomplete: 119)
-- **Incomplete breakdown:** Pending `⬜`=98, Tracked `🔄` / `Tracked (partially done)`=21, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 309  (Done: 189 | Incomplete: 120)
+- **Incomplete breakdown:** Pending `⬜`=98, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 79 | 51 | 28 |
 | `H2` | 4 | 4 | 0 |
-| `H3` | 144 | 79 | 65 |
+| `H3` | 145 | 79 | 66 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 16 | 14 | 2 |
@@ -1211,6 +1211,7 @@ Historical mentions (ADRs, some completed plans) may still cite the **original**
 | 4 | Synthetic identifiers: valid check digits where the demo must find, invalid only in scenario 4, reserved e-mail domains | ✅ Done (repo) |
 | 5 | Protected `.7z` scenario: generator done in the repo; curated scan list on the demo host pending | 🔄 Tracked (partially done) |
 | 6 | SMB target, conditional on RAM measurement (NFS out of v0) | ⬜ Pending |
+| 7 | Per-prospect ephemeral pods (#2280): design done ([`docs/desenho/2280.1.md`](../desenho/2280.1.md), #2282); phase A (commands, unit, reaper, Ansible, acceptance) and phase B (upload) open | 🔄 Tracked (design done) |
 
 ---
 

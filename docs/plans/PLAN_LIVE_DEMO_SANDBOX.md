@@ -1,8 +1,8 @@
 # Plan: Live Demo Sandbox (`dashboard.net.br`)
 
-<!-- plans-hub-summary: Public synthetic demo on one VPS behind a protected edge: read-only curated scans, admin-gated writes, a 30-minute reset instance and a no-reset presentation instance. Not a production tenant. -->
+<!-- plans-hub-summary: Public synthetic demo on one VPS behind a protected edge: read-only curated scans, admin-gated writes, a 30-minute reset instance and a no-reset presentation instance; next phase adds short-lived per-prospect pods (#2280). Not a production tenant. -->
 
-Status: in progress — v0 running on a single host (synthetic corpus and database seeds loaded); periodic reset fix, publishing the archive scenario and acceptance still open (#1447, epic #1446)
+Status: in progress — v0 running on a single host (synthetic corpus and database seeds loaded); periodic reset fix, publishing the archive scenario and acceptance still open (#1447, epic #1446). Per-prospect ephemeral pods designed (#2280, design `docs/desenho/2280.1.md`), implementation not started
 Scope: public, synthetic-data demonstration environment
 Synced with: [PLANS_TODO.md](PLANS_TODO.md)
 
@@ -106,6 +106,9 @@ proposal not yet verified.
 7. Add the demo link to `databoar.com.br` only after the endpoint is stable.
 8. Record operational limits and the migration path to BYO-cloud and air-gapped
    deployments.
+9. Per-prospect ephemeral pods (#2280): design — **done**
+   (`docs/desenho/2280.1.md`); phase A (commands, unit, reaper, Ansible, acceptance)
+   and phase B (upload) — **open**.
 
 ## Acceptance criteria (v0)
 
@@ -120,6 +123,61 @@ proposal not yet verified.
 - SMB is included only if the RAM measurement allows it.
 - The operational runbook (edge, egress, reset, provisioning) exists and stays
   private, outside the public repository.
+
+## Next phase: per-prospect ephemeral pods (#2280)
+
+Goal: during a guided presentation, give one prospect a private, short-lived
+Data Boar instance at `<slug>.dashboard.net.br`, with the same build and detection
+profile as the presentation instance, that evaporates at the end. Design:
+[`docs/desenho/2280.1.md`](../desenho/2280.1.md) (task #2282). Infrastructure
+specifics stay in the private runbook, as for v0.
+
+Marks: **[T]** tested on a project container (rootless Podman 5.4, systemd user
+units); **[H]** to confirm on the target host.
+
+- **Deterministic commands, no LLM:** `prospect-up <slug> [--ttl 30m]`,
+  `prospect-down <slug>`, `prospect-list` and a reaper timer. The slug is a single
+  validated DNS label. Every command is idempotent. `down` and the reaper leave
+  no container, network, volume, unit, proxy route or state behind.
+- **Templated Quadlet unit** `deploy/demo/quadlet/demo-prospect@.container`: the
+  TTL is `RuntimeMaxSec` in a per-instance runtime drop-in. The container is
+  started only by its own unit, so its `conmon` stays in that unit's cgroup, which
+  is the fix for the old reset failure **[T]**. Not started at boot.
+- **Isolation:** one internal network per prospect, with no egress and no reach
+  to the host or to another prospect **[T]**. Loopback-only published port.
+  Memory, swap, CPU and PID limits. Read-only root, in-memory `/data` and `/tmp`,
+  no capabilities, `no-new-privileges`, container logs off the persistent journal.
+- **Gate (phase A):** proxy basic auth with a random per-prospect password. The
+  proxy injects a per-pod API key, which the product requires for a non-loopback
+  bind **[T]**. Per-pod self-signed TLS between the proxy and the pod; the shared
+  origin certificate never enters a pod. Passkey only after #2100.
+- **Config:** the presentation's full detection profile, with only the synthetic
+  file corpus as target: no remote or shared-host database targets and no
+  third-party cloud targets. Learned patterns are off.
+- **Proxy routes:** one route fragment per prospect, loaded atomically through the
+  proxy admin socket. A rejected config is rolled back and the public demo keeps
+  serving **[T]**.
+- **Install:** Ansible role `demo_prospect` and `deploy/ansible/site-demo-prospect.yml`.
+  OpenTofu only for the long-lived wildcard DNS record.
+- **Slot model (operator decision):** the demo host runs at most two Data Boar
+  instances, the public main instance and the presentation instance. A prospect
+  pod is not a third one: it **takes the main instance's slot** for the session,
+  and only one prospect runs at a time. `prospect-up` stops the main instance
+  only after explicit confirmation (`--stop-dashboard`), and never removes it.
+  `prospect-down` and the TTL reaper bring it back and check its status; a failed
+  restart alerts the operator instead of leaving the public demo down silently.
+  The main instance is restarted in its own systemd scope, so its `conmon`
+  survives **[T]**. The presentation instance is never touched.
+- **Phase B (upload), designed per task before release, supervised and only in
+  the prospect slot:** a separate upload service outside the product, with no
+  host environment or host data mounts, writes to an in-memory volume shared
+  read-only with the pod; the whole slot stays within the main instance's
+  memory limit. One automatic scan runs per closed batch (409 is queued). Uploaded files are
+  deleted when that scan ends; the metadata-only findings stay until the TTL.
+  There is a per-IP limit, real-type checks and a consent notice. Uploaded
+  archives, PDF and OOXML stay off until the decompression limits (member count,
+  total size, ratio, inner size, nesting, lying headers, container formats) are
+  tested against malicious files (task 2280.7).
 
 ## Explicit non-goals for v0
 
