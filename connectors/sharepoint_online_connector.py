@@ -415,6 +415,17 @@ def _posix_file_permissions() -> bool:
     return os.name == "posix"
 
 
+# Own, versioned format marker of the refresh-token cache file (B1, #2269): only a
+# file that carries it is ever read, rotated or removed.
+CACHE_FORMAT = "data-boar/sharepoint_online-token-cache"
+CACHE_VERSION = 1
+CACHE_UNRECOGNISED_MESSAGE = (
+    "auth.token_cache_path holds a file that is not a Data Boar token cache of "
+    "a known version; the reader never deletes it: check it and remove it "
+    "manually, or point token_cache_path elsewhere"
+)
+
+
 def _token_cache_path(auth: dict[str, Any]) -> Path | None:
     """Optional refresh-token cache (the only optional key; absent = memory only)."""
     if "token_cache_path" not in auth:
@@ -859,18 +870,17 @@ class SharePointOnlineConnector:
             "scopes_sha256": hashlib.sha256(settings.scopes.encode()).hexdigest(),
         }
 
-    def _load_cache(self) -> str | None:
-        """Refresh token from the cache, or None (absent, unreadable or other config)."""
+    def _read_cache_file(self) -> tuple[str, dict[str, Any] | None]:
+        """("absent" | "ours" | "foreign", data); "ours" only with the marker."""
         path = self._settings.token_cache_path if self._settings else None
         if path is None or not os.path.lexists(path):
-            return None
+            return "absent", None
         from core.l3_transformed_rows import (
             L3ContainmentError,
             verify_owner_containment_fd,
         )
 
         flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
-        data: Any = None
         try:
             fd = os.open(path, flags)
             try:
@@ -880,13 +890,30 @@ class SharePointOnlineConnector:
                 os.close(fd)
             data = json.loads(raw.decode("utf-8"))
         except (OSError, ValueError, L3ContainmentError):
-            data = None
-        refresh = data.get("refresh_token") if isinstance(data, dict) else None
-        bound = isinstance(data, dict) and all(
-            data.get(k) == v for k, v in self._cache_binding().items()
-        )
+            return "foreign", None
+        if (
+            isinstance(data, dict)
+            and data.get("format") == CACHE_FORMAT
+            and data.get("version") == CACHE_VERSION
+        ):
+            return "ours", data
+        return "foreign", None
+
+    def _load_cache(self) -> str | None:
+        """Refresh token from a recognised cache, or None.
+
+        A file without the marker (another file, an older cache, another version) is
+        never touched: config_error, before any request and any terminal check.
+        """
+        state, data = self._read_cache_file()
+        if state == "absent":
+            return None
+        if state == "foreign" or data is None:
+            raise _config_error(CACHE_UNRECOGNISED_MESSAGE)
+        refresh = data.get("refresh_token")
+        bound = all(data.get(k) == v for k, v in self._cache_binding().items())
         if not bound or not isinstance(refresh, str) or not refresh:
-            self._drop_cache()
+            self._drop_cache()  # ours (marker checked), but for another config
             return None
         return refresh
 
@@ -898,6 +925,8 @@ class SharePointOnlineConnector:
         if refresh is None:
             self._drop_cache()
             return
+        if self._read_cache_file()[0] == "foreign":
+            raise _config_error(CACHE_UNRECOGNISED_MESSAGE)
         from core.l3_transformed_rows import L3ContainmentError, persist_l3_body
 
         parent = path.parent
@@ -908,7 +937,14 @@ class SharePointOnlineConnector:
             problem = _private_dir_problem(parent)
             if problem:
                 raise _cache_refused(problem)
-            body = json.dumps({**self._cache_binding(), "refresh_token": refresh})
+            body = json.dumps(
+                {
+                    "format": CACHE_FORMAT,
+                    "version": CACHE_VERSION,
+                    **self._cache_binding(),
+                    "refresh_token": refresh,
+                }
+            )
             persist_l3_body(path, body)
             dir_fd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
             try:
@@ -919,11 +955,12 @@ class SharePointOnlineConnector:
             raise _cache_refused("the cache could not be written safely") from None
 
     def _drop_cache(self) -> None:
+        """Remove the cache only when the file carries the Data Boar marker."""
         path = self._settings.token_cache_path if self._settings else None
-        if path is None:
+        if path is None or self._read_cache_file()[0] != "ours":
             return
         try:
-            if os.path.lexists(path) and not os.path.islink(path):
+            if not os.path.islink(path):
                 os.unlink(path)
         except OSError:
             pass
