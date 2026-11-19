@@ -110,6 +110,13 @@ come back.
 3. Session: `prospect-up <slug> --stop-dashboard [--ttl 30m]` prints the URL,
    the user `prospect`, the password (once), `expires_at` and the warning that
    the public dashboard is down. `prospect-down <slug>` ends it.
+4. Maintenance: with the reaper timer enabled, a `dashboard` stopped outside a
+   prospect session is started again within 2 minutes, a planned maintenance
+   included. Run `systemctl --user stop demo-prospect-reap.timer` before stopping
+   the `dashboard`, and `systemctl --user start demo-prospect-reap.timer` after.
+   While a prospect pod is alive, `prospect-down` of another slug,
+   `prospect.py restore-slot` and the reaper leave the `dashboard` stopped and
+   print `dashboard não religada: slot ocupado por <slug>`.
 
 ### Rollback of prospect pods (operator action)
 
