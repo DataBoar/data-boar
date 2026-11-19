@@ -39,6 +39,8 @@ CLI = REPO / "deploy" / "demo" / "prospect" / "prospect.py"
 DOMAIN = "prospect.test"
 T0 = datetime(2026, 11, 18, 12, 0, 0, tzinfo=UTC)
 IMAGE = "docker.io/fabioleitao/data_boar:1.8.0"
+TEST_OPERATOR_PASSWORD = "operador-senha-teste-20"
+TEST_OPERATOR_PASSWORD_B = "outra-senha-operador-21"
 
 
 def _load_module():
@@ -451,13 +453,21 @@ class Env:
             err=io.StringIO(),
         )
 
-    def cli(self, *args: str) -> tuple[int, str, str]:
+    def cli(self, *args: str, stdin: str | None = None) -> tuple[int, str, str]:
         c = self.ctx()
+        if stdin is not None:
+            c.in_ = io.StringIO(stdin)
         rc = P.main(list(args), c)
         return rc, c.out.getvalue(), c.err.getvalue()
 
-    def up(self, slug: str = "acme", *extra: str) -> tuple[int, str, str]:
-        return self.cli("up", slug, "--stop-dashboard", *extra)
+    def up(
+        self, slug: str = "acme", *extra: str, stdin: str | None = None
+    ) -> tuple[int, str, str]:
+        args = list(extra)
+        if "--password-stdin" not in args:
+            args = ["--password-stdin", *args]
+        payload = stdin if stdin is not None else f"{TEST_OPERATOR_PASSWORD}\n"
+        return self.cli("up", slug, "--stop-dashboard", *args, stdin=payload)
 
     # -- paths
     def slug_dir(self, slug: str) -> Path:
@@ -530,6 +540,18 @@ def _pod_gone(env: Env, slug: str, unit_state: str = "failed") -> None:
 
 def _session_lines(out: str) -> list[str]:
     return [line for line in out.splitlines() if line.strip()]
+
+
+def _password_sent_to_hash(env: Env, occurrence: int = -1) -> str:
+    """Password the CLI passed to caddy hash-password (design D, no stdout echo)."""
+    hits = [
+        i
+        for i, c in enumerate(env.host.calls)
+        if c[-1:] == ["hash-password"] and env.host.inputs[i]
+    ]
+    assert hits, "nenhuma chamada hash-password com stdin"
+    idx = hits[occurrence]
+    return (env.host.inputs[idx] or "").rstrip("\n")
 
 
 # --------------------------------------------------------------------------- slug, TTL
@@ -753,15 +775,15 @@ def test_D2280_1_8_segredos_so_onde_devem(env: Env) -> None:
     <slug>.caddy; config.yaml has no key, password or hash."""
     rc, out, err = env.up()
     assert rc == 0, err
-    senha = re.search(r"^senha: (\S+)$", out, re.M)
-    assert senha
+    senha = _password_sent_to_hash(env)
+    assert not re.search(r"^senha: ", out, re.M)
     key = _pod_env(env)["PROSPECT_API_KEY"]
     with_key = []
     for p in env.tmp.rglob("*"):
         if not p.is_file() or p.is_socket():
             continue
         data = p.read_bytes()
-        assert senha.group(1).encode() not in data, p
+        assert senha.encode() not in data, p
         if key.encode() in data:
             with_key.append(p.name)
     assert sorted(with_key) == ["acme.caddy", "pod.env"]
@@ -984,6 +1006,13 @@ def test_rollback_do_up_religa_mesmo_com_teardown_quebrado(
 
 
 # --------------------------------------------------------------------------- up
+def test_D2280_1_13b_up_exige_password_stdin(env: Env) -> None:
+    """First creation without --password-stdin exits 2."""
+    rc, _, err = env.cli("up", "acme", "--stop-dashboard")
+    assert rc == 2
+    assert "password-stdin" in err
+
+
 def test_D2280_1_14_caminho_feliz_ordem_e_saida(env: Env) -> None:
     """D2280.1-14: call order of sections 3 and 10 and the exact five stdout lines."""
     rc, out, err = env.up("acme", "--ttl", "30m")
@@ -1005,14 +1034,15 @@ def test_D2280_1_14_caminho_feliz_ordem_e_saida(env: Env) -> None:
     lines = _session_lines(out)
     exp = env.state("acme")["expires_at"]
     assert exp == _z(T0 + timedelta(minutes=30)) or exp.endswith("Z")
-    assert len(lines) == 5
+    assert len(lines) == 4
     assert lines[0] == f"url: https://acme.{DOMAIN}/"
     assert lines[1] == "usuário: prospect"
-    assert re.fullmatch(r"senha: \S{16,}", lines[2])
-    assert lines[3] == f"expires_at: {exp}"
-    assert lines[4] == (
+    assert lines[2] == f"expires_at: {exp}"
+    assert lines[3] == (
         f"ATENÇÃO: a dashboard pública está FORA DO AR até prospect-down acme ou {exp}"
     )
+    assert _password_sent_to_hash(env) == TEST_OPERATOR_PASSWORD
+    assert not re.search(r"^senha: ", out, re.M)
     first_stamp = re.search(r"\d{4}-\d\d-\d\dT[\d:.]+Z", out)
     assert first_stamp and first_stamp.group(0) == exp
     assert "+00:00" not in out
@@ -1035,21 +1065,30 @@ def test_D2280_1_15_up_repetido_idempotente(env: Env) -> None:
     assert {p: p.read_bytes() for p in env.tmp.rglob("*") if p.is_file()} == files
     lines = _session_lines(out2)
     assert lines[0] == _session_lines(out1)[0]
-    assert "senha já emitida; use --rotate-password para gerar outra" in lines
+    assert (
+        "senha já emitida; use --rotate-password com --password-stdin para trocar"
+        in lines
+    )
     assert not re.search(r"^senha:", out2, re.M)
-    assert _session_lines(out1)[3] in lines
+    assert _session_lines(out1)[2] in lines
     assert lines[-1].startswith("ATENÇÃO: a dashboard pública está FORA DO AR")
 
 
 def test_D2280_1_15_rotate_password(env: Env) -> None:
-    """Section 1: --rotate-password on the active slug prints a new password."""
+    """Section 1: --rotate-password with --password-stdin hashes a new operator password."""
     rc, out1, _ = env.up()
     assert rc == 0
-    rc, out2, err = env.cli("up", "acme", "--rotate-password")
+    rc, out2, err = env.cli(
+        "up",
+        "acme",
+        "--rotate-password",
+        "--password-stdin",
+        stdin=f"{TEST_OPERATOR_PASSWORD_B}\n",
+    )
     assert rc == 0, err
-    s1 = re.search(r"^senha: (\S+)$", out1, re.M)
-    s2 = re.search(r"^senha: (\S+)$", out2, re.M)
-    assert s1 and s2 and s1.group(1) != s2.group(1)
+    assert _password_sent_to_hash(env, 0) == TEST_OPERATOR_PASSWORD
+    assert _password_sent_to_hash(env, 1) == TEST_OPERATOR_PASSWORD_B
+    assert not re.search(r"^senha: ", out1 + out2, re.M)
     assert len(env.admin.loads) == 2
 
 
@@ -1073,7 +1112,7 @@ def test_D2280_1_16_restos_do_mesmo_slug(env: Env, resto: str) -> None:
         i for i, c in enumerate(new) if c[2:] == ["start", "demo-prospect@acme.service"]
     )
     assert i_rm < i_start
-    assert re.search(r"^senha: ", out2, re.M)
+    assert not re.search(r"^senha: ", out2, re.M)
     assert env.state("acme")["created_at"] == _z(env.clock.now())
 
 
@@ -1317,7 +1356,7 @@ def test_D2280_1_40_dashboard_ja_parada(env: Env) -> None:
     env.host.containers["dashboard"]["State"] = "exited"
     env.inv["prospect_image"] = "localhost/outra-imagem:1"
     env.write_inventory()
-    rc, out, err = env.cli("up", "acme")
+    rc, out, err = env.up("acme")
     assert rc == 0, err
     assert not [c for c in env.host.calls if c[:2] == ["podman", "stop"]]
     slot = json.loads(env.slot_json().read_text("utf-8"))
@@ -1872,7 +1911,8 @@ def test_D2280_1_27_list(env: Env) -> None:
     assert "dashboard: no ar" in out
     rc, up_out, _ = env.up()
     assert rc == 0
-    senha = re.search(r"^senha: (\S+)$", up_out, re.M).group(1)  # type: ignore[union-attr]
+    senha = _password_sent_to_hash(env)
+    assert not re.search(r"^senha: ", up_out, re.M)
     key = _pod_env(env)["PROSPECT_API_KEY"]
     env.clock.advance(60)
     rc, out, _ = env.cli("list")

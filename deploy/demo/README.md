@@ -70,7 +70,7 @@ brings it back and checks its `/status`. One prospect at a time; the
 | ---- | ------- |
 | `prospect/prospect.py` | CLI (Python 3.11+, standard library only): `up`, `down`, `list`, `reap`, `restore-slot`, `teardown`. Reads the private inventory `~/demo/prospect/inventory.json` (mode 600) or `$PROSPECT_INVENTORY`. |
 | `prospect/config.prospect.yaml` | Pod config: synthetic corpus only, no network target, API key from the pod env, profile and recommendations copied from host files. |
-| `prospect/site.caddy.tmpl` | Per-host proxy route: `basic_auth` with a random per-prospect password, the pod API key injected, the pod certificate pinned, no `log`. |
+| `prospect/site.caddy.tmpl` | Per-host proxy route: `basic_auth` with an operator-supplied password (hashed by the CLI), the pod API key injected, the pod certificate pinned, no `log`. |
 | `quadlet/demo-prospect@.container` | Pod template: internal network per slug, port only on `127.0.0.1`, 700 MiB without swap, read-only root, tmpfs data, no capabilities, `LogDriver=none`, no `[Install]`. The signed image and the license hostname come from the host drop-in `demo-prospect@.container.d/10-host.conf` (never in the repo). |
 | `quadlet/demo-prospect.slice` | `MemoryMax=720M` for the pod. |
 | `quadlet/demo-slot-restore.service` | Oneshot that runs `prospect.py restore-slot`; the pod's `ExecStopPost` starts it with `--no-block`. |
@@ -107,9 +107,10 @@ come back.
    `~/.config/systemd/user/`, with the reaper timer enabled.
 2. Check: `prospect-list` shows `dashboard: no ar`;
    `systemctl --user list-timers demo-prospect-reap.timer` shows the timer.
-3. Session: `prospect-up <slug> --stop-dashboard [--ttl 30m]` prints the URL,
-   the user `prospect`, the password (once), `expires_at` and the warning that
-   the public dashboard is down. `prospect-down <slug>` ends it.
+3. Session: generate a password (at least 20 characters), then
+   `printf '%s\n' '<password>' | prospect-up <slug> --stop-dashboard --password-stdin [--ttl 30m]`
+   prints the URL, the user `prospect`, `expires_at` and the warning that the
+   public dashboard is down (the password is not echoed). `prospect-down <slug>` ends it.
 4. Maintenance: with the reaper timer enabled, a `dashboard` stopped outside a
    prospect session is started again within 2 minutes, a planned maintenance
    included. Run `systemctl --user stop demo-prospect-reap.timer` before stopping

@@ -51,6 +51,8 @@ TEMPLATE = QUADLET / "demo-prospect@.container"
 DOMAIN = "prospect.test"
 LICENSE_HOSTNAME = "pod.prospect.test"
 USER = "prospect"
+# Design D (#481): operator password via --password-stdin; must not appear on stdout.
+ACEITACAO_SENHA_OPERADOR = "aceitacao-senha-operador-20"
 
 
 class CliAusente(Exception):
@@ -78,11 +80,16 @@ def _porta_livre(porta: int) -> bool:
 
 # --------------------------------------------------------------------------- helpers
 def _run(
-    argv: list[str], *, env: dict[str, str] | None = None, timeout: float = 120.0
+    argv: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    timeout: float = 120.0,
+    input: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         argv,
         env=env,
+        input=input,
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -202,10 +209,14 @@ class Harness:
         return _run(["systemctl", "--user", *args])
 
     def cli(
-        self, *args: str, timeout: float = 400.0
+        self, *args: str, timeout: float = 400.0, stdin: str | None = None
     ) -> subprocess.CompletedProcess[str]:
         env = {**os.environ, "PROSPECT_INVENTORY": str(self.inventario)}
-        return _run([sys.executable, str(CLI), *args], env=env, timeout=timeout)
+        argv = [sys.executable, str(CLI), *args]
+        payload = stdin
+        if "--password-stdin" in args and payload is None:
+            payload = f"{ACEITACAO_SENHA_OPERADOR}\n"
+        return _run(argv, env=env, timeout=timeout, input=payload)
 
     def inspecionar(self, nome: str) -> dict:
         r = self.podman("inspect", nome)
@@ -505,18 +516,25 @@ class Harness:
 
     # -- operator view
     def subir_prospecto(self, slug: str = "acme", ttl: str = "10m") -> Sessao:
-        r = self.cli("up", slug, "--stop-dashboard", "--ttl", ttl)
+        r = self.cli(
+            "up",
+            slug,
+            "--stop-dashboard",
+            "--password-stdin",
+            "--ttl",
+            ttl,
+        )
         assert r.returncode == 0, f"up {slug}: rc={r.returncode} {r.stderr[-300:]}"
-        return self.ler_sessao(slug, r.stdout)
+        return self.ler_sessao(slug, r.stdout, senha=ACEITACAO_SENHA_OPERADOR)
 
-    def ler_sessao(self, slug: str, saida: str) -> Sessao:
+    def ler_sessao(self, slug: str, saida: str, *, senha: str = "") -> Sessao:
         url = re.search(rf"https://{slug}\.{re.escape(DOMAIN)}\S*", saida)
-        senha = re.search(r"senha(?! já)[^:\n]*:\s*(\S+)", saida, re.IGNORECASE)
         prazo = re.search(r"\d{4}-\d\d-\d\dT[\d:.]+Z", saida)
         assert url and prazo, f"saída do up sem URL ou prazo: {saida[-300:]!r}"
-        return Sessao(
-            slug, url.group(0), senha.group(1) if senha else "", prazo.group(0), saida
+        assert not re.search(r"^senha: \S", saida, re.M), (
+            "a senha não deve sair no stdout (design D, alerta #481)"
         )
+        return Sessao(slug, url.group(0), senha, prazo.group(0), saida)
 
     def auth(self, s: Sessao, senha: str | None = None) -> tuple[str, str]:
         return (USER, s.senha if senha is None else senha)
@@ -609,11 +627,11 @@ def cenario(harness: Harness) -> Iterator[Harness]:
 
 # --------------------------------------------------------------------------- A-1 .. A-18
 def test_A1_up_imprime_credenciais_e_exige_senha(cenario: Harness) -> None:
-    """A-1: up exits 0 with URL/user/password/warning; 401, 401, 200 on /en/; pod trusted."""
+    """A-1: up exits 0 with URL/user/warning; basic_auth works; pod trusted; no password on stdout."""
     h = cenario
-    r = h.cli("up", "acme", "--stop-dashboard", "--ttl", "10m")
+    r = h.cli("up", "acme", "--stop-dashboard", "--password-stdin", "--ttl", "10m")
     assert r.returncode == 0, r.stderr
-    s = h.ler_sessao("acme", r.stdout)
+    s = h.ler_sessao("acme", r.stdout, senha=ACEITACAO_SENHA_OPERADOR)
     assert s.senha and USER in r.stdout
     assert "dashboard" in r.stdout and "FORA DO AR" in r.stdout
     host = h.host("acme")
@@ -631,7 +649,7 @@ def test_A2_up_repetido_e_idempotente(cenario: Harness) -> None:
     assert r.returncode == 0, r.stderr
     s2 = h.ler_sessao("acme", r.stdout)
     assert (s2.url, s2.expires_at) == (s1.url, s1.expires_at)
-    assert s1.senha not in r.stdout and not s2.senha
+    assert ACEITACAO_SENHA_OPERADOR not in r.stdout and not s2.senha
     nomes = h.podman("ps", "-a", "--format", "{{.Names}}").stdout.split()
     assert nomes.count("prospect-acme") == 1
 
@@ -746,7 +764,7 @@ def test_A9_slug_invalido_ou_reservado(cenario: Harness, slug: str) -> None:
     """A-9: invalid or reserved slug exits 2, creates nothing, does not stop the dashboard."""
     h = cenario
     id_dash = h.inspecionar(h.dash)["Id"]
-    r = h.cli("up", slug, "--stop-dashboard")
+    r = h.cli("up", slug, "--stop-dashboard", "--password-stdin")
     assert r.returncode == 2, (r.returncode, r.stderr)
     assert not [n for n in h.podman("ps", "-a", "--format", "{{.Names}}").stdout.split()
                 if n.startswith("prospect-")]  # fmt: skip
@@ -864,7 +882,7 @@ def test_A16_outro_prospecto_ativo(cenario: Harness) -> None:
     """A-16: with acme active, up bravo exits 4 naming acme, and bravo has nothing."""
     h = cenario
     h.subir_prospecto("acme")
-    r = h.cli("up", "bravo", "--stop-dashboard")
+    r = h.cli("up", "bravo", "--stop-dashboard", "--password-stdin")
     assert r.returncode == 4, (r.returncode, r.stderr)
     assert "acme" in r.stdout + r.stderr
     h.assert_limpo("bravo")

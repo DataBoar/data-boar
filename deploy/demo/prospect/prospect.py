@@ -45,6 +45,7 @@ LABEL = "databoar.prospect"
 UNIT_PREFIX = "demo-prospect@"
 POD_PREFIX = "prospect-"
 USER = "prospect"
+MIN_OPERATOR_PASSWORD_CHARS = 20
 POD_MEMORY_MIB = 700
 SLOT_HEALTH_S = 180
 POD_HEALTH_S = 120
@@ -80,6 +81,19 @@ class CliError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def _read_operator_password(ctx: Context) -> str:
+    raw = ctx.in_.readline()
+    if raw == "":
+        raise CliError(EXIT_USAGE, "senha vazia: envie pelo stdin com --password-stdin")
+    password = raw.rstrip("\r\n")
+    if len(password) < MIN_OPERATOR_PASSWORD_CHARS:
+        raise CliError(
+            EXIT_USAGE,
+            f"senha precisa de pelo menos {MIN_OPERATOR_PASSWORD_CHARS} caracteres",
+        )
+    return password
 
 
 class Occupied:
@@ -599,6 +613,7 @@ class Context:
     lock_timeout_reap: float = 60.0
     out: TextIO = field(default_factory=lambda: sys.stdout)
     err: TextIO = field(default_factory=lambda: sys.stderr)
+    in_: TextIO = field(default_factory=lambda: sys.stdin)
 
     @classmethod
     def from_env(cls) -> Context:
@@ -1025,7 +1040,14 @@ class Cli:
         return self.teardown(slug)
 
     # -- up (section 10)
-    def up(self, slug: str, ttl_s: int, stop_dashboard: bool, rotate: bool) -> int:
+    def up(
+        self,
+        slug: str,
+        ttl_s: int,
+        stop_dashboard: bool,
+        rotate: bool,
+        password_stdin: bool,
+    ) -> int:
         with self.lock(self.ctx.lock_timeout_up) as got:
             if not got:
                 raise CliError(EXIT_BUSY, "outra operação de prospecto em andamento")
@@ -1039,7 +1061,17 @@ class Cli:
                         f"rode prospect-down {other} antes",
                     )
             if self.active(slug):
-                return self._existing(slug, rotate)
+                if rotate and not password_stdin:
+                    raise CliError(
+                        EXIT_USAGE,
+                        "use --password-stdin para enviar a nova senha pelo stdin",
+                    )
+                password = (
+                    _read_operator_password(self.ctx)
+                    if rotate and password_stdin
+                    else None
+                )
+                return self._existing(slug, rotate, password)
             # Leftovers of the same slug (failed unit or past the deadline) go first:
             # the old pod still counts as an instance and holds the port.
             if self.leftovers(slug):
@@ -1071,8 +1103,15 @@ class Cli:
             if self.ctx.port_busy(port):
                 raise CliError(EXIT_BUSY, f"porta {port} ocupada")
             self.take_slot(slug, dash_running)
+            if not password_stdin:
+                raise CliError(
+                    EXIT_USAGE,
+                    "use --password-stdin e envie a senha pelo stdin "
+                    f"(mínimo {MIN_OPERATOR_PASSWORD_CHARS} caracteres)",
+                )
+            operator_password = _read_operator_password(self.ctx)
             try:
-                return self._create(slug, ttl_s)
+                return self._create(slug, ttl_s, operator_password)
             except CliError as exc:
                 if self._rollback(slug) == EXIT_SLOT:
                     raise CliError(
@@ -1138,7 +1177,7 @@ class Cli:
                 raise CliError(EXIT_BUSY, msg)
             self.ctx.sleep(1.0)
 
-    def _create(self, slug: str, ttl_s: int) -> int:
+    def _create(self, slug: str, ttl_s: int, operator_password: str) -> int:
         inv = self.inv
         created = self.now()
         expires = created + timedelta(seconds=ttl_s)
@@ -1188,9 +1227,8 @@ class Cli:
         if rc != 0:
             raise CliError(EXIT_UNHEALTHY, f"a unidade {self.unit(slug)} não subiu")
         self._wait_pod_health(port, api_key, str(d / "tls.crt"))
-        password = secrets.token_urlsafe(15)
-        self._publish_route(slug, password, api_key)
-        self.print_session(slug, state, password)
+        self._publish_route(slug, operator_password, api_key)
+        self.print_session(slug, state, session_kind="new")
         return EXIT_OK
 
     def _wait_pod_health(self, port: int, key: str, cafile: str) -> None:
@@ -1271,10 +1309,10 @@ class Cli:
         if got != 401:
             raise CliError(EXIT_PROXY, f"a rota não respondeu 401 (recebeu {got})")
 
-    def _existing(self, slug: str, rotate: bool) -> int:
+    def _existing(self, slug: str, rotate: bool, operator_password: str | None) -> int:
         state = self.state(slug) or {}
         if not rotate:
-            self.print_session(slug, state, None)
+            self.print_session(slug, state, session_kind="existing")
             return EXIT_OK
         frag = self.caddy_dir / f"{slug}.caddy"
         try:
@@ -1284,28 +1322,30 @@ class Cli:
         m = re.search(r'header_up X-API-Key "([0-9a-f]{64})"', old)
         if not m:
             raise CliError(EXIT_PROXY, "fragmento da sessão fora do formato")
-        password = secrets.token_urlsafe(15)
+        assert operator_password is not None
         self.write(
-            frag, self._render_route(slug, self._hash(password), m.group(1)), 0o600
+            frag,
+            self._render_route(slug, self._hash(operator_password), m.group(1)),
+            0o600,
         )
         code = self.reload_proxy()
         if code != 200:
             self.write(frag, old, 0o600)
             self.reload_proxy()
             raise CliError(EXIT_PROXY, f"o proxy recusou a config (/load {code})")
-        self.print_session(slug, state, password)
+        self.print_session(slug, state, session_kind="rotated")
         return EXIT_OK
 
     def print_session(
-        self, slug: str, state: dict[str, Any], password: str | None
+        self, slug: str, state: dict[str, Any], *, session_kind: str
     ) -> None:
         exp = state.get("expires_at", "?")
         self.say(f"url: https://{slug}.{self.inv['prospect_domain']}/")
         self.say(f"usuário: {USER}")
-        if password is None:
-            self.say("senha já emitida; use --rotate-password para gerar outra")
-        else:
-            self.say(f"senha: {password}")
+        if session_kind == "existing":
+            self.say(
+                "senha já emitida; use --rotate-password com --password-stdin para trocar"
+            )
         self.say(f"expires_at: {exp}")
         self.say(
             f"ATENÇÃO: a dashboard pública está FORA DO AR até prospect-down {slug} ou {exp}"
@@ -1528,6 +1568,11 @@ def _parser() -> argparse.ArgumentParser:
     up.add_argument("--stop-dashboard", action="store_true")
     up.add_argument("--ttl", default="30m")
     up.add_argument("--rotate-password", action="store_true")
+    up.add_argument(
+        "--password-stdin",
+        action="store_true",
+        help="lê a senha do operador do stdin (mínimo 20 caracteres)",
+    )
     up.add_argument("--upload", action="store_true")
     down = sub.add_parser("down", add_help=False)
     down.add_argument("slug")
@@ -1564,7 +1609,13 @@ def _dispatch(args: argparse.Namespace, ctx: Context) -> int:
         validate_slug(args.slug, inv["prospect_reserved_slugs"])
     cli = Cli(ctx, inv)
     if args.cmd == "up":
-        return cli.up(args.slug, ttl_s, args.stop_dashboard, args.rotate_password)
+        return cli.up(
+            args.slug,
+            ttl_s,
+            args.stop_dashboard,
+            args.rotate_password,
+            args.password_stdin,
+        )
     if args.cmd == "down":
         return cli.down(args.slug)
     if args.cmd == "list":
