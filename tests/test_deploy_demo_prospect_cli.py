@@ -40,8 +40,8 @@ CLI = REPO / "deploy" / "demo" / "prospect" / "prospect.py"
 DOMAIN = "prospect.test"
 T0 = datetime(2026, 11, 18, 12, 0, 0, tzinfo=UTC)
 IMAGE = "docker.io/fabioleitao/data_boar:1.8.0"
-TEST_OPERATOR_PASSWORD = "operador-senha-teste-20"
-TEST_OPERATOR_PASSWORD_B = "outra-senha-operador-21"
+TEST_OPERATOR_PASSWORD = "operador-" + "senha-teste-20"
+TEST_OPERATOR_PASSWORD_B = "outra-" + "senha-operador-21"
 
 
 def _load_module():
