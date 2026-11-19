@@ -102,7 +102,18 @@ def _target_loads_secrets_from_env(target: dict[str, Any]) -> bool:
     return False
 
 
+def _env_name_from_interpolation(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    text = value.strip()
+    if text.startswith("${") and text.endswith("}") and len(text) > 3:
+        return text[2:-1].strip()
+    return ""
+
+
 def _validate_rest_env_var_names(auth: dict[str, Any]) -> None:
+    from config.loader import assert_credential_env_name
+
     for key, label in (
         ("token_from_env", "auth.token_from_env"),
         ("client_secret_from_env", "auth.client_secret_from_env"),
@@ -110,9 +121,10 @@ def _validate_rest_env_var_names(auth: dict[str, Any]) -> None:
         env_name = (auth.get(key) or "").strip()
         if not env_name:
             continue
-        from config.loader import assert_credential_env_name
-
         assert_credential_env_name(env_name, label)
+    secret_interp = _env_name_from_interpolation(auth.get("client_secret"))
+    if secret_interp:
+        assert_credential_env_name(secret_interp, "auth.client_secret")
 
 
 def _validate_target_env_var_names(target: dict[str, Any]) -> None:
