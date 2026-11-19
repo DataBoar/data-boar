@@ -1233,22 +1233,35 @@ def _write_excel_sheets(
     if hasattr(db_manager, "get_data_source_inventory"):
         inv_rows = db_manager.get_data_source_inventory(session_id) or []
 
+    # Build a lookup of target_name -> target.type from the session config.
+    # This gives the REAL connector type (smb, sharepoint_online, filesystem, database, etc.)
+    # used by the scanner, not just the generic source_type from findings (database/filesystem).
+    targets_config_lookup: dict[str, str] = {}
+    for t_cfg in (config or {}).get("targets", []) or []:
+        if isinstance(t_cfg, dict):
+            name = (t_cfg.get("name") or "").strip()
+            typ = (t_cfg.get("type") or "").strip()
+            if name and typ:
+                targets_config_lookup[name] = typ
+
     # Collect target names from findings that have no inventory row.
-    # Findings carry source_type (database | filesystem | application) based on their origin.
+    # Use the configured target type when available, fall back to inference from findings.
     inv_target_names = {ir.get("target_name", "") for ir in inv_rows}
     targets_with_findings: dict[str, str] = {}  # target_name -> source_type
     for r in db_rows_for_sheets:
         t = r.get("target_name", "")
         if t and t not in inv_target_names:
-            targets_with_findings[t] = "database"
+            targets_with_findings[t] = targets_config_lookup.get(t, "database")
     for r in fs_rows_for_sheets:
         t = r.get("target_name", "")
         if t and t not in inv_target_names:
-            targets_with_findings[t] = "filesystem"
+            targets_with_findings[t] = targets_config_lookup.get(t, "filesystem")
     for r in app_rows_for_sheets or []:
         t = r.get("target_name", "")
         if t and t not in inv_target_names:
-            targets_with_findings[t] = r.get("source_type", "application")
+            targets_with_findings[t] = targets_config_lookup.get(
+                t, r.get("source_type", "application")
+            )
 
     # Build inventory sheet rows: persisted rows first, then not_probed for uncovered targets
     inv_sheet_rows = []
