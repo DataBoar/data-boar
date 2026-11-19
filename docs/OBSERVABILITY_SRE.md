@@ -27,7 +27,9 @@ Today the app already balances these concerns in the following way:
 
 - **Liveness/readiness:** `GET /health` returns 200 when the process is up. Used by Docker, Compose, and Kubernetes for healthchecks (see [deploy/DEPLOY.md](deploy/DEPLOY.md)).
 - **Scan state:** `GET /status` returns `running`, `current_session_id`, `findings_count` (useful for dashboards or runbooks).
-- **No metrics endpoint yet:** There is no `/metrics` (Prometheus) or OpenTelemetry export. Adding one would be an **additive** feature (new route, optional dependency).
+- **No native `/metrics` endpoint:** The application does not expose a Prometheus-compatible `/metrics` route.
+- **Opt-in OTLP export exists:** When `DATA_BOAR_OTEL_ENABLED` is set and the optional `[otel]` extra is installed (`uv sync --extra otel`), Data Boar exports traces, metrics, and logs via OTLP (see `docs/USAGE.md`, `docs/primers/OBSERVABILITY_PRIMER.md`).
+- **Published Docker images do not ship the `[otel]` extra:** The `[otel]` extra is not installable in the published images yet. See issues [#1500](https://github.com/DataBoar/data-boar/issues/1500), [#2212](https://github.com/DataBoar/data-boar/issues/2212), [#2213](https://github.com/DataBoar/data-boar/issues/2213) for tracked work.
 - **Logging:** Application logging exists but is not structured (e.g. no request_id, duration) by default; see [SECURITY.md](../SECURITY.md) for policy (no secrets in logs).
 
 ### SLI/SLO/SLA (how you can get there)
