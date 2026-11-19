@@ -49,7 +49,8 @@ if [ -z "${PROSPECT_ISO_SKIP_IMAGE_LOAD:-}" ]; then
       # shellcheck source=/dev/null
       source "$R/envrc"
       set +a
-      podman load -q
+      # stdout of this script is the isolation dir only (first line); loader chatter goes to stderr.
+      podman load -q >&2
     )
 fi
 echo "$R"
