@@ -9,7 +9,7 @@ import os
 import ssl
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -66,6 +66,17 @@ def _finish_session_interrupted_if_running(engine: AuditEngine) -> None:
     sid = engine.db_manager.current_session_id
     if sid:
         engine.db_manager.finish_session(sid, "interrupted")
+
+
+def _exit_license_blocked(e: LicenseBlockedError) -> NoReturn:
+    """Exit cleanly when licensing enforcement blocks a scan."""
+    print(f"Licensing: scan blocked ({e.state}).", file=sys.stderr)
+    print(str(e), file=sys.stderr)
+    print(
+        "What to do: Provide a valid license file and verify key (see docs/LICENSING_SPEC.md).",
+        file=sys.stderr,
+    )
+    sys.exit(2)
 
 
 def _emit_runtime_trust_info(
@@ -2176,6 +2187,8 @@ def main() -> None:
                     maybe_run_remediation_hook(
                         config, session_id, db_manager=engine.db_manager
                     )
+            except LicenseBlockedError as e:
+                _exit_license_blocked(e)
             except KeyboardInterrupt:
                 _finish_session_interrupted_if_running(engine)
                 print("[demo] Scan interrupted.", file=sys.stderr)
@@ -2551,13 +2564,7 @@ def main() -> None:
         )
         sys.exit(1)
     except LicenseBlockedError as e:
-        print(f"Licensing: scan blocked ({e.state}).", file=sys.stderr)
-        print(str(e), file=sys.stderr)
-        print(
-            "What to do: Provide a valid license file and verify key (see docs/LICENSING_SPEC.md).",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+        _exit_license_blocked(e)
     except Exception as e:
         from core.licensing.errors import FeatureTierBlockedError
 
