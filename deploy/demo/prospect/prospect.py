@@ -82,6 +82,22 @@ class CliError(Exception):
         self.message = message
 
 
+class Occupied:
+    """Third outcome of ``restore_slot`` (design revision 2, DEC-20): a prospect pod is
+    alive, so the slot was left as it was. It is neither 0 (restored) nor 8 (did not
+    come back); the caller prints the line and exits 0 (or 3 with leftovers)."""
+
+    def __init__(self, occupants: list[str]) -> None:
+        self.occupants = occupants
+
+    @property
+    def line(self) -> str:
+        return "dashboard não religada: slot ocupado por " + ", ".join(self.occupants)
+
+
+_OCCUPYING_UNIT = ("active", "activating", "reloading")
+
+
 def _stamp(dt: datetime) -> str:
     """UTC, no fraction, ``Z`` suffix (never ``isoformat()``, which gives ``+00:00``)."""
     return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -859,13 +875,36 @@ class Cli:
         _read_base_env(self.inv["prospect_base_env"])
 
     # -- slot (section 3)
-    def stop_slot(self) -> None:
+    def stop_slot(self) -> int:
         if self.inv["prospect_slot_mode"] == "systemd":
-            self.run(["systemctl", "--user", "stop", f"{self.dash}.service"])
+            argv = ["systemctl", "--user", "stop", f"{self.dash}.service"]
         else:
-            self.run(["podman", "stop", "-t", "20", self.dash])
+            argv = ["podman", "stop", "-t", "20", self.dash]
+        return self.run(argv)[0]
 
-    def restore_slot(self, slug_hint: str | None = None) -> int:
+    def slot_occupants(self) -> list[str]:
+        """Section 3, step 0: slugs with a running labelled container, or whose unit is
+        active/activating/reloading, read from the host (not from the caller's intent)."""
+        slugs = set(self.known_slugs())
+        running: set[str] = set()
+        for c in self.containers(LABEL):
+            value = str((c.get("Labels") or {}).get(LABEL, ""))
+            if not _SLUG.fullmatch(value):
+                continue
+            slugs.add(value)
+            if str(c.get("State", "")).lower() == "running":
+                running.add(value)
+        out = []
+        for slug in sorted(slugs):
+            if slug in running or self.unit_state(slug) in _OCCUPYING_UNIT:
+                exp = (self.state(slug) or {}).get("expires_at")
+                out.append(f"{slug} até {exp}" if exp else slug)
+        return out
+
+    def restore_slot(self, slug_hint: str | None = None) -> int | Occupied:
+        occupants = self.slot_occupants()
+        if occupants:  # no write at all: slot.json and ALERT stay byte for byte
+            return Occupied(occupants)
         slot = self.slot()
         slug = slug_hint or (slot or {}).get("taken_by") or "desconhecida"
         if self.inv["prospect_slot_mode"] == "systemd":
@@ -1035,20 +1074,32 @@ class Cli:
             try:
                 return self._create(slug, ttl_s)
             except CliError as exc:
-                self.stop_and_teardown(slug)
-                rc = self.restore_slot(slug)
-                if rc == EXIT_SLOT:
+                if self._rollback(slug) == EXIT_SLOT:
                     raise CliError(
                         EXIT_SLOT, exc.message + "; dashboard não voltou"
                     ) from None
                 raise
             except BaseException as exc:  # Ctrl-C too: never leave the slot down
-                self.stop_and_teardown(slug)
-                if self.restore_slot(slug) == EXIT_SLOT and isinstance(exc, Exception):
+                if self._rollback(slug) == EXIT_SLOT and isinstance(exc, Exception):
                     raise CliError(
                         EXIT_SLOT, "falha inesperada; dashboard não voltou"
                     ) from None
                 raise
+
+    def _rollback(self, slug: str) -> int | Occupied:
+        """Teardown of a failed up, then restore_slot even if the teardown raised (the
+        leftovers are reported and the reaper finishes them). An Occupied outcome only
+        means the pod of ``slug`` survived; the exit code of the up does not change."""
+        try:
+            self.stop_and_teardown(slug)
+        except Exception as exc:
+            print(
+                f"restos de {slug}: teardown falhou ({type(exc).__name__})",
+                file=self.ctx.err,
+            )
+        finally:  # Ctrl-C in the teardown too
+            rc = self.restore_slot(slug)
+        return rc
 
     def take_slot(self, slug: str, dash_running: bool) -> None:
         previous = self.slot() or {}
@@ -1071,7 +1122,12 @@ class Cli:
         if timer:
             self.run(["systemctl", "--user", "stop", "demo-reset.timer"])
         if dash_running:
-            self.stop_slot()
+            stop_rc = self.stop_slot()
+            if stop_rc != 0:  # the dashboard may still be up: never start a third one
+                msg = f"parada da dashboard falhou (rc={stop_rc})"
+                if self.restore_slot(slug) == EXIT_SLOT:
+                    raise CliError(EXIT_SLOT, msg + "; dashboard não voltou")
+                raise CliError(EXIT_BUSY, msg)
         need = POD_MEMORY_MIB + self.inv["prospect_reserve"]
         deadline = self.now() + timedelta(seconds=MEM_WAIT_S)
         while self.ctx.meminfo() < need:
@@ -1262,15 +1318,20 @@ class Cli:
                 raise CliError(EXIT_BUSY, "outra operação de prospecto em andamento")
             had = self.leftovers(slug)
             rest = self.stop_and_teardown(slug) if had else []
-            rc = EXIT_OK
+            outcome: int | Occupied = EXIT_OK
             if self.slot() is not None or self.container_state(self.dash) != "running":
-                rc = self.restore_slot(slug)
+                outcome = self.restore_slot(slug)
             if not had:
                 self.say(f"nada a remover: {slug}")
-            elif rc == EXIT_OK:
+                if isinstance(outcome, Occupied):
+                    self.say(outcome.line)
+            elif isinstance(outcome, Occupied):
+                self.say(f"removido: {slug}; {outcome.line}")
+            elif outcome == EXIT_OK:
                 self.say(f"removido: {slug}; dashboard no ar")
             else:
                 self.say(f"removido: {slug}; dashboard FORA DO AR")
+            rc = EXIT_OK if isinstance(outcome, Occupied) else outcome
             if rest:
                 print(f"restos de {slug}: " + "; ".join(rest), file=self.ctx.err)
                 self.say("restos: " + "; ".join(rest))
@@ -1394,12 +1455,12 @@ class Cli:
                 self.slot() is not None or self.container_state(self.dash) != "running"
             ):
                 slot_rc = self.restore_slot()
-                self.say(
-                    "reap: dashboard no ar"
-                    if slot_rc == EXIT_OK
-                    else "reap: dashboard FORA DO AR"
-                )
-                if slot_rc != EXIT_OK:
+                if isinstance(slot_rc, Occupied):  # retried on the next cycle
+                    self.say(f"reap: {slot_rc.line}")
+                elif slot_rc == EXIT_OK:
+                    self.say("reap: dashboard no ar")
+                else:
+                    self.say("reap: dashboard FORA DO AR")
                     rc = slot_rc
             return rc
 
@@ -1514,10 +1575,13 @@ def _dispatch(args: argparse.Namespace, ctx: Context) -> int:
         with cli.lock(ctx.lock_timeout_reap) as got:
             if not got:
                 raise CliError(EXIT_BUSY, "outra operação de prospecto em andamento")
-            rc = cli.restore_slot()
-        if rc == EXIT_OK:
+            outcome = cli.restore_slot()
+        if isinstance(outcome, Occupied):
+            cli.say(outcome.line)
+            return EXIT_OK
+        if outcome == EXIT_OK:
             cli.say("dashboard no ar")
-        return rc
+        return outcome
     return cli.teardown_from_unit(args.slug)
 
 
