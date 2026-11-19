@@ -1,7 +1,7 @@
 """Black-box acceptance for prospect-up/down, phase A (task 2280.4, epic #2280, issue #2285).
 
 Source of truth: ``docs/desenho/2280.1.md``, section "Especificação para a aceitação do QA"
-(A-1 to A-18) and section 15 (test seams). Phase B (A-B1 to A-B3) belongs to task 2280.10.
+(A-1 to A-19) and section 15 (test seams). Phase B (A-B1 to A-B3) belongs to task 2280.10.
 
 How it talks to the system (only what an operator would use):
 - the CLI ``deploy/demo/prospect/prospect.py <sub>`` as a subprocess (``up``, ``down``,
@@ -17,6 +17,10 @@ A preparation failure is an ERROR, never an expected failure.
 Pending marker: every test is ``xfail(strict=True, raises=CliAusente)``. ``CliAusente`` is
 raised only while the phase-A artifacts do not exist in the repo, so a harness mistake can
 never pass as "expected failure". When 2280.2/2280.3 land, the dev removes ``pendente``.
+
+A-19 (design revision 2) is the exception: the CLI already exists, so it is
+``xfail(strict=True, raises=CorrecaoAusente)`` until the guard of 2280.2 lands; the dev removes
+that mark. Only the behavior assertions raise ``CorrecaoAusente``; the preparation does not.
 
 Placeholders only: ``acme`` and ``bravo`` are synthetic slugs; no real prospect, vault,
 host or secret appears here. Time-dependent waits are polls with a deadline (the design
@@ -35,6 +39,7 @@ import tempfile
 import threading
 import time
 from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -51,6 +56,20 @@ USER = "prospect"
 
 class CliAusente(Exception):
     """The phase-A artifacts are not in the repo yet (task 2280.2/2280.3 pending)."""
+
+
+class CorrecaoAusente(Exception):
+    """A-19 only: the occupancy guard (design revision 2, DEC-20) is not implemented yet."""
+
+
+@contextmanager
+def _guarda_pendente() -> Iterator[None]:
+    """Turns a failed behavior assertion into ``CorrecaoAusente``, so only a real violation
+    of the guard counts as the expected failure; preparation errors stay plain errors."""
+    try:
+        yield
+    except AssertionError as exc:
+        raise CorrecaoAusente(str(exc)) from exc
 
 
 pendente = pytest.mark.xfail(
@@ -851,8 +870,9 @@ def test_A18_dashboard_nao_volta_gera_alerta_unico(cenario: Harness) -> None:
     an err line in the journal, calls the alert command once, list shows FORA DO AR, and two
     reaper cycles do not repeat the alert.
 
-    Deviation from the design text: the dashboard is made unstartable by a bind mount whose
-    source is removed (an image with a missing tag cannot be forced after `create`)."""
+    How the dashboard is made unstartable (design, revision 1): a bind mount whose source is
+    removed after `podman create`; a missing image tag does not work, because `create` pins
+    the image id. The test requires `podman start` to fail in the preparation."""
     h = cenario
     h.subir_prospecto()
     fonte = h.raiz / "sumira"
@@ -884,3 +904,43 @@ def test_A18_dashboard_nao_volta_gera_alerta_unico(cenario: Harness) -> None:
         assert len(h.alerta_chamadas.read_text(encoding="utf-8").splitlines()) == 1
     finally:
         h.podman("rm", "-f", "-t", "0", h.dash)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=CorrecaoAusente,
+    reason="pendente: tarefa 2280.2/2280.3 implementa o prospect-up/down (#2285)",
+)
+def test_A19_down_de_outro_slug_e_restore_slot_nao_religam(cenario: Harness) -> None:
+    """A-19 (design revision 2): with acme active and the dashboard stopped by the swap,
+    `down bravo` and `restore-slot` exit 0, print the occupied-slot lines, and leave the
+    dashboard exited (same id), slot.json untouched and the acme pod up behind its 401."""
+    h = cenario
+    id_dash = h.inspecionar(h.dash)["Id"]
+    s = h.subir_prospecto("acme")
+    slot = h.runtime / "demo-prospect" / "slot.json"
+    antes = slot.read_bytes()
+    ocupado = f"dashboard não religada: slot ocupado por acme até {s.prazo}"
+
+    with _guarda_pendente():
+        r = h.cli("down", "bravo")
+        assert r.returncode == 0, (r.returncode, r.stderr)
+        linhas = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+        assert linhas == ["nada a remover: bravo", ocupado], r.stdout
+
+        r = h.cli("restore-slot")
+        assert r.returncode == 0, (r.returncode, r.stderr)
+        assert [ln.strip() for ln in r.stdout.splitlines() if ln.strip()] == [
+            ocupado
+        ], r.stdout
+
+        info = h.inspecionar(h.dash)
+        assert info["Id"] == id_dash
+        assert info["State"]["Status"] == "exited"
+        assert slot.read_bytes() == antes
+        assert h.estado("prospect-acme") == "running"
+        assert h.http(h.host("acme"), "/status")[0] == 401
+        assert "dashboard: parada pela sessão acme desde" in h.cli("list").stdout
+
+        assert h.cli("down", "acme").returncode == 0
+        h.assert_slot_ok(id_dash)
