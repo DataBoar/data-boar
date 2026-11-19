@@ -76,6 +76,24 @@ _semgrep_ver_from_workflow() {
   printf '%s' "$ver"
 }
 
+# semgrep-core from the PyPI wheel (uvx) dies with SIGSEGV on an 8 MB stack
+# ("semgrep-core exited with -11"; the text blames memory, it is not memory). The
+# CI docker image does not inherit that host limit. Lift the soft limit to the hard
+# limit; rules, scope, version and --error stay untouched (#2294). It is called
+# inside a subshell so the lift never leaks to the other scans.
+_semgrep_raise_stack_limit() {
+  local hard
+  hard="$(ulimit -Hs)"
+  ulimit -Ss "$hard" 2>/dev/null || echo "check-all-security-scans.sh: WARNING: could not raise the stack limit to ${hard} KB (Semgrep may crash with -11)" >&2
+}
+
+_semgrep_scan() (
+  _semgrep_raise_stack_limit
+  uvx "semgrep@${SEMGREP_VER}" scan --config p/python --metrics=off \
+    --exclude-rule python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text \
+    --error .
+)
+
 if [[ "$ENFORCED" -eq 1 ]]; then
   SEMGREP_VER="$(_semgrep_ver_from_workflow)"
   if [[ -z "$SEMGREP_VER" ]]; then
@@ -83,9 +101,7 @@ if [[ "$ENFORCED" -eq 1 ]]; then
     exit 1
   fi
   echo "Semgrep pin: ${SEMGREP_VER} (from .github/workflows/semgrep.yml image tag)." >&2
-  _run_scan "Semgrep" uvx "semgrep@${SEMGREP_VER}" scan --config p/python --metrics=off \
-    --exclude-rule python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text \
-    --error .
+  _run_scan "Semgrep" _semgrep_scan
 fi
 
 if [[ "${#FAILURES[@]}" -gt 0 ]]; then
