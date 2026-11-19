@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Syntax-check LAB-NODE-01 Ansible playbooks (regression for #1631 Jinja var names).
+# Syntax-check LAB-NODE-01 Ansible playbooks (regression for #1631 Jinja var names)
+# and deploy/ansible/site-demo-prospect.yml (epic #2280).
 # Usage (from repo root): ./scripts/ansible-syntax-check.sh
 set -euo pipefail
 
@@ -25,5 +26,16 @@ for pb in lab-node-01-baseline.yml lab-node-01-podman.yml; do
   echo "ansible-playbook --syntax-check playbooks/$pb"
   ansible-playbook --syntax-check -i "$INV" "playbooks/$pb"
 done
+
+# deploy/ansible: the per-prospect pod tooling (epic #2280, task 2280.3). The example
+# inventory has the demo_prospect group; the playbook needs no collection.
+DEPLOY_ANSIBLE_DIR="$REPO_ROOT/deploy/ansible"
+(
+  cd "$DEPLOY_ANSIBLE_DIR"
+  export ANSIBLE_ROLES_PATH="$DEPLOY_ANSIBLE_DIR/roles"
+  echo "ansible-playbook --syntax-check deploy/ansible/site-demo-prospect.yml"
+  ansible-playbook --syntax-check -i "$DEPLOY_ANSIBLE_DIR/inventory/hosts.ini.example" \
+    site-demo-prospect.yml
+)
 
 echo "ansible-syntax-check.sh: OK"

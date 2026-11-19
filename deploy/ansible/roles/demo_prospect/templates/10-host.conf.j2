@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# Host drop-in of the prospect pod template (epic #2280). Image and license hostname come
+# from the private inventory.
+[Container]
+Image={{ prospect_image }}
+HostName={{ prospect_license_hostname }}

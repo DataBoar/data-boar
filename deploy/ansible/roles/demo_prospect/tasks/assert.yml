@@ -1,0 +1,60 @@
+---
+# Variables with no default in the repo (design D-36 and section 16). They come from the
+# private inventory; the role stops here, naming the missing one, before touching the host.
+- name: Required private inventory variables are set
+  ansible.builtin.assert:
+    that: item in vars
+    fail_msg: "variável obrigatória do inventário privado sem valor: {{ item }}"
+    quiet: true
+  loop:
+    - prospect_domain
+    - prospect_proxy_container
+    - prospect_tls_line
+    - prospect_caddy_dir
+    - prospect_caddy_admin_socket
+    - prospect_caddyfile
+    - prospect_corpus_dir
+    - prospect_profile_file
+    - prospect_recommendations_file
+    - prospect_base_env
+    - prospect_license_file
+    - prospect_image
+    - prospect_license_hostname
+
+- name: The license mode is fixed in enforced
+  ansible.builtin.assert:
+    that: prospect_license_mode | default('enforced') == 'enforced'
+    fail_msg: "prospect_license_mode é fixo em enforced na role (revisão 1 do desenho); remova a variável."
+
+- name: Host paths are absolute and free of ':', ',' and line breaks
+  ansible.builtin.assert:
+    that: vars[item] is string and vars[item] is match('^/[^\n:,]+$')
+    fail_msg: "{{ item }}: precisa ser um caminho absoluto sem ':', ',' nem quebra de linha"
+    quiet: true
+  loop: "{{ demo_prospect_path_keys | select('in', vars) | list }}"
+
+- name: Stat the directories and files the CLI reads
+  ansible.builtin.stat:
+    path: "{{ vars[item.var] }}"
+  register: demo_prospect_stats
+  check_mode: false
+  loop:
+    - {var: prospect_corpus_dir, kind: dir}
+    - {var: prospect_profile_file, kind: file}
+    - {var: prospect_recommendations_file, kind: file}
+    - {var: prospect_base_env, kind: file}
+    - {var: prospect_license_file, kind: file}
+    - {var: prospect_caddyfile, kind: file}
+  loop_control:
+    label: "{{ item.var }}"
+
+- name: The directories and files exist on the host
+  ansible.builtin.assert:
+    that: >-
+      item.stat.exists and
+      (item.item.kind == 'dir' and item.stat.isdir or item.item.kind == 'file' and item.stat.isreg)
+    fail_msg: "{{ item.item.var }}: {{ 'diretório' if item.item.kind == 'dir' else 'arquivo' }} não existe no host"
+    quiet: true
+  loop: "{{ demo_prospect_stats.results }}"
+  loop_control:
+    label: "{{ item.item.var }}"

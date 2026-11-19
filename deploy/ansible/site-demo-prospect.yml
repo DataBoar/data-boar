@@ -1,0 +1,18 @@
+---
+# Path DEMO-PROSPECT: install the per-prospect ephemeral pod tooling (epic #2280,
+# design docs/desenho/2280.1.md section 14) on the demo host, as the rootless user that
+# runs the demo: no become.
+# Usage:
+#   ansible-playbook -i inventory/hosts.ini site-demo-prospect.yml --check   # dry-run
+#   ansible-playbook -i inventory/hosts.ini site-demo-prospect.yml           # apply
+#
+# The host variables (prospect_*) come from the private inventory; see
+# inventory/hosts.ini.example. This play never touches the proxy, the public demo env,
+# the `dashboard` or the `apresentacao`.
+
+- name: Install the prospect pod tooling on the demo host
+  hosts: demo_prospect
+  become: false
+  environment: "{{ labop_debian_unattended_apt_environment }}"
+  roles:
+    - demo_prospect

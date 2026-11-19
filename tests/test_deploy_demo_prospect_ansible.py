@@ -44,7 +44,14 @@ def _load_cli():
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
+    keep, sys.dont_write_bytecode = (
+        sys.dont_write_bytecode,
+        True,
+    )  # no .pyc under deploy/
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.dont_write_bytecode = keep
     return mod
 
 
@@ -130,7 +137,8 @@ def test_D2280_1_37_no_public_demo_secret_ip_or_hostname() -> None:
         if _FORBIDDEN.search(text):
             bad.append(f"{rel}: segredo ou env da demo pública")
         for ip in _IPV4.findall(text):
-            if not ip.startswith("127."):
+            # 0.0.0.0 is the bind inside the pod; the port is published on 127.0.0.1 only.
+            if not ip.startswith("127.") and ip != "0.0.0.0":
                 bad.append(f"{rel}: IP {ip}")
         for host in _HOST.findall(text):
             if host.lower() not in _HOST_OK:
@@ -237,7 +245,7 @@ if shutil.which("ansible-playbook"):
         tpl = "demo-prospect@.container"
         assert (quad / tpl).read_bytes() == (QUADLET / tpl).read_bytes()
         drop = (quad / f"{tpl}.d" / "10-host.conf").read_text(encoding="utf-8")
-        assert drop.splitlines()[0] == "[Container]"
+        assert "[Container]" in drop.splitlines()
         assert "Image=localhost/data_boar:test-signed" in drop
         assert "HostName=demo-host" in drop
         assert "PROSPECT_INVENTORY" not in drop
