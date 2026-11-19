@@ -30,13 +30,13 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 309  (Done: 189 | Incomplete: 120)
-- **Incomplete breakdown:** Pending `⬜`=98, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 309  (Done: 190 | Incomplete: 119)
+- **Incomplete breakdown:** Pending `⬜`=97, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
-| `H1` | 79 | 51 | 28 |
+| `H1` | 79 | 52 | 27 |
 | `H2` | 4 | 4 | 0 |
 | `H3` | 145 | 79 | 66 |
 | `H4` | 0 | 0 | 0 |
@@ -525,8 +525,8 @@ No capacity or timing claim is made without a measurement.
 | # | To-do | Status |
 | - | ----- | ------ |
 | 1 | PLAN written (design, least privilege, fail-closed tier entry) | ✅ Done |
-| 2 | Phase 0 ([#2260](https://github.com/DataBoar/data-boar/issues/2260)): real proof against a personal OneDrive, delegated device-code mode, synthetic folder (rclone/WebDAV discarded) | ⬜ Pending (needs the operator's app registration) |
-| 3 | Phase 1 ([#2261](https://github.com/DataBoar/data-boar/issues/2261)): `sharepoint_online` reader, delegated mode, simulated-Graph tests | 🔄 In progress (implemented and tested against a simulated Graph only; not merged; no real-account proof) |
+| 2 | Phase 0 ([#2260](https://github.com/DataBoar/data-boar/issues/2260)): real proof against a personal OneDrive, delegated device-code mode, synthetic folder (rclone/WebDAV discarded) | 🔄 Partial: app registration and consent done 2026-11-17; download proven by a probe outside the connector against a personal OneDrive (#2260 comments); proof through the Boar connector pending |
+| 3 | Phase 1 ([#2261](https://github.com/DataBoar/data-boar/issues/2261)): `sharepoint_online` reader, delegated mode, simulated-Graph tests | ✅ Done against a simulated Graph: PR [#2265](https://github.com/DataBoar/data-boar/pull/2265) merged 2026-11-17 (closes #2261) and PR [#2271](https://github.com/DataBoar/data-boar/pull/2271) merged 2026-11-18 (closes #2269); no real-account proof through the connector yet (#2260) |
 | 3b | Phase 1c ([#2262](https://github.com/DataBoar/data-boar/issues/2262)): app-only (client credentials) for a work tenant | ⬜ Blocked: no work-tenant available; roadmap, no proof |
 | 4 | Phase 2: Exchange Online mail; permission and consent guide (en_US + pt_BR) | ⬜ Pending |
 
