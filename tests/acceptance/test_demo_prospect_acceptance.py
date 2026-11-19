@@ -570,7 +570,6 @@ def cenario(harness: Harness) -> Iterator[Harness]:
 
 
 # --------------------------------------------------------------------------- A-1 .. A-18
-@pendente
 def test_A1_up_imprime_credenciais_e_exige_senha(cenario: Harness) -> None:
     """A-1: up exits 0 with URL/user/password/warning; 401, 401, 200 on /en/; pod trusted."""
     h = cenario
@@ -586,7 +585,6 @@ def test_A1_up_imprime_credenciais_e_exige_senha(cenario: Harness) -> None:
     assert h.pod_status(s)["trust_state"] == "trusted"
 
 
-@pendente
 def test_A2_up_repetido_e_idempotente(cenario: Harness) -> None:
     """A-2: second up exits 0, no new password, same URL and deadline, one container."""
     h = cenario
@@ -600,7 +598,6 @@ def test_A2_up_repetido_e_idempotente(cenario: Harness) -> None:
     assert nomes.count("prospect-acme") == 1
 
 
-@pendente
 def test_A3_pod_nao_alcanca_nada_fora(cenario: Harness) -> None:
     """A-3: from inside the pod, no public IP, LAN IP, host.containers.internal, host loopback
     ports or external name resolution."""
@@ -634,7 +631,6 @@ def test_A3_pod_nao_alcanca_nada_fora(cenario: Harness) -> None:
         assert r.stdout.strip() == "", f"o pod alcançou algo fora: {r.stdout}"
 
 
-@pendente
 def test_A4_isolamento_entre_prospectos(cenario: Harness) -> None:
     """A-4: other processes reach the pod port but get 401 without the key; after
     scan(acme)/down/up(bravo), bravo has no finding or session from acme."""
@@ -654,7 +650,6 @@ def test_A4_isolamento_entre_prospectos(cenario: Harness) -> None:
     assert st["current_session_id"] != sessao_acme
 
 
-@pendente
 def test_A5_down_remove_tudo(cenario: Harness) -> None:
     """A-5: down exits 0 and leaves nothing of acme (podman, unit, route, state, fragment)."""
     h = cenario
@@ -664,7 +659,6 @@ def test_A5_down_remove_tudo(cenario: Harness) -> None:
     h.assert_limpo("acme")
 
 
-@pendente
 def test_A6_down_repetido_ou_inexistente(cenario: Harness) -> None:
     """A-6: down twice, and down of an unknown slug, exit 0 with 'nada a remover'."""
     h = cenario
@@ -676,7 +670,6 @@ def test_A6_down_repetido_ou_inexistente(cenario: Harness) -> None:
         assert "nada a remover" in r.stdout
 
 
-@pendente
 def test_A7_ttl_vence_e_reaper_limpa(cenario: Harness) -> None:
     """A-7: after the TTL plus one reaper cycle, A-5 and A-17 hold with no manual command."""
     h = cenario
@@ -693,7 +686,6 @@ def test_A7_ttl_vence_e_reaper_limpa(cenario: Harness) -> None:
     h.assert_slot_ok(id_dash)
 
 
-@pendente
 def test_A8_pod_morto_nao_volta_e_slot_volta(cenario: Harness) -> None:
     """A-8: podman kill on the pod: it does not come back; A-5 and A-17 hold within 3 min."""
     h = cenario
@@ -711,7 +703,6 @@ def test_A8_pod_morto_nao_volta_e_slot_volta(cenario: Harness) -> None:
     h.assert_slot_ok(id_dash)
 
 
-@pendente
 @pytest.mark.parametrize("slug", ["Acme.com", "dashboard"])
 def test_A9_slug_invalido_ou_reservado(cenario: Harness, slug: str) -> None:
     """A-9: invalid or reserved slug exits 2, creates nothing, does not stop the dashboard."""
@@ -725,7 +716,6 @@ def test_A9_slug_invalido_ou_reservado(cenario: Harness, slug: str) -> None:
     h.assert_slot_ok(id_dash)
 
 
-@pendente
 def test_A10_nada_cai_durante_o_ciclo(cenario: Harness) -> None:
     """A-10: control site and the test apresentacao answer 200 throughout a full cycle, and the
     apresentacao keeps the same StartedAt."""
@@ -742,7 +732,6 @@ def test_A10_nada_cai_durante_o_ciclo(cenario: Harness) -> None:
     assert h.inspecionar(h.apres)["State"]["StartedAt"] == inicio
 
 
-@pendente
 def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     """A-11: limits and hardening in `podman inspect` of the pod."""
     h = cenario
@@ -764,7 +753,6 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     assert {"/data", "/tmp"} <= tmpfs  # noqa: S108
 
 
-@pendente
 def test_A12_segredos_nao_vazam(cenario: Harness) -> None:
     """A-12: printed password and the API key (read from pod.env) are not in the journal, the
     proxy logs, ~/.local/share/containers or $XDG_RUNTIME_DIR after A-5."""
@@ -792,7 +780,6 @@ def test_A12_segredos_nao_vazam(cenario: Harness) -> None:
             assert achados == [], f"segredo em {achados}"
 
 
-@pendente
 def test_A14_segundo_scan_recebe_409(cenario: Harness) -> None:
     """A-14: two POST /scan in a row through the proxy: the second gets 409."""
     h = cenario
@@ -804,7 +791,6 @@ def test_A14_segundo_scan_recebe_409(cenario: Harness) -> None:
     assert segundo == 409
 
 
-@pendente
 def test_A15_troca_de_slot(cenario: Harness) -> None:
     """A-15: without the flag exit 2 and the dashboard keeps running; with it the dashboard is
     exited (same id, restart=always), stays so 30 s later, apresentacao untouched, pod up."""
@@ -832,7 +818,6 @@ def test_A15_troca_de_slot(cenario: Harness) -> None:
     assert h.pod_status(s)["trust_state"] == "trusted"
 
 
-@pendente
 def test_A16_outro_prospecto_ativo(cenario: Harness) -> None:
     """A-16: with acme active, up bravo exits 4 naming acme, and bravo has nothing."""
     h = cenario
@@ -843,7 +828,6 @@ def test_A16_outro_prospecto_ativo(cenario: Harness) -> None:
     h.assert_limpo("bravo")
 
 
-@pendente
 def test_A17_dashboard_volta_e_continua_viva(cenario: Harness) -> None:
     """A-17: after down, the dashboard is running (same id), trusted, and 60 s later it is
     still running with a live conmon (the old scar does not come back)."""
@@ -862,7 +846,6 @@ def test_A17_dashboard_volta_e_continua_viva(cenario: Harness) -> None:
     assert h.dash_saudavel()
 
 
-@pendente
 def test_A18_dashboard_nao_volta_gera_alerta_unico(cenario: Harness) -> None:
     """A-18: with a dashboard that cannot start, down exits 8, removes the pod, writes ALERT and
     an err line in the journal, calls the alert command once, list shows FORA DO AR, and two
