@@ -299,6 +299,13 @@ class FakeHost:
         if verb == "reset-failed":
             self.units.pop(unit, None)
             return 0, "", ""
+        if verb == "show" and rest[1] == "demo-prospect@*":
+            blocks = [
+                f"Id={u}\nActiveState={st}"
+                for u, st in sorted(self.units.items())
+                if u.startswith("demo-prospect@")
+            ]
+            return 0, "\n\n".join(blocks) + ("\n" if blocks else ""), ""
         return 0, "", ""
 
 
@@ -327,6 +334,7 @@ class FakeProbe:
         self.calls: list[tuple[str, str | None, str | None]] = []
         self.route_calls: list[tuple[str, int]] = []
         self.route_code = 401
+        self.route_codes: list[int] = []
 
     def status(self, url: str, key: str | None = None, cafile: str | None = None):
         self.calls.append((url, key, cafile))
@@ -342,7 +350,7 @@ class FakeProbe:
 
     def route_status(self, host: str, port: int) -> int:
         self.route_calls.append((host, port))
-        return self.route_code
+        return self.route_codes.pop(0) if self.route_codes else self.route_code
 
 
 class FakeAlerter:
@@ -1723,3 +1731,52 @@ def test_cli_erro_de_uso_em_uma_linha(env: Env) -> None:
     rc, _, err = env.cli("nao-existe")
     assert rc == 2
     assert len(err.strip().splitlines()) == 1
+
+
+# --------------------------------------------------------------------------- extra cases
+def test_reap_reseta_a_unidade_failed_depois_do_from_unit(env: Env) -> None:
+    """Sections 11 and 12: after the TTL (or a killed pod) the ExecStopPost teardown leaves
+    the unit `failed` and no state; the next reap resets it and brings the slot back."""
+    assert env.up()[0] == 0
+    env.host.containers.pop("prospect-acme")
+    env.host.units["demo-prospect@acme.service"] = "failed"
+    assert env.cli("teardown", "acme", "--from-unit")[0] == 0
+    assert not env.slug_dir("acme").exists()
+    assert env.host.units.get("demo-prospect@acme.service") == "failed"
+    before = len(env.host.calls)
+    rc, _, err = env.cli("reap")
+    assert rc == 0, err
+    new = env.host.calls[before:]
+    assert ["systemctl", "--user", "reset-failed", "demo-prospect@acme.service"] in new
+    assert "demo-prospect@acme.service" not in env.host.units
+    env.assert_clean("acme")
+    assert not env.slot_json().exists()
+    before = len(env.host.calls)
+    assert env.cli("reap")[0] == 0
+    assert [c for c in env.host.calls[before:] if not is_read(c)] == []
+
+
+def test_memoria_insuficiente_e_dashboard_nao_volta_sai_8(env: Env) -> None:
+    """Section 1, exit codes: when the slot does not come back, 8 wins over 4."""
+    env.mem_mib = 100
+    env.host.dash_start_rc = 125
+    rc, _, _ = env.up()
+    assert rc == 8
+    assert len(env.alerter.emitted) == 1
+
+
+def test_falha_de_inicio_com_dashboard_que_nao_volta_sai_8(env: Env) -> None:
+    """Section 1, exit codes: a failed up whose rollback cannot bring the slot back is 8."""
+    env.host.fail["start demo-prospect@acme.service"] = (1, "", "job failed")
+    env.host.dash_start_rc = 125
+    rc, _, _ = env.up()
+    assert rc == 8
+    assert not env.slug_dir("acme").exists()
+
+
+def test_rota_sem_resposta_e_tentada_de_novo(env: Env) -> None:
+    """Section 10, step 11: no answer yet (0) is retried for a few seconds; 401 passes."""
+    env.probe.route_codes = [0, 0, 401]
+    rc, _, err = env.up()
+    assert rc == 0, err
+    assert len(env.probe.route_calls) == 3
