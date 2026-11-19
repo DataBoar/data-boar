@@ -341,10 +341,14 @@ class Harness:
         pasta.mkdir(exist_ok=True)
         for i in range(60):
             cpf = _cpf_sintetico(f"{(i * 7919 + 123456789) % 10**9:09d}")
-            (pasta / f"ficha-{i:03d}.txt").write_text(
+            arquivo = pasta / f"ficha-{i:03d}.txt"
+            arquivo.write_text(
                 f"Cliente ficticio {i}\nCPF: {cpf}\nE-mail: cliente{i}@exemplo.com\n",
                 encoding="utf-8",
             )
+            arquivo.chmod(0o644)
+        # Prospect pod runs non-root (typical 65532:65532); ro bind must allow other read+execute.
+        pasta.chmod(0o755)
 
     def subir(self) -> None:
         self._corpus()
