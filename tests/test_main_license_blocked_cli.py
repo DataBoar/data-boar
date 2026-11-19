@@ -87,3 +87,16 @@ def test_oneshot_blocked_still_exits_2_with_same_text(monkeypatch, tmp_path, cap
         _run_main(monkeypatch, ["--config", str(_config(tmp_path))])
     assert ei.value.code == 2
     _assert_clean_block(capsys, "UNLICENSED", msg)
+
+
+def test_resume_blocked_still_exits_2_without_traceback(monkeypatch, tmp_path, capsys):
+    """--resume must also exit cleanly when license blocks the scan (#2188)."""
+    msg = "license blocked: license_blocked_state"
+    _block_scan(monkeypatch, "UNLICENSED", msg)
+    with pytest.raises(SystemExit) as ei:
+        _run_main(
+            monkeypatch,
+            ["--config", str(_config(tmp_path)), "--resume", "some-session-id"],
+        )
+    assert ei.value.code == 2
+    _assert_clean_block(capsys, "UNLICENSED", msg)
