@@ -171,6 +171,7 @@ if os.name != "nt" and shutil.which("openssl"):
         h = _handler((200, body))
         srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), h)
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.load_cert_chain(str(certs / "tls.crt"), str(certs / "tls.key"))
         srv.socket = ctx.wrap_socket(srv.socket, server_side=True)
         t = threading.Thread(target=srv.serve_forever, daemon=True)
