@@ -1232,17 +1232,47 @@ def _write_excel_sheets(
     inv_rows = []
     if hasattr(db_manager, "get_data_source_inventory"):
         inv_rows = db_manager.get_data_source_inventory(session_id) or []
-    if inv_rows:
-        include_internal_inventory_details = bool(
-            report_cfg.get("include_internal_inventory_details", False)
+
+    # Collect target names from findings that have no inventory row.
+    # Findings carry source_type (database | filesystem | application) based on their origin.
+    inv_target_names = {ir.get("target_name", "") for ir in inv_rows}
+    targets_with_findings: dict[str, str] = {}  # target_name -> source_type
+    for r in db_rows_for_sheets:
+        t = r.get("target_name", "")
+        if t and t not in inv_target_names:
+            targets_with_findings[t] = "database"
+    for r in fs_rows_for_sheets:
+        t = r.get("target_name", "")
+        if t and t not in inv_target_names:
+            targets_with_findings[t] = "filesystem"
+    for r in app_rows_for_sheets or []:
+        t = r.get("target_name", "")
+        if t and t not in inv_target_names:
+            targets_with_findings[t] = r.get("source_type", "application")
+
+    # Build inventory sheet rows: persisted rows first, then not_probed for uncovered targets
+    inv_sheet_rows = []
+    internal_inv_rows = []
+    include_internal_inventory_details = bool(
+        report_cfg.get("include_internal_inventory_details", False)
+    )
+    for r in inv_rows:
+        executive_details, technical_details = _split_inventory_details(
+            r.get("raw_details", "") or ""
         )
-        inv_sheet_rows = []
-        internal_inv_rows = []
-        for r in inv_rows:
-            executive_details, technical_details = _split_inventory_details(
-                r.get("raw_details", "") or ""
-            )
-            inv_sheet_rows.append(
+        inv_sheet_rows.append(
+            {
+                "Target": r.get("target_name", ""),
+                "Source type": r.get("source_type", ""),
+                "Product": r.get("product", "") or "",
+                "Product version": r.get("product_version", "") or "",
+                "Protocol/API version": r.get("protocol_or_api_version", "") or "",
+                "Transport security": r.get("transport_security", "") or "",
+                "Inventory details (executive)": executive_details,
+            }
+        )
+        if technical_details:
+            internal_inv_rows.append(
                 {
                     "Target": r.get("target_name", ""),
                     "Source type": r.get("source_type", ""),
@@ -1250,22 +1280,26 @@ def _write_excel_sheets(
                     "Product version": r.get("product_version", "") or "",
                     "Protocol/API version": r.get("protocol_or_api_version", "") or "",
                     "Transport security": r.get("transport_security", "") or "",
-                    "Inventory details (executive)": executive_details,
+                    "Inventory details (technical)": technical_details,
                 }
             )
-            if technical_details:
-                internal_inv_rows.append(
-                    {
-                        "Target": r.get("target_name", ""),
-                        "Source type": r.get("source_type", ""),
-                        "Product": r.get("product", "") or "",
-                        "Product version": r.get("product_version", "") or "",
-                        "Protocol/API version": r.get("protocol_or_api_version", "")
-                        or "",
-                        "Transport security": r.get("transport_security", "") or "",
-                        "Inventory details (technical)": technical_details,
-                    }
-                )
+
+    # Add not_probed rows for targets with findings but no persisted inventory
+    for target_name, source_type in targets_with_findings.items():
+        inv_sheet_rows.append(
+            {
+                "Target": target_name,
+                "Source type": source_type,
+                "Product": "",
+                "Product version": "",
+                "Protocol/API version": "",
+                "Transport security": "not_probed",
+                "Inventory details (executive)": "not_probed: no connector-specific inventory probe ran for this target; findings exist for it",
+            }
+        )
+
+    # Write the inventory sheet when there are rows (either from inventory or from findings reconciliation)
+    if inv_sheet_rows:
         _excel_safe_dataframe(inv_sheet_rows).to_excel(
             writer, sheet_name=_SHEET_DATA_SOURCE_INVENTORY, index=False
         )
