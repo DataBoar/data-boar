@@ -1,0 +1,85 @@
+---
+# Defaults of the demo_prospect role (epic #2280, design docs/desenho/2280.1.md section 14).
+#
+# The host variables (prospect_image, prospect_license_hostname, prospect_license_file,
+# prospect_profile_file, prospect_base_env and the rest of section 16) have NO default here:
+# they come from the private inventory and the role asserts them (tasks/assert.yml).
+
+# Home of the user that runs the pods; everything is installed below it.
+demo_prospect_home: "{{ ansible_facts['user_dir'] }}"
+
+# Repo sources, relative to this role (deploy/demo/...).
+demo_prospect_src_dir: "{{ role_path }}/../../../demo/prospect"
+demo_prospect_quadlet_src_dir: "{{ role_path }}/../../../demo/quadlet"
+
+# Destinations.
+demo_prospect_root: "{{ demo_prospect_home }}/demo/prospect"
+demo_prospect_bin_dir: "{{ demo_prospect_root }}/bin"
+demo_prospect_shortcut_dir: "{{ demo_prospect_home }}/.local/bin"
+demo_prospect_quadlet_dir: "{{ demo_prospect_home }}/.config/containers/systemd"
+demo_prospect_systemd_dir: "{{ demo_prospect_home }}/.config/systemd/user"
+
+# Prerequisites (design section 14).
+demo_prospect_min_podman: "5.0"
+demo_prospect_min_python: "3.11"
+demo_prospect_cgroup_controllers: [cpu, memory, pids]
+
+# Files copied next to prospect.py: the CLI looks for its templates beside itself.
+demo_prospect_bin_files:
+  - {name: prospect.py, mode: "0755"}
+  - {name: config.prospect.yaml, mode: "0644"}
+  - {name: site.caddy.tmpl, mode: "0644"}
+
+# Units installed in ~/.config/systemd/user/ (the timer is enabled).
+demo_prospect_systemd_units:
+  - demo-prospect.slice
+  - demo-slot-restore.service
+  - demo-prospect-reap.service
+  - demo-prospect-reap.timer
+
+# prospect.py subcommands that get a shortcut (prospect-<sub> == prospect.py <sub>).
+demo_prospect_shortcuts: [up, down, list]
+
+# Keys whose value is a host path (absolute, no ':', ',' or line break; design section 16).
+demo_prospect_path_keys:
+  - prospect_caddy_dir
+  - prospect_caddy_admin_socket
+  - prospect_caddyfile
+  - prospect_corpus_dir
+  - prospect_extras_dir
+  - prospect_profile_file
+  - prospect_recommendations_file
+  - prospect_license_file
+  - prospect_base_env
+  - prospect_alert_cmd
+  - prospect_alert_path
+
+# Every key of the closed inventory schema (design section 16). Only the keys defined for
+# the host are written; the CLI applies its own default to the others. prospect_license_mode
+# is deliberately absent: the role writes it fixed (tasks/install.yml).
+demo_prospect_inventory_keys:
+  - prospect_domain
+  - prospect_port
+  - prospect_proxy_port
+  - prospect_proxy_container
+  - prospect_tls_line
+  - prospect_caddy_dir
+  - prospect_caddy_dir_in_proxy
+  - prospect_caddy_admin_socket
+  - prospect_caddyfile
+  - prospect_corpus_dir
+  - prospect_extras_dir
+  - prospect_profile_file
+  - prospect_recommendations_file
+  - prospect_license_file
+  - prospect_base_env
+  - prospect_reserve
+  - prospect_slot_container
+  - prospect_slot_mode
+  - prospect_slot_health_url
+  - prospect_protected_containers
+  - prospect_alert_cmd
+  - prospect_alert_path
+  - prospect_reserved_slugs
+  - prospect_image
+  - prospect_license_hostname

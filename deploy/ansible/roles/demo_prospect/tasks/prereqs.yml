@@ -1,0 +1,76 @@
+---
+# Read-only checks: they run (and never change anything) even with --check.
+- name: Read the Podman version
+  ansible.builtin.command:
+    argv: [podman, version, --format, "{% raw %}{{.Client.Version}}{% endraw %}"]
+  register: demo_prospect_podman
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: Podman {{ demo_prospect_min_podman }} or newer
+  ansible.builtin.assert:
+    that:
+      - demo_prospect_podman.rc == 0
+      - demo_prospect_podman.stdout | trim is version(demo_prospect_min_podman, '>=')
+    fail_msg: "Podman {{ demo_prospect_min_podman }} ou mais é necessário (Quadlet de usuário)."
+
+- name: Read the linger flag of the user
+  ansible.builtin.command:
+    argv: [loginctl, show-user, "{{ ansible_facts['user_id'] }}", -p, Linger, --value]
+  register: demo_prospect_linger
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: Linger enabled
+  ansible.builtin.assert:
+    that: demo_prospect_linger.rc == 0 and demo_prospect_linger.stdout | trim == 'yes'
+    fail_msg: "linger desligado: rode 'loginctl enable-linger {{ ansible_facts['user_id'] }}'."
+
+- name: Read the cgroup controllers delegated to the user manager
+  ansible.builtin.slurp:
+    src: "/sys/fs/cgroup/user.slice/user-{{ ansible_facts['user_uid'] }}.slice/user@{{ ansible_facts['user_uid'] }}.service/cgroup.controllers"
+  register: demo_prospect_controllers
+  failed_when: false
+
+- name: cpu, memory and pids delegated
+  ansible.builtin.assert:
+    that:
+      - demo_prospect_controllers.content is defined
+      - demo_prospect_cgroup_controllers | difference((demo_prospect_controllers.content | b64decode).split()) | length == 0
+    fail_msg: >-
+      os controladores {{ demo_prospect_cgroup_controllers | join(' ') }} não estão delegados ao
+      usuário (systemd 'Delegate=' no user@.service).
+
+- name: Read the python3 version
+  ansible.builtin.command:
+    argv: [python3, -c, "import sys; print('%d.%d' % sys.version_info[:2])"]
+  register: demo_prospect_python
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: python3 {{ demo_prospect_min_python }} or newer
+  ansible.builtin.assert:
+    that:
+      - demo_prospect_python.rc == 0
+      - demo_prospect_python.stdout | trim is version(demo_prospect_min_python, '>=')
+    fail_msg: "python3 {{ demo_prospect_min_python }} ou mais é necessário (o prospect.py só usa a stdlib)."
+
+- name: Find openssl and systemd-run
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v \"$1\"", sh, "{{ item }}"]
+  loop: [openssl, systemd-run]
+  register: demo_prospect_tools
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: openssl and systemd-run present
+  ansible.builtin.assert:
+    that: item.rc == 0
+    fail_msg: "{{ item.item }} não encontrado no PATH."
+  loop: "{{ demo_prospect_tools.results }}"
+  loop_control:
+    label: "{{ item.item }}"

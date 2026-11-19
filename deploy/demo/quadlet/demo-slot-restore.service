@@ -1,0 +1,13 @@
+# Brings the dashboard slot back after a prospect session (epic #2280, design
+# 2280.1 section 3). Started with --no-block by the pod's ExecStopPost, so the
+# dashboard is never restarted inside the cgroup of the unit that is dying.
+# restore-slot starts the dashboard through `systemd-run --user --scope`, so its
+# conmon lives in its own scope and not in this oneshot.
+
+[Unit]
+Description=Restore the Data Boar dashboard slot after a prospect session
+
+[Service]
+Type=oneshot
+ExecStart=%h/demo/prospect/bin/prospect.py restore-slot
+TimeoutStartSec=300

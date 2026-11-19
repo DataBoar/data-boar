@@ -126,6 +126,20 @@ def _report_inventory() -> CommandCompletionInventory:
     )
 
 
+# Segments separated by single hyphens, no trailing/double hyphen. Written without
+# nested/ambiguous quantifiers (``(?:[a-z0-9]+|-[a-z0-9]+)*`` was exponential:
+# CodeQL py/redos); each ``-`` forces a new segment, so matching is linear.
+_LONG_OPTION_RE = re.compile(r"^--[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+
+
+def _parse_long_option_token(raw: str) -> str | None:
+    """Return a long-option name only when ``raw`` is a real flag token, not prose."""
+    token = raw.strip().rstrip(",:;.)]}\"'")
+    if _LONG_OPTION_RE.fullmatch(token):
+        return token
+    return None
+
+
 COMMAND_COMPLETION_INVENTORY: dict[str, CommandCompletionInventory] = {
     "data-boar": CommandCompletionInventory(
         long_options=_DATA_BOAR_LONG_OPTIONS,
@@ -148,11 +162,17 @@ def long_options_from_help_text(help_text: str) -> frozenset[str]:
     for line in help_text.splitlines():
         if line.startswith("usage:"):
             for match in re.finditer(r"(--[a-z][a-z0-9-]+)", line):
-                opts.add(match.group(1))
+                opt = _parse_long_option_token(match.group(1))
+                if opt:
+                    opts.add(opt)
         elif line.startswith("  -"):
-            for token in line.split():
-                if token.startswith("--"):
-                    opts.add(token.rstrip(",:"))
+            synopsis = re.split(r"\s{2,}", line.strip(), maxsplit=1)[0]
+            for token in synopsis.split():
+                if not token.startswith("--"):
+                    continue
+                opt = _parse_long_option_token(token)
+                if opt:
+                    opts.add(opt)
     return frozenset(opts)
 
 

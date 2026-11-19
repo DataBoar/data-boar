@@ -13,6 +13,10 @@ regexes = [
   '''(?i)wrong-key''',  # FP: chave FAKE demo (curl-auth-header) no synthetic_corpus:778, commit historico b902a2ce.
   '''D6F81740\s*AA5FAB8A\s*CE5716AF\s*871542E6\s*F789F64F''',
   '''D6F81740AA5FAB8ACE5716AF871542E6F789F64F''',
+  # FP: senhas sintéticas TDD/aceitação demo prospect (#2283/#2285, DEC-21), não credencial real.
+  '''operador-senha-teste-20''',
+  '''outra-senha-operador-21''',
+  '''aceitacao-senha-operador-20''',
 ]
 paths = [
   '''scripts/generate_synthetic_poc_corpus\.py''',

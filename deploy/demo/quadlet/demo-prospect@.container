@@ -1,0 +1,44 @@
+# Per-prospect ephemeral Data Boar pod in the dashboard slot (epic #2280,
+# design docs/desenho/2280.1.md section 5). Instance %i is the validated slug.
+# Started and stopped only by prospect.py (no Install section); the TTL is a runtime
+# drop-in (RuntimeMaxSec) and 5400 s is the ceiling without it. Image= matches
+# dashboard.container; the host drop-in demo-prospect@.container.d/10-host.conf
+# (written by Ansible, never in the repo) sets the signed image and HostName=.
+# Host paths of the shared folders come from state.env, never from this file.
+
+[Unit]
+Description=Data Boar prospect pod %i (ephemeral, dashboard slot)
+
+[Container]
+Image=docker.io/fabioleitao/data_boar:1.8.0
+ContainerName=prospect-%i
+Label=databoar.prospect=%i
+Network=prospect-%i
+PublishPort=127.0.0.1:${PROSPECT_PORT}:8088
+PodmanArgs=--memory 700m --memory-swap 700m --cpus 1 --pids-limit 256 --ulimit core=0
+DropCapability=all
+NoNewPrivileges=true
+ReadOnly=true
+LogDriver=none
+Tmpfs=/data:rw,size=96m,mode=0700,U,nosuid,nodev,noexec
+Tmpfs=/tmp:rw,size=64m,mode=1777,nosuid,nodev,noexec
+EnvironmentFile=%t/demo-prospect/%i/pod.env
+Volume=%t/demo-prospect/%i/config.yaml:/cfg/config.yaml:ro,Z
+Volume=%t/demo-prospect/%i/profile.yaml:/cfg/profile.yaml:ro,Z
+Volume=%t/demo-prospect/%i/recommendations.yaml:/cfg/recommendations.yaml:ro,Z
+Volume=%t/demo-prospect/%i/tls.crt:/certs/tls.crt:ro,Z
+Volume=%t/demo-prospect/%i/tls.key:/certs/tls.key:ro,Z
+Volume=%t/demo-prospect/%i/lic:/lic:ro,Z
+Volume=${PROSPECT_CORPUS_DIR}:/corpus:ro
+Volume=${PROSPECT_EXTRAS_DIR}:/extras:ro
+Exec=main.py --config /cfg/config.yaml --web --host 0.0.0.0 --https-cert-file /certs/tls.crt --https-key-file /certs/tls.key
+StopTimeout=20
+
+[Service]
+EnvironmentFile=%t/demo-prospect/%i/state.env
+ExecStartPre=/usr/bin/podman network create --internal --ignore --label databoar.prospect=%i prospect-%i
+ExecStopPost=-%h/demo/prospect/bin/prospect.py teardown %i --from-unit
+Restart=no
+RuntimeMaxSec=5400
+TimeoutStartSec=300
+Slice=demo-prospect.slice

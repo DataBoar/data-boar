@@ -1,0 +1,4 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# prospect-{{ item }} == prospect.py {{ item }} (design 2280.1 section 1).
+exec "{{ demo_prospect_bin_dir }}/prospect.py" {{ item }} "$@"

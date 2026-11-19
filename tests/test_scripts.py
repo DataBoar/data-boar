@@ -853,6 +853,44 @@ def test_check_all_security_scans_mirror_ci_commands():
     )
 
 
+def test_check_all_security_scans_semgrep_raises_stack_limit():
+    """semgrep-core (uvx wheel) SIGSEGVs (-11, misleading "memory" text) on an 8 MB stack (#2294).
+
+    The Semgrep step must lift the soft stack limit to the hard limit, in a subshell,
+    without touching rules, scope or version. Measured 2026-11-19: `ulimit -s 8192`
+    fails even on a one-line file; `ulimit -s unlimited` passes the same command.
+    """
+    import shutil
+
+    import pytest
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    root = _project_root()
+    sh = root / "scripts" / "check-all-security-scans.sh"
+    text = sh.read_text(encoding="utf-8", errors="replace")
+    assert "_semgrep_raise_stack_limit" in text
+    assert '_run_scan "Semgrep" _semgrep_scan' in text
+    # Behavioural: soft limit 8192, the helper must raise it to the hard limit
+    # inside a subshell, and the parent shell must stay at 8192.
+    probe = (
+        "set -u; "
+        f"eval \"$(sed -n '/^_semgrep_raise_stack_limit()/,/^}}/p' '{sh.as_posix()}')\"; "
+        "ulimit -Ss 8192 || exit 77; "
+        "hard=$(ulimit -Hs); "
+        '[ "$hard" = "8192" ] && exit 77; '
+        '( _semgrep_raise_stack_limit; [ "$(ulimit -Ss)" = "$hard" ] ) || exit 1; '
+        '[ "$(ulimit -Ss)" = "8192" ] || exit 2'
+    )
+    result = subprocess.run(
+        [bash, "-c", probe], capture_output=True, text=True, timeout=30
+    )
+    if result.returncode == 77:
+        pytest.skip("hard stack limit is 8192 here: cannot raise (environment)")
+    assert result.returncode == 0, (result.returncode, result.stderr)
+
+
 def test_check_all_security_scans_semgrep_version_from_workflow_only():
     """Local Semgrep pin is the semgrep.yml image tag — not a second hardcoded version (#1793)."""
     root = _project_root()

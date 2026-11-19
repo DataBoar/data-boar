@@ -1,0 +1,11 @@
+---
+# Tagged `systemd`: these talk to the real user manager of the target host.
+- name: Reload the user manager and enable the reaper timer
+  ansible.builtin.systemd:
+    name: demo-prospect-reap.timer
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"

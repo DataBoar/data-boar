@@ -1,0 +1,8 @@
+# Slice of the prospect pod (epic #2280, design 2280.1 section 5): one pod with
+# a little headroom over its own 700 MiB limit.
+
+[Unit]
+Description=Data Boar prospect pods (dashboard slot)
+
+[Slice]
+MemoryMax=720M

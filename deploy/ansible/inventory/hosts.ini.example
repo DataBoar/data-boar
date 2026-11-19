@@ -6,3 +6,29 @@
 
 [data_boar:vars]
 ansible_python_interpreter=/usr/bin/python3
+
+[demo_prospect]
+# The demo host, as the rootless user that runs the demo (site-demo-prospect.yml).
+# demo-host ansible_user=demo
+
+[demo_prospect:vars]
+ansible_python_interpreter=/usr/bin/python3
+# Private values: put them in host_vars/<host>.yml (never in the repo). Names and example
+# values only; the closed schema is design docs/desenho/2280.1.md section 16.
+#   prospect_domain: demo.example.invalid
+#   prospect_proxy_container: proxy
+#   prospect_tls_line: "tls internal"
+#   prospect_caddy_dir: /srv/demo/prospects
+#   prospect_caddy_admin_socket: /srv/demo/caddy-admin.sock
+#   prospect_caddyfile: /srv/demo/Caddyfile
+#   prospect_corpus_dir: /srv/demo/corpus
+#   prospect_profile_file: /srv/demo/profile.yaml
+#   prospect_recommendations_file: /srv/demo/recommendations.yaml
+#   prospect_base_env: /srv/demo/prospect-base.env
+#   prospect_license_file: /srv/demo/license.lic
+#   prospect_image: registry.example.invalid/data_boar:signed
+#   prospect_license_hostname: demo-license-host
+# Optional keys (the CLI has a default): prospect_port, prospect_proxy_port,
+# prospect_caddy_dir_in_proxy, prospect_extras_dir, prospect_reserve, prospect_slot_container,
+# prospect_slot_mode, prospect_slot_health_url, prospect_protected_containers,
+# prospect_alert_cmd, prospect_alert_path, prospect_reserved_slugs.

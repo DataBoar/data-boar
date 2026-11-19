@@ -1,0 +1,68 @@
+---
+- name: Directories (state 0700, CLI, shortcuts, units, fragments)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ demo_prospect_root }}", mode: "0700"}
+    - {path: "{{ demo_prospect_bin_dir }}", mode: "0755"}
+    - {path: "{{ demo_prospect_shortcut_dir }}", mode: "0755"}
+    - {path: "{{ demo_prospect_systemd_dir }}", mode: "0755"}
+    - {path: "{{ demo_prospect_quadlet_dir }}", mode: "0755"}
+    - {path: "{{ demo_prospect_quadlet_dir }}/demo-prospect@.container.d", mode: "0755"}
+    # The proxy mounts this directory read-only and it survives a reboot (design section 4).
+    - {path: "{{ prospect_caddy_dir }}", mode: "0755"}
+  loop_control:
+    label: "{{ item.path }}"
+
+# The CLI looks for its templates in Path(__file__).resolve().parent: all three go to bin/.
+- name: CLI and templates in bin/
+  ansible.builtin.copy:
+    src: "{{ demo_prospect_src_dir }}/{{ item.name }}"
+    dest: "{{ demo_prospect_bin_dir }}/{{ item.name }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ demo_prospect_bin_files }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Keys of the closed inventory that are set for this host
+  ansible.builtin.set_fact:
+    demo_prospect_inventory: >-
+      {{ dict(demo_prospect_inventory_keys | select('in', vars) | list
+              | zip(demo_prospect_inventory_keys | select('in', vars) | map('extract', vars)))
+         | combine({'prospect_license_mode': 'enforced'}) }}
+
+# 0600: the CLI exits 5 on a group or world readable inventory (design section 16).
+- name: inventory.json (closed schema, 0600)
+  ansible.builtin.copy:
+    content: "{{ demo_prospect_inventory | to_nice_json(sort_keys=true) }}\n"
+    dest: "{{ demo_prospect_root }}/inventory.json"
+    mode: "0600"
+
+- name: Shortcuts prospect-up, prospect-down and prospect-list
+  ansible.builtin.template:
+    src: bin/shortcut.sh.j2
+    dest: "{{ demo_prospect_shortcut_dir }}/prospect-{{ item }}"
+    mode: "0755"
+  loop: "{{ demo_prospect_shortcuts }}"
+
+- name: Pod template (Quadlet)
+  ansible.builtin.copy:
+    src: "{{ demo_prospect_quadlet_src_dir }}/demo-prospect@.container"
+    dest: "{{ demo_prospect_quadlet_dir }}/demo-prospect@.container"
+    mode: "0644"
+
+# Signed image and license hostname come from the private inventory, never from the repo.
+- name: Host drop-in 10-host.conf
+  ansible.builtin.template:
+    src: 10-host.conf.j2
+    dest: "{{ demo_prospect_quadlet_dir }}/demo-prospect@.container.d/10-host.conf"
+    mode: "0644"
+
+- name: Slice, slot restore and reaper units
+  ansible.builtin.copy:
+    src: "{{ demo_prospect_quadlet_src_dir }}/{{ item }}"
+    dest: "{{ demo_prospect_systemd_dir }}/{{ item }}"
+    mode: "0644"
+  loop: "{{ demo_prospect_systemd_units }}"

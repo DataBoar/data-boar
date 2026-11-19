@@ -1,0 +1,14 @@
+---
+- name: Host prerequisites (Podman, linger, cgroup delegation, python3, openssl, systemd-run)
+  ansible.builtin.import_tasks: prereqs.yml
+  tags: [prereqs]
+
+- name: Assert the private inventory variables and the files they point to
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Install the CLI, inventory, shortcuts and units
+  ansible.builtin.import_tasks: install.yml
+
+- name: Reload the user manager and enable the reaper timer
+  ansible.builtin.import_tasks: systemd.yml
+  tags: [systemd]
