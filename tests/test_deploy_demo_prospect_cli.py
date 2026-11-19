@@ -516,6 +516,18 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
                 assert protected not in " ".join(argv), argv
 
 
+def _pod_gone(env: Env, slug: str, unit_state: str = "failed") -> None:
+    """The pod of ``slug`` is gone as after the TTL's ExecStopPost: no labelled container
+    and the unit out of active/activating/reloading (design revision 2, DEC-20)."""
+    for name in [
+        n
+        for n, c in env.host.containers.items()
+        if c["Labels"].get("databoar.prospect") == slug
+    ]:
+        del env.host.containers[name]
+    env.host.units[f"demo-prospect@{slug}.service"] = unit_state
+
+
 def _session_lines(out: str) -> list[str]:
     return [line for line in out.splitlines() if line.strip()]
 
@@ -928,6 +940,49 @@ def test_D2280_1_13_memoria_insuficiente_sai_4(env: Env) -> None:
     assert env.clock.now() - T0 >= timedelta(seconds=15)
 
 
+@pytest.mark.parametrize(
+    ("mode", "stop"),
+    [
+        ("podman", "podman stop -t 20 dashboard"),
+        ("systemd", "systemctl --user stop dashboard.service"),
+    ],
+)
+def test_parada_da_dashboard_falha_sai_4(env: Env, mode: str, stop: str) -> None:
+    """S3 of the PR #2292 review: a failed stop of the dashboard (exit code != 0) restores
+    the slot and exits 4, like the memory path of D2280.1-13; no pod is created."""
+    env.inv["prospect_slot_mode"] = mode
+    env.write_inventory()
+    env.host.timer_active = True
+    env.host.fail[stop] = (125, "", "Error: stop failed")
+    rc, _, err = env.up()
+    assert rc == 4, err
+    assert "parada da dashboard falhou (rc=125)" in err
+    assert not [c for c in env.host.calls if c[-1:] == ["demo-prospect@acme.service"]
+                and "start" in c]  # fmt: skip
+    assert not env.slug_dir("acme").exists()
+    assert not env.slot_json().exists()
+    assert env.host.timer_active is True
+    assert env.host.state("dashboard") == "running"
+
+
+def test_rollback_do_up_religa_mesmo_com_teardown_quebrado(
+    env: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S4 of the PR #2292 review: if the teardown of the up rollback raises (an OSError
+    removing a fragment), restore_slot still runs and the exit code of the up stays."""
+    env.probe.pod = None  # no pod health -> 7 (D2280.1-17a)
+
+    def broken(self: Any, slug: str, *, from_unit: bool = False) -> list[str]:
+        raise OSError("fragmento preso")
+
+    monkeypatch.setattr(P.Cli, "teardown", broken)
+    rc, _, err = env.up()
+    assert rc == 7, err
+    assert [c for c in env.host.calls if c[:1] == ["systemd-run"]]
+    assert env.host.state("dashboard") == "running"
+    assert not env.slot_json().exists()
+
+
 # --------------------------------------------------------------------------- up
 def test_D2280_1_14_caminho_feliz_ordem_e_saida(env: Env) -> None:
     """D2280.1-14: call order of sections 3 and 10 and the exact five stdout lines."""
@@ -1299,6 +1354,7 @@ def test_D2280_1_42_restore_slot_ok(env: Env) -> None:
     env.host.timer_active = True
     assert env.up()[0] == 0
     assert env.host.timer_active is False
+    _pod_gone(env, "acme")  # revision 2: restore-slot only restarts a free slot
     before = len(env.host.calls)
     rc, out, err = env.cli("restore-slot")
     assert rc == 0, err
@@ -1317,6 +1373,7 @@ def test_D2280_1_42_restore_slot_ok(env: Env) -> None:
 def test_D2280_1_42_integrity_no_topo_nao_passa(env: Env) -> None:
     """D2280.1-42 (revision 1): integrity_state at top level without `integrity` fails."""
     assert env.up()[0] == 0
+    _pod_gone(env, "acme")  # revision 2: restore-slot only restarts a free slot
     env.probe.slot = {"trust_state": "trusted", "integrity_state": "validated"}
     rc, _, _ = env.cli("restore-slot")
     assert rc == 8
@@ -1495,7 +1552,9 @@ def test_D2280_1_22_down_sem_nada(env: Env) -> None:
 
 
 def test_D2280_1_22_down_sem_nada_religa_slot(env: Env) -> None:
-    """D2280.1-22: with slot.json present, restore_slot is called even with nothing to remove."""
+    """D2280.1-22 (revision 2): with no occupant and slot.json present (a crash mid-session),
+    restore_slot restarts the dashboard: systemd-run ... podman start dashboard, slot.json
+    deleted with good fake health, and stdout is only 'nada a remover: <slug>'."""
     assert env.up()[0] == 0
     assert env.cli("down", "acme")[0] == 0
     env.slot_json().write_text(
@@ -1505,12 +1564,242 @@ def test_D2280_1_22_down_sem_nada_religa_slot(env: Env) -> None:
     )  # fmt: skip
     env.host.containers["dashboard"]["State"] = "exited"
     loads = len(env.admin.loads)
+    before = len(env.host.calls)
     rc, out, err = env.cli("down", "acme")
     assert rc == 0, err
-    assert "nada a remover: acme" in out
+    assert _session_lines(out) == ["nada a remover: acme"]
     assert len(env.admin.loads) == loads
+    run = [c for c in env.host.calls[before:] if c[:1] == ["systemd-run"]]
+    assert len(run) == 1 and run[0][5:] == ["podman", "start", "dashboard"]
     assert env.host.state("dashboard") == "running"
     assert not env.slot_json().exists()
+
+
+# -- occupancy guard of restore_slot (design revision 2, section 3 step 0, DEC-20)
+def _acme_ativo(env: Env, mode: str = "podman") -> str:
+    """acme active after a full up --stop-dashboard, with demo-reset.timer active before;
+    returns the expires_at of acme."""
+    if mode != "podman":
+        env.inv["prospect_slot_mode"] = mode
+        env.write_inventory()
+    env.host.timer_active = True
+    assert env.up()[0] == 0
+    assert env.host.state("prospect-acme") == "running"
+    assert env.host.units["demo-prospect@acme.service"] == "active"
+    assert env.slot_json().exists()
+    return str(env.state("acme")["expires_at"])
+
+
+def _tree(path: Path) -> dict[str, bytes]:
+    return {
+        str(p.relative_to(path)): p.read_bytes() for p in path.rglob("*") if p.is_file()
+    }
+
+
+def _assert_nao_religou(env: Env, new: list[list[str]], occupant: str = "acme") -> None:
+    """No restart of the slot and no write naming the occupant (D2280.1-45)."""
+    for c in new:
+        assert c[:1] != ["systemd-run"], c
+        assert c[:2] != ["podman", "start"], c
+        assert c != ["systemctl", "--user", "start", "dashboard.service"], c
+        assert c != ["systemctl", "--user", "start", "demo-reset.timer"], c
+        assert c[:1] != ["#probe"], c  # no health wait
+        if not is_read(c):
+            assert occupant not in " ".join(c), c
+    assert not env.alert_path.exists()
+    assert env.alerter.emitted == []
+
+
+@pytest.mark.parametrize("mode", ["podman", "systemd"])
+def test_D2280_1_45_down_de_outro_slug_nao_religa(env: Env, mode: str) -> None:
+    """D2280.1-45: with acme active, `down bravo` exits 0 with two lines, never restarts
+    the dashboard, keeps slot.json byte for byte and leaves acme intact."""
+    exp = _acme_ativo(env, mode)
+    slot = env.slot_json().read_bytes()
+    acme = _tree(env.slug_dir("acme"))
+    loads = len(env.admin.loads)
+    before = len(env.host.calls)
+    rc, out, err = env.cli("down", "bravo")
+    assert rc == 0, err
+    assert _session_lines(out) == [
+        "nada a remover: bravo",
+        f"dashboard não religada: slot ocupado por acme até {exp}",
+    ]
+    _assert_nao_religou(env, env.host.calls[before:])
+    assert len(env.admin.loads) == loads
+    assert env.slot_json().read_bytes() == slot
+    assert _tree(env.slug_dir("acme")) == acme
+    assert env.host.state("prospect-acme") == "running"
+
+
+def test_D2280_1_45_down_de_outro_slug_com_restos(env: Env) -> None:
+    """D2280.1-45: bravo with a leftover fragment is torn down (one /load and the rm of
+    bravo's label, nothing names acme) and the single line says the slot is occupied."""
+    exp = _acme_ativo(env)
+    slot = env.slot_json().read_bytes()
+    (env.caddy_dir / "bravo.caddy").write_text("x", encoding="utf-8")
+    loads = len(env.admin.loads)
+    before = len(env.host.calls)
+    rc, out, err = env.cli("down", "bravo")
+    assert rc == 0, err
+    assert _session_lines(out) == [
+        f"removido: bravo; dashboard não religada: slot ocupado por acme até {exp}"
+    ]
+    new = env.host.calls[before:]
+    assert len(env.admin.loads) == loads + 1
+    assert [
+        "podman", "rm", "-f", "-i", "--filter", "label=databoar.prospect=bravo"
+    ] in new  # fmt: skip
+    _assert_nao_religou(env, new)
+    assert env.slot_json().read_bytes() == slot
+    assert not (env.caddy_dir / "bravo.caddy").exists()
+
+
+def test_D2280_1_45_ocupante_so_pelo_conteiner(env: Env) -> None:
+    """D2280.1-45: a running labelled container without state.json occupies the slot; the
+    line ends in 'slot ocupado por acme', without 'até'."""
+    env.host.add_container(
+        "prospect-acme", IMAGE, "running", {"databoar.prospect": "acme"}
+    )
+    env.host.containers["dashboard"]["State"] = "exited"
+    env.slot_json().parent.mkdir(parents=True, exist_ok=True)
+    env.slot_json().write_text(
+        json.dumps({"slot": "dashboard", "taken_by": "acme", "taken_at": _z(T0),
+                    "mode": "podman", "reset_timer_was_active": False}),
+        encoding="utf-8",
+    )  # fmt: skip
+    slot = env.slot_json().read_bytes()
+    before = len(env.host.calls)
+    rc, out, err = env.cli("down", "bravo")
+    assert rc == 0, err
+    assert _session_lines(out) == [
+        "nada a remover: bravo",
+        "dashboard não religada: slot ocupado por acme",
+    ]
+    _assert_nao_religou(env, env.host.calls[before:])
+    assert env.slot_json().read_bytes() == slot
+    assert env.host.state("dashboard") == "exited"
+
+
+def test_D2280_1_46_restore_slot_ocupado(env: Env) -> None:
+    """D2280.1-46: with acme active, `restore-slot` exits 0 with the single occupied line,
+    no restart, slot.json byte for byte and no ALERT."""
+    exp = _acme_ativo(env)
+    slot = env.slot_json().read_bytes()
+    before = len(env.host.calls)
+    rc, out, err = env.cli("restore-slot")
+    assert rc == 0, err
+    assert _session_lines(out) == [
+        f"dashboard não religada: slot ocupado por acme até {exp}"
+    ]
+    _assert_nao_religou(env, env.host.calls[before:])
+    assert env.slot_json().read_bytes() == slot
+
+
+def test_D2280_1_46_unidade_deactivating_nao_ocupa(env: Env) -> None:
+    """D2280.1-46: unit deactivating and no running labelled container (TTL after the
+    ExecStopPost) is no occupant: restore-slot restarts as in D2280.1-42."""
+    _acme_ativo(env)
+    _pod_gone(env, "acme", "deactivating")
+    before = len(env.host.calls)
+    rc, out, err = env.cli("restore-slot")
+    assert rc == 0, err
+    run = [c for c in env.host.calls[before:] if c[:1] == ["systemd-run"]]
+    assert len(run) == 1 and run[0][5:] == ["podman", "start", "dashboard"]
+    assert not env.slot_json().exists()
+    assert _session_lines(out) == ["dashboard no ar"]
+
+
+def test_D2280_1_47_corrida_do_ttl(env: Env) -> None:
+    """D2280.1-47: TTL of acme, then up bravo before the restore runs: the restore finds
+    bravo and does nothing; down bravo restarts the dashboard and the timer."""
+    _acme_ativo(env)
+    # 1. the TTL: the unit is deactivating while its ExecStopPost runs.
+    env.host.units["demo-prospect@acme.service"] = "deactivating"
+    before = len(env.host.calls)
+    assert env.cli("teardown", "acme", "--from-unit")[0] == 0
+    new = env.host.calls[before:]
+    assert [
+        "systemctl", "--user", "start", "--no-block", "demo-slot-restore.service"
+    ] in new  # fmt: skip
+    assert not [c for c in new if c[:1] == ["systemd-run"]]
+    env.host.units["demo-prospect@acme.service"] = "failed"
+    # 2. up bravo before the restore: the dashboard is already stopped.
+    before = len(env.host.calls)
+    rc, _, err = env.up("bravo")
+    assert rc == 0, err
+    assert not [c for c in env.host.calls[before:] if c[:2] == ["podman", "stop"]]
+    record = json.loads(env.slot_json().read_text("utf-8"))
+    assert record["taken_by"] == "bravo"
+    assert record["reset_timer_was_active"] is True
+    exp = str(env.state("bravo")["expires_at"])
+    # 3. the delayed demo-slot-restore.service.
+    slot = env.slot_json().read_bytes()
+    before = len(env.host.calls)
+    rc, out, err = env.cli("restore-slot")
+    assert rc == 0, err
+    assert _session_lines(out) == [
+        f"dashboard não religada: slot ocupado por bravo até {exp}"
+    ]
+    _assert_nao_religou(env, env.host.calls[before:], occupant="bravo")
+    assert env.slot_json().read_bytes() == slot
+    # 4. down bravo restores the slot and the timer of the start of acme.
+    before = len(env.host.calls)
+    rc, out, err = env.cli("down", "bravo")
+    assert rc == 0, err
+    new = env.host.calls[before:]
+    run = [c for c in new if c[:1] == ["systemd-run"]]
+    assert len(run) == 1 and run[0][5:] == ["podman", "start", "dashboard"]
+    assert ["systemctl", "--user", "start", "demo-reset.timer"] in new
+    assert not env.slot_json().exists()
+    assert _session_lines(out) == ["removido: bravo; dashboard no ar"]
+
+
+def test_D2280_1_47_reap_com_bravo_ativo_nao_religa(env: Env) -> None:
+    """D2280.1-47: with bravo active and slot.json present, reap does not restore."""
+    _acme_ativo(env)
+    env.host.timer_active = False
+    assert env.cli("down", "acme")[0] == 0
+    assert env.up("bravo")[0] == 0
+    before = len(env.host.calls)
+    assert env.cli("reap")[0] == 0
+    _assert_nao_religou(env, env.host.calls[before:], occupant="bravo")
+    assert env.slot_json().exists()
+
+
+def test_D2280_1_47_reap_bravo_vencido_religa(env: Env) -> None:
+    """D2280.1-47: with bravo past its deadline, reap tears it down and restores."""
+    assert env.up("bravo", "--ttl", "5m")[0] == 0
+    env.clock.t = T0 + timedelta(minutes=5, seconds=61)
+    before = len(env.host.calls)
+    rc, out, err = env.cli("reap")
+    assert rc == 0, err
+    run = [c for c in env.host.calls[before:] if c[:1] == ["systemd-run"]]
+    assert len(run) == 1
+    assert not env.slot_json().exists()
+    env.assert_clean("bravo")
+
+
+def test_D2280_1_47_reap_pod_sobrevive_nao_religa(env: Env) -> None:
+    """D2280.1-47: bravo past its deadline whose container survives the teardown (the fake
+    rm fails) -> reap exits 3, prints the occupied line without 'até', no podman start,
+    slot.json stays."""
+    assert env.up("bravo", "--ttl", "5m")[0] == 0
+    env.clock.t = T0 + timedelta(minutes=5, seconds=61)
+    env.host.fail["systemctl --user stop demo-prospect@bravo.service"] = (1, "", "x")
+    env.host.fail["podman rm -f -i --filter label=databoar.prospect=bravo"] = (
+        1, "", "x"
+    )  # fmt: skip
+    slot = env.slot_json().read_bytes()
+    before = len(env.host.calls)
+    rc, out, err = env.cli("reap")
+    assert rc == 3, (out, err)
+    assert "reap: dashboard não religada: slot ocupado por bravo" in _session_lines(out)
+    new = env.host.calls[before:]
+    assert not [c for c in new if c[:1] == ["systemd-run"]]
+    assert not [c for c in new if c[:2] == ["podman", "start"]]
+    assert env.host.state("prospect-bravo") == "running"
+    assert env.slot_json().read_bytes() == slot
 
 
 @pytest.mark.parametrize("resto", ["rede", "fragmento", "estado"])
