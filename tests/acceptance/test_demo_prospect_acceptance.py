@@ -54,7 +54,7 @@ USER = "prospect"
 # Design D (#481): operator password via --password-stdin; must not appear on stdout.
 ACEITACAO_SENHA_OPERADOR = "aceitacao-senha-operador-20"
 
-# Podman 5.4.2 expands DropCapability=all to this fixed set (design A-11, revisão 4).
+# Podman 5.4.2 expands DropCapability=all to this fixed set (design A-11 / D-6).
 _PODMAN_5_4_CAP_DROP_ALL = frozenset(
     {
         "CAP_CHOWN",
@@ -235,10 +235,23 @@ class Harness:
         env = {**os.environ, "PROSPECT_INVENTORY": str(self.inventario)}
         argv = [sys.executable, str(CLI), *args]
         if fechado:
-            return subprocess.run(
-                argv,
+            wrapper = ["sh", "-c", 'exec "$0" "$@" <&-', sys.executable]
+            prep = subprocess.run(
+                [*wrapper, "-c", "import sys; print(sys.stdin is None)"],
                 env=env,
-                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            if prep.returncode != 0 or prep.stdout.strip() != "True":
+                raise AssertionError(
+                    "preparação fd 0 fechado: esperado sys.stdin is None, "
+                    f"rc={prep.returncode} stdout={prep.stdout!r} stderr={prep.stderr!r}"
+                )
+            return subprocess.run(
+                [*wrapper, str(CLI), *args],
+                env=env,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -339,7 +352,9 @@ class Harness:
     def _corpus(self) -> None:
         pasta = self.raiz / "corpus"
         pasta.mkdir(exist_ok=True)
-        for i in range(60):
+        # 300 fichas (desenho A-4). Redução temporária a 60 por “lentidão” revertida
+        # após chmod 0770→755/644 no corpus (318aee90); A-4 isolado com 300 ≈47s (2026-11-19).
+        for i in range(300):
             cpf = _cpf_sintetico(f"{(i * 7919 + 123456789) % 10**9:09d}")
             arquivo = pasta / f"ficha-{i:03d}.txt"
             arquivo.write_text(
@@ -835,7 +850,8 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     assert hc["PidsLimit"] == 256
     assert hc["ReadonlyRootfs"] is True
     drop = [c.upper() for c in (hc.get("CapDrop") or [])]
-    eff = [c.upper() for c in (i.get("EffectiveCaps") or [])]
+    assert "EffectiveCaps" in i, "inspect deve expor EffectiveCaps"
+    eff = [c.upper() for c in i["EffectiveCaps"]]
     assert hc["CapAdd"] in (None, [])
     assert eff == [], f"EffectiveCaps deve ser vazio, veio {eff!r}"
     norm = set(drop)
@@ -889,6 +905,7 @@ def test_A14_segundo_scan_recebe_409(cenario: Harness) -> None:
     def em_scan() -> bool:
         return h.pod_status(s).get("running") is True
 
+    # Não está no desenho A-14: o segundo POST só é 409 com scan ativo (running=true).
     _esperar(em_scan, 90, 2.0, msg="primeiro POST /scan deve deixar running=true")
     segundo = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
     assert segundo == 409, (
@@ -1053,34 +1070,45 @@ def test_A20_up_sem_password_stdin_nao_derruba_dashboard(cenario: Harness) -> No
 
 
 @pytest.mark.parametrize(
-    "invocar",
+    ("invocar", "msg_esperada"),
     [
-        lambda h: h.cli(
-            "up",
-            "acme",
-            "--stop-dashboard",
-            "--password-stdin",
-            stdin="x" * 19 + "\n",
+        (
+            lambda h: h.cli(
+                "up",
+                "acme",
+                "--stop-dashboard",
+                "--password-stdin",
+                stdin="x" * 19 + "\n",
+            ),
+            "senha precisa de pelo menos 20 caracteres",
         ),
-        lambda h: h.cli(
-            "up",
-            "acme",
-            "--stop-dashboard",
-            "--password-stdin",
-            stdin="",
+        (
+            lambda h: h.cli(
+                "up",
+                "acme",
+                "--stop-dashboard",
+                "--password-stdin",
+                stdin="",
+            ),
+            "senha vazia: envie pelo stdin com --password-stdin",
         ),
-        lambda h: h.cli(
-            "up",
-            "acme",
-            "--stop-dashboard",
-            "--password-stdin",
-            fechado=True,
+        (
+            lambda h: h.cli(
+                "up",
+                "acme",
+                "--stop-dashboard",
+                "--password-stdin",
+                fechado=True,
+            ),
+            "stdin indisponível: envie a senha pelo stdin com --password-stdin",
         ),
     ],
     ids=["19-chars", "stdin-vazio", "stdin-fechado"],
 )
 def test_A21_entrada_senha_invalida_sem_efeito(
-    cenario: Harness, invocar: Callable[[Harness], subprocess.CompletedProcess[str]]
+    cenario: Harness,
+    invocar: Callable[[Harness], subprocess.CompletedProcess[str]],
+    msg_esperada: str,
 ) -> None:
     """A-21 (DEC-22): três entradas inválidas → 2, mesmas pós-condições do A-20."""
     h = cenario
@@ -1088,14 +1116,48 @@ def test_A21_entrada_senha_invalida_sem_efeito(
     r = invocar(h)
     assert r.returncode == 2, (r.returncode, r.stderr)
     assert "Traceback" not in r.stderr
-    linha = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else ""
-    assert any(
-        p in linha
-        for p in (
-            "senha precisa de pelo menos 20 caracteres",
-            "senha vazia:",
-            "stdin indisponível:",
-            "senha ilegível:",
-        )
-    ), linha
+    assert r.stderr.strip() == msg_esperada, r.stderr
+    assert msg_esperada not in r.stdout
+    _pos_entrada_invalida_sem_efeito(h, antes)
+
+
+_MSG_72_UTF8 = "senha precisa ter no máximo 72 bytes em UTF-8"
+_MUSICAL_A22 = "\U0001d11e"
+
+
+@pytest.mark.parametrize(
+    "stdin_bytes",
+    [
+        ("a" * 73 + "\n").encode(),
+        (_MUSICAL_A22 * 20 + "\n").encode(),
+    ],
+    ids=["73-ascii", "20-symbols-80-bytes"],
+)
+def test_A22_senha_acima_72_bytes_sem_efeito(
+    cenario: Harness, stdin_bytes: bytes
+) -> None:
+    """A-22 (revisão 5): recusa acima de 72 bytes UTF-8 — dashboard intacta (StartedAt)."""
+    h = cenario
+    antes = h.inspecionar(h.dash)
+    env = {**os.environ, "PROSPECT_INVENTORY": str(h.inventario)}
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "up",
+            "acme",
+            "--stop-dashboard",
+            "--password-stdin",
+        ],
+        env=env,
+        input=stdin_bytes,
+        capture_output=True,
+        timeout=400.0,
+        check=False,
+    )
+    err = r.stderr.decode("utf-8", errors="replace")
+    assert r.returncode == 2, (r.returncode, err)
+    assert "Traceback" not in err
+    assert err.strip() == _MSG_72_UTF8, err
+    assert _MSG_72_UTF8 not in r.stdout.decode("utf-8", errors="replace")
     _pos_entrada_invalida_sem_efeito(h, antes)
