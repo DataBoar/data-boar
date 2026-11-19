@@ -1,0 +1,11 @@
+[Unit]
+Description=Reap Data Boar prospect pods every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Unit=demo-prospect-reap.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

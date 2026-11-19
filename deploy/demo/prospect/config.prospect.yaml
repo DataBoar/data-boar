@@ -1,0 +1,161 @@
+# Prospect pod config (epic #2280, design 2280.1 section 8). Rendered by
+# deploy/demo/prospect/prospect.py: only the dollar-brace placeholders are filled, and the
+# render fails if one is left. No secret lives here: the API key comes from the
+# pod env (PROSPECT_API_KEY), and the detection profile and recommendations are
+# copies of host files mounted at /cfg (never versioned in this repo).
+targets:
+  - name: Corpus sintético
+    type: filesystem
+    path: /corpus
+
+file_scan:
+  extensions:
+    - ".R"
+    - ".accdb"
+    - ".ass"
+    - ".avro"
+    - ".bat"
+    - ".bib"
+    - ".c"
+    - ".cfg"
+    - ".cjs"
+    - ".conf"
+    - ".config"
+    - ".cpp"
+    - ".cs"
+    - ".csv"
+    - ".db"
+    - ".dbf"
+    - ".diff"
+    - ".doc"
+    - ".docx"
+    - ".eml"
+    - ".env"
+    - ".epub"
+    - ".feather"
+    - ".go"
+    - ".gql"
+    - ".graphql"
+    - ".h"
+    - ".hpp"
+    - ".htm"
+    - ".html"
+    - ".ini"
+    - ".java"
+    - ".js"
+    - ".json"
+    - ".jsonl"
+    - ".kt"
+    - ".kts"
+    - ".log"
+    - ".markdown"
+    - ".md"
+    - ".mdb"
+    - ".mht"
+    - ".mhtml"
+    - ".mjs"
+    - ".msg"
+    - ".n3"
+    - ".ndjson"
+    - ".odb"
+    - ".odf"
+    - ".odg"
+    - ".odm"
+    - ".odp"
+    - ".ods"
+    - ".odt"
+    - ".orc"
+    - ".owl"
+    - ".parquet"
+    - ".patch"
+    - ".pdf"
+    - ".php"
+    - ".pl"
+    - ".pm"
+    - ".pps"
+    - ".ppsx"
+    - ".ppt"
+    - ".pptx"
+    - ".properties"
+    - ".ps1"
+    - ".py"
+    - ".r"
+    - ".rb"
+    - ".rdf"
+    - ".rs"
+    - ".rst"
+    - ".rtf"
+    - ".rtfd"
+    - ".scala"
+    - ".sh"
+    - ".sql"
+    - ".sqlite"
+    - ".sqlite3"
+    - ".srt"
+    - ".ssa"
+    - ".svg"
+    - ".svgz"
+    - ".tab"
+    - ".tex"
+    - ".toml"
+    - ".ts"
+    - ".tsv"
+    - ".ttl"
+    - ".txt"
+    - ".vb"
+    - ".vtt"
+    - ".vue"
+    - ".xhtml"
+    - ".xls"
+    - ".xlsb"
+    - ".xlsm"
+    - ".xlsx"
+    - ".xml"
+    - ".yaml"
+    - ".yml"
+  recursive: true
+  use_content_type: true
+  scan_rich_media_metadata: true
+  scan_for_stego: true
+  scan_image_ocr: false
+  # Curated corpus only; uploads (phase B) keep archives off until task 2280.7.
+  scan_compressed: true
+  max_inner_size: 8388608
+  max_members: 200
+  max_total_uncompressed: 67108864
+  max_expansion_ratio: 50
+
+sensitivity_detection:
+  connector_format_id_hint: true
+
+regex_overrides_files:
+  - /cfg/profile.yaml
+  - /cfg/recommendations.yaml
+ml_patterns_file: /cfg/profile.yaml
+dl_patterns_file: /cfg/profile.yaml
+
+scan:
+  max_workers: 2
+
+rate_limit:
+  enabled: true
+  max_concurrent_scans: 1
+  min_interval_seconds: 5
+
+learned_patterns:
+  enabled: false
+
+report:
+  output_dir: /data
+  jurisdiction_hints:
+    enabled: true
+
+api:
+  port: 8088
+  host: 0.0.0.0
+  require_api_key: true
+  api_key_from_env: PROSPECT_API_KEY
+  trusted_hosts:
+    - "${trusted_host}"
+
+sqlite_path: /data/audit_results.db

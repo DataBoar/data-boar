@@ -1,0 +1,14 @@
+${host}:${proxy_port} {
+	${tls_line}
+	basic_auth {
+		prospect ${bcrypt_hash}
+	}
+	reverse_proxy https://127.0.0.1:${pod_port} {
+		header_up X-API-Key "${api_key}"
+		header_up -Authorization
+		transport http {
+			tls_trust_pool file ${caddy_dir_in_proxy}/${slug}.crt
+			tls_server_name prospect-${slug}
+		}
+	}
+}

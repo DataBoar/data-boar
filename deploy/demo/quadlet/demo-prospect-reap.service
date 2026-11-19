@@ -1,0 +1,10 @@
+# Reaper of prospect pods (epic #2280, design 2280.1 section 12): expired or dead
+# pods, orphans with the databoar.prospect label, and the dashboard slot.
+
+[Unit]
+Description=Reap expired Data Boar prospect pods
+
+[Service]
+Type=oneshot
+ExecStart=%h/demo/prospect/bin/prospect.py reap
+TimeoutStartSec=300
