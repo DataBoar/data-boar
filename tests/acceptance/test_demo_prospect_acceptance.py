@@ -82,7 +82,7 @@ def _exige_home_isolado() -> None:
         )
 
 
-def _porta_livre(porta: int) -> bool:
+def _porta_esta_livre(porta: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.bind(("127.0.0.1", porta))
@@ -480,7 +480,7 @@ class Harness:
         )
         self.garantir_dashboard()
         _esperar(
-            lambda: _porta_livre(self.porta_pod),
+            lambda: _porta_esta_livre(self.porta_pod),
             45,
             0.5,
             msg=f"porta do pod {self.porta_pod} livre",
