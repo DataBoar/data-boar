@@ -46,6 +46,7 @@ UNIT_PREFIX = "demo-prospect@"
 POD_PREFIX = "prospect-"
 USER = "prospect"
 MIN_OPERATOR_PASSWORD_CHARS = 20
+MAX_OPERATOR_PASSWORD_UTF8_BYTES = 72
 POD_MEMORY_MIB = 700
 SLOT_HEALTH_S = 180
 POD_HEALTH_S = 120
@@ -122,6 +123,8 @@ def _read_operator_password(ctx: Context) -> str:
             EXIT_USAGE,
             f"senha precisa de pelo menos {MIN_OPERATOR_PASSWORD_CHARS} caracteres",
         )
+    if len(password.encode("utf-8")) > MAX_OPERATOR_PASSWORD_UTF8_BYTES:
+        raise CliError(EXIT_USAGE, "senha precisa ter no máximo 72 bytes em UTF-8")
     return password
 
 
@@ -463,6 +466,8 @@ class Runner:
                 input=input,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="strict",
                 timeout=self.timeout,
                 check=False,
             )
@@ -1138,8 +1143,8 @@ class Cli:
             port = self.inv["prospect_port"]
             if self.ctx.port_busy(port):
                 raise CliError(EXIT_BUSY, f"porta {port} ocupada")
-            self.take_slot(slug, dash_running)
             assert operator_password is not None
+            self.take_slot(slug, dash_running)
             try:
                 return self._create(slug, ttl_s, operator_password)
             except CliError as exc:
@@ -1344,6 +1349,7 @@ class Cli:
         if not rotate:
             self.print_session(slug, state, session_kind="existing")
             return EXIT_OK
+        assert operator_password is not None
         frag = self.caddy_dir / f"{slug}.caddy"
         try:
             old = frag.read_text(encoding="utf-8")
@@ -1352,7 +1358,6 @@ class Cli:
         m = re.search(r'header_up X-API-Key "([0-9a-f]{64})"', old)
         if not m:
             raise CliError(EXIT_PROXY, "fragmento da sessão fora do formato")
-        assert operator_password is not None
         self.write(
             frag,
             self._render_route(slug, self._hash(operator_password), m.group(1)),
