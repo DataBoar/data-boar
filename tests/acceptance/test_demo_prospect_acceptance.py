@@ -332,6 +332,9 @@ class Harness:
         alerta.chmod(0o755)
         (self.raiz / "profile.yaml").write_text("{}\n", encoding="utf-8")
         (self.raiz / "recommendations.yaml").write_text("{}\n", encoding="utf-8")
+        base_env = self.raiz / "base.env"
+        base_env.write_text("", encoding="utf-8")
+        base_env.chmod(0o600)
         inv = {
             "prospect_slot_container": self.dash,
             "prospect_slot_mode": "podman",
@@ -345,7 +348,10 @@ class Harness:
             "prospect_proxy_container": self.proxy,
             "prospect_tls_line": "tls internal",
             "prospect_caddy_dir": str(self.caddy_dir),
+            "prospect_caddy_dir_in_proxy": str(self.caddy_dir),
             "prospect_caddy_admin_socket": str(self.admin_sock),
+            "prospect_caddyfile": str(self.raiz / "Caddyfile"),
+            "prospect_base_env": str(base_env),
             "prospect_corpus_dir": str(self.raiz / "corpus"),
             "prospect_profile_file": str(self.raiz / "profile.yaml"),
             "prospect_recommendations_file": str(self.raiz / "recommendations.yaml"),
