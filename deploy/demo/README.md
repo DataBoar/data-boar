@@ -129,3 +129,21 @@ come back.
    `databoar.prospect` container or network is left
    (`podman ps -a --filter label=databoar.prospect`,
    `podman network ls --filter label=databoar.prospect`).
+
+### Running the prospect acceptance suite in isolation
+
+The suite in `tests/acceptance/test_demo_prospect_acceptance.py` runs in an
+isolated `HOME` (environment variable `ISO_H`) and never touches the real
+`~/.config` or Podman storage. It needs a local image (e.g.
+`PROSPECT_TEST_IMAGE=localhost/data_boar:1.8.1-demo`) and Podman.
+
+```bash
+export PROSPECT_TEST_IMAGE=localhost/data_boar:1.8.1-demo
+R=$(PROSPECT_TEST_IMAGE="$PROSPECT_TEST_IMAGE" ./scripts/acceptance/prospect-iso-up.sh | sed -n '1p')
+set -a && source "$R/envrc" && set +a
+uv run pytest tests/acceptance/test_demo_prospect_acceptance.py -v --tb=line
+```
+
+If `ISO_H` does not match `HOME`, the tests skip. A full run takes roughly 18
+minutes. Open a fresh shell afterwards so `ISO_H` and `XDG_*` variables do not
+leak into the next work session.
