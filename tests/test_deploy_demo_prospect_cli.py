@@ -1494,6 +1494,211 @@ def test_D2280_DEC22_D55_rotate_password_sem_stdin(env: Env) -> None:
     assert not any(c[-1:] == ["hash-password"] for c in env.host.calls[calls_before:])
 
 
+_MSG_72_BYTES = "senha precisa ter no máximo 72 bytes em UTF-8"
+_MUSICAL = "\U0001d11e"
+
+
+def _assert_stderr_exato(err: str, esperado: str) -> None:
+    linhas = [ln for ln in err.strip().splitlines() if ln.strip()]
+    assert linhas and linhas[-1] == esperado, (linhas, esperado)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "a" * 73 + "\n",
+        "é" * 37 + "\n",
+        _MUSICAL * 20 + "\n",
+    ],
+    ids=["73-ascii", "37-accent-74-bytes", "20-symbols-80-bytes"],
+)
+def test_D2280_DEC22_D56_recusa_acima_72_bytes_utf8(env: Env, payload: str) -> None:
+    """D-56: recusa no passo 1b — P0+, sem slot, sem stop dashboard."""
+    tracked = TrackingStdin(payload, env=env)
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--stop-dashboard",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        _MSG_72_BYTES,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=True,
+        dash_state="running",
+    )
+    _assert_stderr_exato(err, _MSG_72_BYTES)
+    assert not any(c[:4] == ["podman", "stop", "-t", "20"] for c in env.host.calls)
+
+
+@pytest.mark.parametrize(
+    "payload,esperada",
+    [
+        ("a" * 72 + "\n", "a" * 72),
+        ("é" * 36 + "\n", "é" * 36),
+        ("a" * 72 + "\r\n", "a" * 72),
+    ],
+    ids=["72-ascii", "72-accent-bytes", "72-crlf"],
+)
+def test_D2280_DEC22_D57_fronteira_72_bytes_aceita(
+    env: Env, payload: str, esperada: str
+) -> None:
+    """D-57: exatamente 72 bytes UTF-8 segue ao hash-password."""
+    tracked = TrackingStdin(payload, env=env)
+    c = env.ctx()
+    c.in_ = tracked
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    assert rc == 0, c.err.getvalue()
+    assert _password_sent_to_hash(env).rstrip("\n") == esperada
+
+
+def test_D2280_DEC22_D57_19_simbolos_ordem_regra_curta(env: Env) -> None:
+    """D-57: 19×𝄞 (76 bytes) → mensagem de mínimo, não a dos 72 bytes."""
+    tracked = TrackingStdin(_MUSICAL * 19 + "\n", env=env)
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--stop-dashboard",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    needle = "senha precisa de pelo menos 20 caracteres"
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        needle,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+    )
+    _assert_stderr_exato(err, needle)
+    assert _MSG_72_BYTES not in err
+
+
+def test_D2280_DEC22_D58_idempotente_recusa_73_bytes(env: Env) -> None:
+    """D-58: slug ativo + 73 bytes → 2 sem chamadas novas ao executor."""
+    rc, _out, _ = env.up()
+    assert rc == 0
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    tracked = TrackingStdin("a" * 73 + "\n", env=env)
+    rc, _out, err = env.cli("up", "acme", "--password-stdin", stdin=tracked)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        _MSG_72_BYTES,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+    _assert_stderr_exato(err, _MSG_72_BYTES)
+    assert [c for c in env.host.calls[calls_before:] if not is_read(c)] == []
+
+
+def test_D2280_DEC22_D58_rotate_recusa_73_bytes_sem_proxy(env: Env) -> None:
+    """D-58: rotação com 73 bytes → P0+, fragmento intacto."""
+    rc, _out, _ = env.up()
+    assert rc == 0
+    frag = (env.caddy_dir / "acme.caddy").read_bytes()
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    tracked = TrackingStdin("a" * 73 + "\n", env=env)
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--rotate-password",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        _MSG_72_BYTES,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+    _assert_stderr_exato(err, _MSG_72_BYTES)
+    assert (env.caddy_dir / "acme.caddy").read_bytes() == frag
+    assert not any(c[-1:] == ["hash-password"] for c in env.host.calls[calls_before:])
+    assert len(env.admin.loads) == loads_before
+
+
+def test_D2280_DEC22_D59_runner_run_utf8_stdin() -> None:
+    """D-59: Runner.run envia stdin em UTF-8 mesmo com locale ASCII no filho."""
+    cli_path = str(CLI)
+    child = f"""
+import importlib.util
+import sys
+spec = importlib.util.spec_from_file_location("prospect_cli", {cli_path!r})
+assert spec and spec.loader
+mod = importlib.util.module_from_spec(spec)
+sys.modules["prospect_cli"] = mod
+spec.loader.exec_module(mod)
+rc, out, err = mod.Runner().run(
+    [sys.executable, "-c", "import sys; sys.stdout.write(sys.stdin.buffer.read().hex())"],
+    input="\\u00e9\\n",
+)
+assert rc == 0, (rc, err)
+assert out == "c3a90a"
+"""
+    env = {
+        **os.environ,
+        "LC_ALL": "C",
+        "PYTHONCOERCECLOCALE": "0",
+        "PYTHONUTF8": "0",
+    }
+    r = subprocess.run(
+        [sys.executable, "-c", child],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert r.returncode == 0, (r.stdout, r.stderr)
+
+
 def test_D2280_1_14_caminho_feliz_ordem_e_saida(env: Env) -> None:
     """D2280.1-14: call order of sections 3 and 10 and the exact five stdout lines."""
     rc, out, err = env.up("acme", "--ttl", "30m")
