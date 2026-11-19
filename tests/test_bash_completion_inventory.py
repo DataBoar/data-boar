@@ -16,6 +16,35 @@ from cli.bash_completion_inventory import (
     short_options_from_help_text,
 )
 
+
+def test_long_options_from_help_ignores_prose_references() -> None:
+    """Help prose cites other flags with punctuation; only synopsis flags count."""
+    help_text = (
+        "usage: data-boar [--export-dsar SESSION_ID]\n"
+        "  --dsar-output PATH    Write DSAR. Requires --export-dsar.\n"
+        "  --export-sarif SESSION_ID\n"
+        "  --sarif-output PATH   Write SARIF. Requires --export-sarif.\n"
+    )
+    assert long_options_from_help_text(help_text) == frozenset(
+        {
+            "--dsar-output",
+            "--export-dsar",
+            "--export-sarif",
+            "--sarif-output",
+        }
+    )
+
+
+def test_long_options_from_help_rejects_wrapped_usage_fragments() -> None:
+    """Argparse may hard-wrap usage; partial ``--export-`` is not a flag."""
+    help_text = (
+        "usage: data-boar [--export-\n                 audit-trail [PATH]]\n  --web\n"
+    )
+    opts = long_options_from_help_text(help_text)
+    assert "--export-" not in opts
+    assert "--web" in opts
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BASH_COMPLETION_SCRIPT = REPO_ROOT / "scripts" / "bash-completion" / "data-boar.bash"
 
