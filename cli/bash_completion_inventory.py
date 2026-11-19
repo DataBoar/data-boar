@@ -126,7 +126,10 @@ def _report_inventory() -> CommandCompletionInventory:
     )
 
 
-_LONG_OPTION_RE = re.compile(r"^--[a-z](?:[a-z0-9]+|-[a-z0-9]+)*$")
+# Segments separated by single hyphens, no trailing/double hyphen. Written without
+# nested/ambiguous quantifiers (``(?:[a-z0-9]+|-[a-z0-9]+)*`` was exponential:
+# CodeQL py/redos); each ``-`` forces a new segment, so matching is linear.
+_LONG_OPTION_RE = re.compile(r"^--[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 
 
 def _parse_long_option_token(raw: str) -> str | None:
