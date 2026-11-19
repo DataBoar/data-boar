@@ -54,6 +54,19 @@ USER = "prospect"
 # Design D (#481): operator password via --password-stdin; must not appear on stdout.
 ACEITACAO_SENHA_OPERADOR = "aceitacao-senha-operador-20"
 
+# Podman 5.4+ may expand DropCapability=all instead of a lone ALL token (design A-11).
+_MIN_CAPS_IN_EXPANDED_DROP = 30
+_EXPANDED_DROP_ANCHORS = frozenset({"CHOWN", "DAC_OVERRIDE", "NET_RAW", "SYS_ADMIN"})
+
+
+def _cap_drop_covers_all(drop: list[str]) -> bool:
+    norm = {c.upper() for c in drop}
+    if "ALL" in norm:
+        return True
+    if len(norm) < _MIN_CAPS_IN_EXPANDED_DROP:
+        return False
+    return _EXPANDED_DROP_ANCHORS <= norm
+
 
 class CliAusente(Exception):
     """The phase-A artifacts are not in the repo yet (task 2280.2/2280.3 pending)."""
@@ -802,8 +815,10 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     drop = [c.upper() for c in (hc.get("CapDrop") or [])]
     eff = [c.upper() for c in (i.get("EffectiveCaps") or [])]
     assert hc["CapAdd"] in (None, [])
-    # Podman 5.4 expands DropCapability=all instead of a single ALL token.
-    assert "ALL" in drop or not eff
+    assert eff == [], f"EffectiveCaps deve ser vazio, veio {eff!r}"
+    assert _cap_drop_covers_all(drop), (
+        f"CapDrop não cobre todas as capabilities (ALL ou expansão completa): {drop!r}"
+    )
     assert "no-new-privileges" in " ".join(hc["SecurityOpt"] or [])
     assert hc["LogConfig"]["Type"] == "none"
     assert i["Config"]["Hostname"] == LICENSE_HOSTNAME

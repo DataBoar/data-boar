@@ -120,30 +120,72 @@ _HOST = re.compile(
     re.I,
 )
 _HOST_OK = {"dashboard.net.br", "docker.io"}
+# 0.0.0.0 is only allowed as in-pod web bind (Exec + config), not elsewhere in the tree.
+_POD_BIND_0_ALLOWLIST: dict[Path, re.Pattern[str]] = {
+    QUADLET / "demo-prospect@.container": re.compile(r"--host\s+0\.0\.0\.0"),
+    REPO / "deploy/demo/prospect/config.prospect.yaml": re.compile(
+        r"^\s*host:\s+0\.0\.0\.0\s*$", re.M
+    ),
+}
 
 
-def test_D2280_1_37_no_public_demo_secret_ip_or_hostname() -> None:
-    """D2280.1-37: prospect/, the role and the units name no supabase, m365, /demo/env,
-    IP beyond loopback or hostname beyond dashboard.net.br."""
+def _d37_scan_text(rel: str, text: str) -> list[str]:
+    bad: list[str] = []
+    if _FORBIDDEN.search(text):
+        bad.append(f"{rel}: segredo ou env da demo pública")
+    path = REPO / rel
+    allow = _POD_BIND_0_ALLOWLIST.get(path.resolve())
+    for ip in _IPV4.findall(text):
+        if ip.startswith("127."):
+            continue
+        if ip == "0.0.0.0":
+            if allow and allow.search(text):
+                continue
+            bad.append(f"{rel}: 0.0.0.0 fora do bind interno permitido do pod")
+            continue
+        bad.append(f"{rel}: IP {ip}")
+    for host in _HOST.findall(text):
+        if host.lower() not in _HOST_OK:
+            bad.append(f"{rel}: hostname {host}")
+    return bad
+
+
+def _d37_files() -> list[Path]:
     files = [p for p in (REPO / "deploy/demo/prospect").iterdir() if p.is_file()]
     files += _role_files()
     files += [p for p in QUADLET.glob("demo-prospect*") if p.is_file()]
     files += [QUADLET / "demo-slot-restore.service"]
     files += [PLAYBOOK]
+    return files
+
+
+def test_D2280_1_37_no_public_demo_secret_ip_or_hostname() -> None:
+    """D2280.1-37: prospect/, the role and the units name no supabase, m365, /demo/env,
+    IP beyond loopback or hostname beyond dashboard.net.br."""
     bad: list[str] = []
-    for path in files:
-        text = path.read_text(encoding="utf-8")
+    for path in _d37_files():
         rel = str(path.relative_to(REPO))
-        if _FORBIDDEN.search(text):
-            bad.append(f"{rel}: segredo ou env da demo pública")
-        for ip in _IPV4.findall(text):
-            # 0.0.0.0 is the bind inside the pod; the port is published on 127.0.0.1 only.
-            if not ip.startswith("127.") and ip != "0.0.0.0":
-                bad.append(f"{rel}: IP {ip}")
-        for host in _HOST.findall(text):
-            if host.lower() not in _HOST_OK:
-                bad.append(f"{rel}: hostname {host}")
+        bad.extend(_d37_scan_text(rel, path.read_text(encoding="utf-8")))
     assert not bad, bad
+
+
+def test_D2280_1_37_rejects_non_loopback_ip_outside_pod_bind() -> None:
+    """D2280.1-37: 0.0.0.0 in Ansible/templates is forbidden; only pod Exec/config bind."""
+    bad = _d37_scan_text(
+        "deploy/ansible/roles/demo_prospect/templates/example.j2",
+        "reverse_proxy 0.0.0.0:443\n",
+    )
+    assert bad and "0.0.0.0" in bad[0]
+    bad2 = _d37_scan_text(
+        "deploy/ansible/roles/demo_prospect/templates/example.j2",
+        "reverse_proxy 192.0.2.1:443\n",
+    )
+    assert bad2 and "192.0.2.1" in bad2[0]
+    ok = _d37_scan_text(
+        str((QUADLET / "demo-prospect@.container").relative_to(REPO)),
+        (QUADLET / "demo-prospect@.container").read_text(encoding="utf-8"),
+    )
+    assert ok == []
 
 
 # ------------------------------------------------------------------- the role, for real
