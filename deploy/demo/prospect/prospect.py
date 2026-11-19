@@ -489,6 +489,7 @@ class HealthProbe:
         )
         # Pinned self-signed pod certificate (cafile): chain verified, the name is
         # prospect-<slug>, not 127.0.0.1. Slot probe: loopback only, no verification.
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         ctx.check_hostname = False
         if not cafile:
             ctx.verify_mode = ssl.CERT_NONE
@@ -508,6 +509,8 @@ class HealthProbe:
 
     def route_status(self, host: str, port: int) -> int:
         ctx = ssl.create_default_context()
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        # Route check through the local proxy (loopback only): any certificate.
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         conn = _SNIHTTPSConnection(host, port, ctx)
