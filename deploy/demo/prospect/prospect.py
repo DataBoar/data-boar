@@ -51,6 +51,7 @@ POD_HEALTH_S = 120
 MEM_WAIT_S = 15
 REAP_GRACE_S = 60
 POLL_S = 3.0
+ROUTE_WAIT_S = 15
 ALERT_TAG = "databoar-prospect"
 
 _SLUG = re.compile(r"^[a-z][a-z0-9-]{1,18}[a-z0-9]$")
@@ -1041,9 +1042,12 @@ class Cli:
                         EXIT_SLOT, exc.message + "; dashboard não voltou"
                     ) from None
                 raise
-            except BaseException:
+            except BaseException as exc:  # Ctrl-C too: never leave the slot down
                 self.stop_and_teardown(slug)
-                self.restore_slot(slug)
+                if self.restore_slot(slug) == EXIT_SLOT and isinstance(exc, Exception):
+                    raise CliError(
+                        EXIT_SLOT, "falha inesperada; dashboard não voltou"
+                    ) from None
                 raise
 
     def take_slot(self, slug: str, dash_running: bool) -> None:
@@ -1072,10 +1076,10 @@ class Cli:
         deadline = self.now() + timedelta(seconds=MEM_WAIT_S)
         while self.ctx.meminfo() < need:
             if self.now() >= deadline:
-                self.restore_slot(slug)
-                raise CliError(
-                    EXIT_BUSY, f"memória insuficiente: MemAvailable < {need} MiB"
-                )
+                msg = f"memória insuficiente: MemAvailable < {need} MiB"
+                if self.restore_slot(slug) == EXIT_SLOT:
+                    raise CliError(EXIT_SLOT, msg + "; dashboard não voltou")
+                raise CliError(EXIT_BUSY, msg)
             self.ctx.sleep(1.0)
 
     def _create(self, slug: str, ttl_s: int) -> int:
@@ -1202,7 +1206,12 @@ class Cli:
             self.reload_proxy()
             raise CliError(EXIT_PROXY, f"o proxy recusou a config (/load {code})")
         host = f"{slug}.{self.inv['prospect_domain']}"
-        got = self.ctx.probe.route_status(host, self.inv["prospect_proxy_port"])
+        deadline = self.now() + timedelta(seconds=ROUTE_WAIT_S)
+        while True:
+            got = self.ctx.probe.route_status(host, self.inv["prospect_proxy_port"])
+            if got != 0 or self.now() >= deadline:  # 0 = no answer yet (TLS warming up)
+                break
+            self.ctx.sleep(1.0)
         if got != 401:
             raise CliError(EXIT_PROXY, f"a rota não respondeu 401 (recebeu {got})")
 
@@ -1409,7 +1418,39 @@ class Cli:
         if root.is_dir():
             for p in root.glob(f"{UNIT_PREFIX}*.service.d"):
                 found.add(p.name[len(UNIT_PREFIX) : -len(".service.d")])
+        found |= self.failed_units()
         return {s for s in found if _SLUG.fullmatch(s) and "--" not in s}
+
+    def failed_units(self) -> set[str]:
+        """Instances left `failed` by the TTL or a dead pod: the ExecStopPost teardown
+        never resets its own unit, so the reaper does (section 12, step 1)."""
+        rc, out, _ = self.run(
+            [
+                "systemctl",
+                "--user",
+                "show",
+                f"{UNIT_PREFIX}*",
+                "-p",
+                "Id",
+                "-p",
+                "ActiveState",
+            ]
+        )
+        found: set[str] = set()
+        if rc != 0:
+            return found
+        for block in out.split("\n\n"):
+            fields = dict(
+                line.split("=", 1) for line in block.splitlines() if "=" in line
+            )
+            unit = fields.get("Id", "")
+            if (
+                fields.get("ActiveState") == "failed"
+                and unit.startswith(UNIT_PREFIX)
+                and unit.endswith(".service")
+            ):
+                found.add(unit[len(UNIT_PREFIX) : -len(".service")])
+        return found
 
 
 # --------------------------------------------------------------------------- argv
