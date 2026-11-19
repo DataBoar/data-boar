@@ -1536,27 +1536,23 @@ class SensitivityDetector:
         found_patterns: list[tuple[str, str]] = []
         if self._rust_stage is not None:
             rust_hits, rust_ok = self._rust_stage.match_names(combined)
-            # Collect hit names into a set for definition-order emission
-            hit_names: set[str] = set()
-            if rust_ok:
-                for name in rust_hits:
-                    if name in self.patterns:
-                        hit_names.add(name)
-                python_only = self._rust_stage.python_fallback_names
-            else:
-                python_only = (
-                    self._rust_stage.rust_pattern_names
-                    | self._rust_stage.python_fallback_names
-                )
-            # Add python_only hits that actually match (definition order emission)
-            for name in self.patterns:
-                if name not in hit_names and name in python_only:
+            python_only = (
+                self._rust_stage.python_fallback_names
+                if rust_ok
+                else self._rust_stage.rust_pattern_names
+                | self._rust_stage.python_fallback_names
+            )
+            # Single pass in definition order: decide emission on the spot
+            for name, (_, norm_tag) in self.patterns.items():
+                # Check if this name is a hit
+                is_hit = False
+                if rust_ok and name in rust_hits:
+                    is_hit = True
+                elif name in python_only:
                     rex = self._compiled.get(name)
                     if rex and rex.search(combined):
-                        hit_names.add(name)
-            # Emit in definition order
-            for name in self.patterns:
-                if name in hit_names:
+                        is_hit = True
+                if is_hit:
                     self._append_pattern_hit(found_patterns, name, combined)
             return found_patterns
         for name, (_, norm_tag) in self.patterns.items():
