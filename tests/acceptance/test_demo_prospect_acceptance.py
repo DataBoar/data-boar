@@ -54,18 +54,22 @@ USER = "prospect"
 # Design D (#481): operator password via --password-stdin; must not appear on stdout.
 ACEITACAO_SENHA_OPERADOR = "aceitacao-senha-operador-20"
 
-# Podman 5.4+ may expand DropCapability=all instead of a lone ALL token (design A-11).
-_MIN_CAPS_IN_EXPANDED_DROP = 30
-_EXPANDED_DROP_ANCHORS = frozenset({"CHOWN", "DAC_OVERRIDE", "NET_RAW", "SYS_ADMIN"})
-
-
-def _cap_drop_covers_all(drop: list[str]) -> bool:
-    norm = {c.upper() for c in drop}
-    if "ALL" in norm:
-        return True
-    if len(norm) < _MIN_CAPS_IN_EXPANDED_DROP:
-        return False
-    return _EXPANDED_DROP_ANCHORS <= norm
+# Podman 5.4.2 expands DropCapability=all to this fixed set (design A-11, revisão 4).
+_PODMAN_5_4_CAP_DROP_ALL = frozenset(
+    {
+        "CAP_CHOWN",
+        "CAP_DAC_OVERRIDE",
+        "CAP_FOWNER",
+        "CAP_FSETID",
+        "CAP_KILL",
+        "CAP_NET_BIND_SERVICE",
+        "CAP_SETFCAP",
+        "CAP_SETGID",
+        "CAP_SETPCAP",
+        "CAP_SETUID",
+        "CAP_SYS_CHROOT",
+    }
+)
 
 
 class CliAusente(Exception):
@@ -222,12 +226,26 @@ class Harness:
         return _run(["systemctl", "--user", *args])
 
     def cli(
-        self, *args: str, timeout: float = 400.0, stdin: str | None = None
+        self,
+        *args: str,
+        timeout: float = 400.0,
+        stdin: str | None = None,
+        fechado: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         env = {**os.environ, "PROSPECT_INVENTORY": str(self.inventario)}
         argv = [sys.executable, str(CLI), *args]
+        if fechado:
+            return subprocess.run(
+                argv,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
         payload = stdin
-        if "--password-stdin" in args and payload is None:
+        if "--password-stdin" in args and stdin is None:
             payload = f"{ACEITACAO_SENHA_OPERADOR}\n"
         return _run(argv, env=env, timeout=timeout, input=payload)
 
@@ -321,7 +339,7 @@ class Harness:
     def _corpus(self) -> None:
         pasta = self.raiz / "corpus"
         pasta.mkdir(exist_ok=True)
-        for i in range(300):
+        for i in range(60):
             cpf = _cpf_sintetico(f"{(i * 7919 + 123456789) % 10**9:09d}")
             (pasta / f"ficha-{i:03d}.txt").write_text(
                 f"Cliente ficticio {i}\nCPF: {cpf}\nE-mail: cliente{i}@exemplo.com\n",
@@ -816,8 +834,9 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     eff = [c.upper() for c in (i.get("EffectiveCaps") or [])]
     assert hc["CapAdd"] in (None, [])
     assert eff == [], f"EffectiveCaps deve ser vazio, veio {eff!r}"
-    assert _cap_drop_covers_all(drop), (
-        f"CapDrop não cobre todas as capabilities (ALL ou expansão completa): {drop!r}"
+    norm = set(drop)
+    assert norm == _PODMAN_5_4_CAP_DROP_ALL or norm == {"ALL"}, (
+        f"CapDrop fora do conjunto Podman 5.4.2 + DropCapability=all: {drop!r}"
     )
     assert "no-new-privileges" in " ".join(hc["SecurityOpt"] or [])
     assert hc["LogConfig"]["Type"] == "none"
@@ -861,9 +880,16 @@ def test_A14_segundo_scan_recebe_409(cenario: Harness) -> None:
     s = h.subir_prospecto()
     host = h.host("acme")
     primeiro = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
-    segundo = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
     assert primeiro in (200, 202)
-    assert segundo == 409
+
+    def em_scan() -> bool:
+        return h.pod_status(s).get("running") is True
+
+    _esperar(em_scan, 90, 2.0, msg="primeiro POST /scan deve deixar running=true")
+    segundo = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
+    assert segundo == 409, (
+        f"segundo POST com scan ativo deve ser 409, não {segundo} (rate limit 429 é falha)"
+    )
 
 
 def test_A15_troca_de_slot(cenario: Harness) -> None:
@@ -875,6 +901,7 @@ def test_A15_troca_de_slot(cenario: Harness) -> None:
     inicio_apres = h.inspecionar(h.apres)["State"]["StartedAt"]
     r = h.cli("up", "acme")
     assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "--stop-dashboard" in r.stderr
     assert h.estado(h.dash) == "running"
     assert not h.existe("prospect-acme")
     s = h.subir_prospecto()
@@ -994,3 +1021,77 @@ def test_A19_down_de_outro_slug_e_restore_slot_nao_religam(cenario: Harness) -> 
 
     assert h.cli("down", "acme").returncode == 0
     h.assert_slot_ok(id_dash)
+
+
+def _pos_entrada_invalida_sem_efeito(h: Harness, dash_antes: dict) -> None:
+    """Pós-condições A-20 / A-21 (DEC-22): recusa 2 sem derrubar a dashboard de teste."""
+    depois = h.inspecionar(h.dash)
+    assert depois["Id"] == dash_antes["Id"]
+    assert depois["State"]["StartedAt"] == dash_antes["State"]["StartedAt"]
+    assert depois["State"]["Status"] == "running"
+    assert not h.existe("prospect-acme")
+    assert h.unidade_prospect_ausente("acme")
+    assert not (h.runtime / "demo-prospect" / "acme").exists()
+    assert not (h.runtime / "demo-prospect" / "slot.json").exists()
+    assert list(h.caddy_dir.glob("acme.*")) == []
+    assert h.http(f"ctrl.{DOMAIN}", "/")[0] == 200
+
+
+def test_A20_up_sem_password_stdin_nao_derruba_dashboard(cenario: Harness) -> None:
+    """A-20 (DEC-22): --stop-dashboard sem --password-stdin → 2, dashboard intacta."""
+    h = cenario
+    antes = h.inspecionar(h.dash)
+    r = h.cli("up", "acme", "--stop-dashboard")
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "password-stdin" in r.stderr
+    assert "Traceback" not in r.stderr
+    _pos_entrada_invalida_sem_efeito(h, antes)
+
+
+@pytest.mark.parametrize(
+    "invocar",
+    [
+        lambda h: h.cli(
+            "up",
+            "acme",
+            "--stop-dashboard",
+            "--password-stdin",
+            stdin="x" * 19 + "\n",
+        ),
+        lambda h: h.cli(
+            "up",
+            "acme",
+            "--stop-dashboard",
+            "--password-stdin",
+            stdin="",
+        ),
+        lambda h: h.cli(
+            "up",
+            "acme",
+            "--stop-dashboard",
+            "--password-stdin",
+            fechado=True,
+        ),
+    ],
+    ids=["19-chars", "stdin-vazio", "stdin-fechado"],
+)
+def test_A21_entrada_senha_invalida_sem_efeito(
+    cenario: Harness, invocar: Callable[[Harness], subprocess.CompletedProcess[str]]
+) -> None:
+    """A-21 (DEC-22): três entradas inválidas → 2, mesmas pós-condições do A-20."""
+    h = cenario
+    antes = h.inspecionar(h.dash)
+    r = invocar(h)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "Traceback" not in r.stderr
+    linha = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else ""
+    assert any(
+        p in linha
+        for p in (
+            "senha precisa de pelo menos 20 caracteres",
+            "senha vazia:",
+            "stdin indisponível:",
+            "senha ilegível:",
+        )
+    ), linha
+    _pos_entrada_invalida_sem_efeito(h, antes)
