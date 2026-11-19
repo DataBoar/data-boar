@@ -249,3 +249,140 @@ def test_target_with_no_findings_no_inventory_not_in_sheet(
         assert out is None, "Report should not be generated when there are no findings"
     finally:
         mgr.dispose()
+
+
+def test_smb_target_with_findings_uses_configured_type(
+    tmp_path: Path,
+) -> None:
+    """NEW CASE (a): An SMB target with findings and no inventory row uses 'smb' from config."""
+    db_path = str(tmp_path / "report_inventory_smb.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        sid = "session-smb-findings"
+        mgr.set_current_session_id(sid)
+        mgr.create_session_record(sid)
+
+        # Add a filesystem finding for an SMB target
+        mgr.save_finding(
+            source_type="filesystem",
+            target_name="smb-backup-server",
+            path="\\\\backup-server\\data",
+            file_name="backup.sql",
+            data_type="sql",
+            sensitivity_level="HIGH",
+            pattern_detected="CPF",
+            norm_tag="LGPD Art. 5",
+            ml_confidence=90,
+        )
+
+        mgr.finish_session(sid)
+
+        # Generate report WITH the target configured as type='smb'
+        config = {
+            "targets": [
+                {"name": "smb-backup-server", "type": "smb"},
+            ]
+        }
+        out = generate_report(mgr, sid, output_dir=str(tmp_path), config=config)
+        assert out is not None
+
+        wb = load_workbook(out)
+        row = _find_inventory_row(wb, "smb-backup-server")
+        assert row is not None, "Expected inventory row for SMB target with findings"
+        assert row["Source type"] == "smb", (
+            f"Expected Source type 'smb' from config, got '{row['Source type']}'"
+        )
+        assert row["Transport security"] == "not_probed"
+    finally:
+        mgr.dispose()
+
+
+def test_sharepoint_online_target_with_findings_uses_configured_type(
+    tmp_path: Path,
+) -> None:
+    """NEW CASE (b): A sharepoint_online target uses 'sharepoint_online' from config."""
+    db_path = str(tmp_path / "report_inventory_sp.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        sid = "session-sp-findings"
+        mgr.set_current_session_id(sid)
+        mgr.create_session_record(sid)
+
+        # Add a filesystem finding for a SharePoint target
+        mgr.save_finding(
+            source_type="filesystem",
+            target_name="company-shared-docs",
+            path="/sharepoint/company/docs",
+            file_name="contracts.xlsx",
+            data_type="xlsx",
+            sensitivity_level="HIGH",
+            pattern_detected="EMAIL",
+            norm_tag="GDPR Art. 4(1)",
+            ml_confidence=88,
+        )
+
+        mgr.finish_session(sid)
+
+        # Generate report WITH the target configured as type='sharepoint_online'
+        config = {
+            "targets": [
+                {"name": "company-shared-docs", "type": "sharepoint_online"},
+            ]
+        }
+        out = generate_report(mgr, sid, output_dir=str(tmp_path), config=config)
+        assert out is not None
+
+        wb = load_workbook(out)
+        row = _find_inventory_row(wb, "company-shared-docs")
+        assert row is not None, (
+            "Expected inventory row for SharePoint target with findings"
+        )
+        assert row["Source type"] == "sharepoint_online", (
+            f"Expected Source type 'sharepoint_online' from config, got '{row['Source type']}'"
+        )
+        assert row["Transport security"] == "not_probed"
+    finally:
+        mgr.dispose()
+
+
+def test_target_absent_from_config_uses_fallback_type(
+    tmp_path: Path,
+) -> None:
+    """NEW CASE (c): A target absent from config keeps the old fallback source_type."""
+    db_path = str(tmp_path / "report_inventory_fallback.db")
+    mgr = LocalDBManager(db_path)
+    try:
+        sid = "session-fallback"
+        mgr.set_current_session_id(sid)
+        mgr.create_session_record(sid)
+
+        # Add a filesystem finding
+        mgr.save_finding(
+            source_type="filesystem",
+            target_name="unknown-target",
+            path="/data",
+            file_name="secrets.txt",
+            data_type="txt",
+            sensitivity_level="HIGH",
+            pattern_detected="CREDIT_CARD",
+            norm_tag="PCI",
+            ml_confidence=95,
+        )
+
+        mgr.finish_session(sid)
+
+        # Generate report WITHOUT the target in config (empty targets list)
+        config = {"targets": []}
+        out = generate_report(mgr, sid, output_dir=str(tmp_path), config=config)
+        assert out is not None
+
+        wb = load_workbook(out)
+        row = _find_inventory_row(wb, "unknown-target")
+        assert row is not None, "Expected inventory row"
+        # Should fall back to the inferred type from findings
+        assert row["Source type"] == "filesystem", (
+            f"Expected fallback Source type 'filesystem', got '{row['Source type']}'"
+        )
+        assert row["Transport security"] == "not_probed"
+    finally:
+        mgr.dispose()
