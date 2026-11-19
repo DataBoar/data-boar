@@ -255,7 +255,7 @@ def render_ttl_dropin(ttl_s: int) -> str:
 
 def _read_base_env(path: str) -> dict[str, str]:
     """Section 7: the prospect base env may hold only DATA_BOAR_MACHINE_SEED."""
-    if path.rstrip("/").endswith("/demo/env"):
+    if Path(path).parts[-2:] == ("demo", "env"):  # the public demo env file
         raise _bad("prospect_base_env", "o env da demo pública nunca é usado")
     out: dict[str, str] = {}
     for raw in Path(path).read_text(encoding="utf-8").splitlines():
