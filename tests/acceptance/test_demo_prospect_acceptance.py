@@ -14,13 +14,12 @@ test ``apresentacao``, both from ``PROSPECT_TEST_IMAGE`` with license mode ``ope
 ``prospect.test``. Skipped without ``podman``/``systemd-run --user``/the image variable.
 A preparation failure is an ERROR, never an expected failure.
 
-Pending marker: every test is ``xfail(strict=True, raises=CliAusente)``. ``CliAusente`` is
-raised only while the phase-A artifacts do not exist in the repo, so a harness mistake can
-never pass as "expected failure". When 2280.2/2280.3 land, the dev removes ``pendente``.
+Run only with an **isolated** ``HOME`` (``ISO_H`` must match ``Path.home()``): never the
+operator's real ``~/.config`` or ``~/demo``. Use the repo ``scripts/acceptance/prospect-iso-up.sh``
+envrc or equivalent before ``pytest`` on this file.
 
-A-19 (design revision 2) is the exception: the CLI already exists, so it is
-``xfail(strict=True, raises=CorrecaoAusente)`` until the guard of 2280.2 lands; the dev removes
-that mark. Only the behavior assertions raise ``CorrecaoAusente``; the preparation does not.
+``CliAusente`` is raised only while phase-A artifacts are missing from the repo (harness
+preparation), not as a blanket xfail.
 
 Placeholders only: ``acme`` and ``bravo`` are synthetic slugs; no real prospect, vault,
 host or secret appears here. Time-dependent waits are polls with a deadline (the design
@@ -33,13 +32,13 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -58,25 +57,23 @@ class CliAusente(Exception):
     """The phase-A artifacts are not in the repo yet (task 2280.2/2280.3 pending)."""
 
 
-class CorrecaoAusente(Exception):
-    """A-19 only: the occupancy guard (design revision 2, DEC-20) is not implemented yet."""
+def _exige_home_isolado() -> None:
+    iso_h = os.environ.get("ISO_H")
+    home = Path.home().resolve()
+    if not iso_h or Path(iso_h).resolve() != home:
+        pytest.skip(
+            "aceitação exige HOME isolado (defina ISO_H=HOME temporário; ver "
+            "scripts/acceptance/prospect-iso-up.sh)"
+        )
 
 
-@contextmanager
-def _guarda_pendente() -> Iterator[None]:
-    """Turns a failed behavior assertion into ``CorrecaoAusente``, so only a real violation
-    of the guard counts as the expected failure; preparation errors stay plain errors."""
-    try:
-        yield
-    except AssertionError as exc:
-        raise CorrecaoAusente(str(exc)) from exc
-
-
-pendente = pytest.mark.xfail(
-    strict=True,
-    raises=CliAusente,
-    reason="pendente: tarefa 2280.2/2280.3 implementa o prospect-up/down (#2285)",
-)
+def _porta_livre(porta: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", porta))
+        except OSError:
+            return False
+    return True
 
 
 # --------------------------------------------------------------------------- helpers
@@ -239,6 +236,8 @@ class Harness:
         ]  # fmt: skip
         if auth:
             cmd += ["-u", f"{auth[0]}:{auth[1]}"]
+        if metodo.upper() == "POST":
+            cmd += ["-H", "Content-Type: application/json", "-d", "{}"]
         r = _run([*cmd, f"https://{host}:{porta}{caminho}"], timeout=30)
         corpo, _, codigo = r.stdout.rpartition("\n")
         return (int(codigo) if codigo.isdigit() else 0), corpo
@@ -456,6 +455,25 @@ class Harness:
             "exec", self.proxy, "caddy", "reload", "--config", f"{self.raiz}/Caddyfile"
         )
         self.garantir_dashboard()
+        _esperar(
+            lambda: _porta_livre(self.porta_pod),
+            45,
+            0.5,
+            msg=f"porta do pod {self.porta_pod} livre",
+        )
+
+    def unidade_prospect_ausente(self, slug: str) -> bool:
+        out = self.systemctl(
+            "list-units", "--all", "--no-legend", f"demo-prospect@{slug}*"
+        ).stdout.strip()
+        return out == ""
+
+    def reaper_limpou(self, slug: str = "acme") -> bool:
+        return (
+            not self.existe(f"prospect-{slug}")
+            and self.dash_saudavel()
+            and self.unidade_prospect_ausente(slug)
+        )
 
     def garantir_dashboard(self) -> None:
         if not self.existe(self.dash) or self.estado(self.dash) == "created":
@@ -554,6 +572,7 @@ class Harness:
 # --------------------------------------------------------------------------- fixtures
 @pytest.fixture(scope="session")
 def harness() -> Iterator[Harness]:
+    _exige_home_isolado()
     if not shutil.which("podman") or not shutil.which("systemd-run"):
         pytest.skip("sem podman ou systemd-run")
     if _run(["systemd-run", "--user", "--scope", "true"]).returncode != 0:
@@ -696,10 +715,10 @@ def test_A7_ttl_vence_e_reaper_limpa(cenario: Harness) -> None:
     h.subir_prospecto("acme", "5m")
     h.systemctl("start", "demo-prospect-reap.timer")
     _esperar(
-        lambda: not h.existe("prospect-acme") and h.dash_saudavel(),
+        lambda: h.reaper_limpou("acme"),
         8 * 60,
         10.0,
-        msg="TTL de 5m + 1 ciclo do reaper",
+        msg="TTL de 5m + 1 ciclo do reaper (inclui reset-failed da unidade)",
     )
     h.assert_limpo("acme")
     h.assert_slot_ok(id_dash)
@@ -713,10 +732,10 @@ def test_A8_pod_morto_nao_volta_e_slot_volta(cenario: Harness) -> None:
     h.systemctl("start", "demo-prospect-reap.timer")
     assert h.podman("kill", "prospect-acme").returncode == 0
     _esperar(
-        lambda: not h.existe("prospect-acme") and h.dash_saudavel(),
-        3 * 60,
+        lambda: h.reaper_limpou("acme"),
+        4 * 60,
         5.0,
-        msg="limpeza em até 3 min",
+        msg="reaper + reset-failed em até ~4 min",
     )
     h.assert_limpo("acme")
     h.assert_slot_ok(id_dash)
@@ -762,7 +781,11 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     assert hc["NanoCpus"] == 10**9 or hc.get("CpuQuota") == hc.get("CpuPeriod")
     assert hc["PidsLimit"] == 256
     assert hc["ReadonlyRootfs"] is True
-    assert hc["CapAdd"] in (None, []) and "ALL" in [c.upper() for c in hc["CapDrop"]]
+    drop = [c.upper() for c in (hc.get("CapDrop") or [])]
+    eff = [c.upper() for c in (i.get("EffectiveCaps") or [])]
+    assert hc["CapAdd"] in (None, [])
+    # Podman 5.4 expands DropCapability=all instead of a single ALL token.
+    assert "ALL" in drop or not eff
     assert "no-new-privileges" in " ".join(hc["SecurityOpt"] or [])
     assert hc["LogConfig"]["Type"] == "none"
     assert i["Config"]["Hostname"] == LICENSE_HOSTNAME
@@ -906,11 +929,6 @@ def test_A18_dashboard_nao_volta_gera_alerta_unico(cenario: Harness) -> None:
         h.podman("rm", "-f", "-t", "0", h.dash)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=CorrecaoAusente,
-    reason="pendente: tarefa 2280.2/2280.3 implementa o prospect-up/down (#2285)",
-)
 def test_A19_down_de_outro_slug_e_restore_slot_nao_religam(cenario: Harness) -> None:
     """A-19 (design revision 2): with acme active and the dashboard stopped by the swap,
     `down bravo` and `restore-slot` exit 0, print the occupied-slot lines, and leave the
@@ -920,27 +938,26 @@ def test_A19_down_de_outro_slug_e_restore_slot_nao_religam(cenario: Harness) -> 
     s = h.subir_prospecto("acme")
     slot = h.runtime / "demo-prospect" / "slot.json"
     antes = slot.read_bytes()
-    ocupado = f"dashboard não religada: slot ocupado por acme até {s.prazo}"
+    ocupado = f"dashboard não religada: slot ocupado por acme até {s.expires_at}"
 
-    with _guarda_pendente():
-        r = h.cli("down", "bravo")
-        assert r.returncode == 0, (r.returncode, r.stderr)
-        linhas = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
-        assert linhas == ["nada a remover: bravo", ocupado], r.stdout
+    r = h.cli("down", "bravo")
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    linhas = [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+    assert linhas == ["nada a remover: bravo", ocupado], r.stdout
 
-        r = h.cli("restore-slot")
-        assert r.returncode == 0, (r.returncode, r.stderr)
-        assert [ln.strip() for ln in r.stdout.splitlines() if ln.strip()] == [
-            ocupado
-        ], r.stdout
+    r = h.cli("restore-slot")
+    assert r.returncode == 0, (r.returncode, r.stderr)
+    assert [ln.strip() for ln in r.stdout.splitlines() if ln.strip()] == [ocupado], (
+        r.stdout
+    )
 
-        info = h.inspecionar(h.dash)
-        assert info["Id"] == id_dash
-        assert info["State"]["Status"] == "exited"
-        assert slot.read_bytes() == antes
-        assert h.estado("prospect-acme") == "running"
-        assert h.http(h.host("acme"), "/status")[0] == 401
-        assert "dashboard: parada pela sessão acme desde" in h.cli("list").stdout
+    info = h.inspecionar(h.dash)
+    assert info["Id"] == id_dash
+    assert info["State"]["Status"] == "exited"
+    assert slot.read_bytes() == antes
+    assert h.estado("prospect-acme") == "running"
+    assert h.http(h.host("acme"), "/status")[0] == 401
+    assert "dashboard: parada pela sessão acme desde" in h.cli("list").stdout
 
-        assert h.cli("down", "acme").returncode == 0
-        h.assert_slot_ok(id_dash)
+    assert h.cli("down", "acme").returncode == 0
+    h.assert_slot_ok(id_dash)
