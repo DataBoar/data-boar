@@ -139,7 +139,10 @@ class ToyStore:
         objects: dict[str, bytes],
         token: str,
         host: str = TOY_HOST,
+        declared_sizes: dict[str, int] | None = None,
     ) -> None:
+        """``declared_sizes``: the listing declares these byte counts, not the real ones."""
+        self.declared_sizes = dict(declared_sizes or {})
         self.container = container
         self.objects = dict(objects)
         self.token = token
@@ -172,7 +175,13 @@ class ToyStore:
             return httpx.Response(
                 200,
                 json={
-                    "items": [{"name": n, "bytes": len(self.objects[n])} for n in page],
+                    "items": [
+                        {
+                            "name": n,
+                            "bytes": self.declared_sizes.get(n, len(self.objects[n])),
+                        }
+                        for n in page
+                    ],
                     "next": f"c{start + limit}" if more else None,
                 },
             )
@@ -201,6 +210,8 @@ class ToyDriver:
     name = "toy"
     max_page_size = TOY_PAGE_SIZE
     max_key_bytes = 256
+    # Design R6-8: keys the target must carry (the common layer checks them).
+    required_keys: tuple[str, ...] = ("host", "container")
     credential_keys: tuple[tuple[str, bool], ...] = (("token_from_env", True),)
     forbidden_inline_keys = frozenset({"toy_token", "toy_secret"})
     # Design revision 5: the toy uses ``host`` (the S3 drivers refuse it as misnamed), so it

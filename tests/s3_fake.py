@@ -437,6 +437,8 @@ class FakeS3:
         self._injected: dict[str, bytes] = {}
         self._injected_raw: list[str] = []
         self._redirect: dict[str, Any] | None = None
+        self._extra_entries = 0
+        self._raw_listing: bytes | None = None
         self.transport = httpx.MockTransport(self._handle)
 
     # -- identity ----------------------------------------------------------
@@ -512,6 +514,14 @@ class FakeS3:
 
     def pagination(self, mode: Literal["missing_token", "repeat_token"] | None) -> None:
         self.pagination_mode = mode
+
+    def extra_entries_beyond_max_keys(self, n: int) -> None:
+        """Hostile server: every listing page carries ``n`` entries more than ``max-keys``."""
+        self._extra_entries = n
+
+    def raw_listing_body(self, body: bytes | None) -> None:
+        """Every listing answers exactly ``body`` (hostile bodies); ``None`` turns it off."""
+        self._raw_listing = body
 
     def redirect(
         self, status: int, code: str | None = None, location: str | None = None
@@ -746,7 +756,7 @@ class FakeS3:
             wanted = int(params.get("max-keys", "1000"))
         except ValueError:
             return self._error(400, "InvalidArgument", headers)
-        maxkeys = max(1, min(wanted, self.page_size, 1000))
+        maxkeys = max(1, min(wanted, self.page_size, 1000)) + self._extra_entries
         offset = 0
         if "continuation-token" in params:
             try:
@@ -762,7 +772,12 @@ class FakeS3:
         elif self.pagination_mode == "repeat_token":
             truncated, token_out = True, _token_for(maxkeys)
         encoded = self.encoding_type == "url" and params.get("encoding-type") == "url"
-        body = self._listing_xml(page, prefix, maxkeys, truncated, token_out, encoded)
+        if self._raw_listing is not None:
+            body = self._raw_listing
+        else:
+            body = self._listing_xml(
+                page, prefix, maxkeys, truncated, token_out, encoded
+            )
         sink: list[int] = []
         return httpx.Response(
             200,
