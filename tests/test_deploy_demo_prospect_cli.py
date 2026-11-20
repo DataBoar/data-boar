@@ -16,6 +16,7 @@ placeholders ``acme`` and ``bravo``.
 
 from __future__ import annotations
 
+import codecs
 import importlib.util
 import io
 import json
@@ -39,8 +40,8 @@ CLI = REPO / "deploy" / "demo" / "prospect" / "prospect.py"
 DOMAIN = "prospect.test"
 T0 = datetime(2026, 11, 18, 12, 0, 0, tzinfo=UTC)
 IMAGE = "docker.io/fabioleitao/data_boar:1.8.0"
-TEST_OPERATOR_PASSWORD = "operador-senha-teste-20"
-TEST_OPERATOR_PASSWORD_B = "outra-senha-operador-21"
+TEST_OPERATOR_PASSWORD = "operador-" + "senha-teste-20"
+TEST_OPERATOR_PASSWORD_B = "outra-" + "senha-operador-21"
 
 
 def _load_module():
@@ -367,6 +368,99 @@ class FakeAlerter:
         self.infos.append(msg)
 
 
+class TrackingStdin(io.StringIO):
+    """Records when ``readline()`` runs relative to executor calls and the lock (D-54)."""
+
+    def __init__(self, data: str = "", *, env: Env | None = None) -> None:
+        super().__init__(data)
+        self.readline_calls = 0
+        self.executor_calls_at_read = -1
+        self.lock_existed_at_read: bool | None = None
+        self._env = env
+
+    def readline(self, *args: Any, **kwargs: Any) -> str:
+        self.readline_calls += 1
+        if self._env is not None:
+            self.executor_calls_at_read = len(self._env.host.calls)
+            self.lock_existed_at_read = self._env.lock_path().exists()
+        return super().readline(*args, **kwargs)
+
+
+class _BrokenStdin:
+    def readline(self) -> str:
+        raise OSError("stdin indisponível no teste")
+
+
+class _ClosedStringIO(io.StringIO):
+    def readline(self, *args: Any, **kwargs: Any) -> str:
+        raise ValueError("I/O operation on closed file")
+
+
+def _assert_p0_dec22(
+    env: Env,
+    rc: int,
+    err: str,
+    needle: str,
+    *,
+    fp_before: dict[str, bytes],
+    writes_before: int,
+    loads_before: int,
+    tracked: TrackingStdin | None = None,
+    readline_expect: int = 0,
+    expect_no_slot: bool = True,
+    dash_state: str = "running",
+) -> None:
+    assert rc == 2, (rc, err)
+    assert needle in err
+    assert "Traceback" not in err
+    assert env.tree_fingerprint() == fp_before
+    assert len(env.host.writes()) == writes_before
+    assert len(env.admin.loads) == loads_before
+    if expect_no_slot:
+        assert not env.slot_json().exists()
+    assert env.host.state("dashboard") == dash_state
+    if tracked is not None:
+        assert tracked.readline_calls == readline_expect
+
+
+def _assert_p0_plus_dec22(
+    env: Env,
+    rc: int,
+    err: str,
+    needle: str,
+    *,
+    fp_before: dict[str, bytes],
+    writes_before: int,
+    loads_before: int,
+    calls_before: int,
+    lock_existed_before: bool,
+    tracked: TrackingStdin | None = None,
+    readline_expect: int | None = None,
+    expect_no_slot: bool = True,
+    dash_state: str = "running",
+) -> None:
+    _assert_p0_dec22(
+        env,
+        rc,
+        err,
+        needle,
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        tracked=tracked,
+        readline_expect=readline_expect if readline_expect is not None else 0,
+        expect_no_slot=expect_no_slot,
+        dash_state=dash_state,
+    )
+    assert len(env.host.calls) == calls_before
+    if (
+        tracked is not None
+        and tracked.lock_existed_at_read is not None
+        and not lock_existed_before
+    ):
+        assert tracked.lock_existed_at_read is False
+
+
 class Env:
     """One test world: inventory, fakes and a factory of CLI contexts."""
 
@@ -453,12 +547,25 @@ class Env:
             err=io.StringIO(),
         )
 
-    def cli(self, *args: str, stdin: str | None = None) -> tuple[int, str, str]:
+    def cli(
+        self,
+        *args: str,
+        stdin: str | io.IOBase | None = None,
+    ) -> tuple[int, str, str]:
         c = self.ctx()
         if stdin is not None:
-            c.in_ = io.StringIO(stdin)
+            c.in_ = io.StringIO(stdin) if isinstance(stdin, str) else stdin
         rc = P.main(list(args), c)
         return rc, c.out.getvalue(), c.err.getvalue()
+
+    def tree_fingerprint(self) -> dict[str, bytes]:
+        lock = self.lock_path()
+        found: dict[str, bytes] = {}
+        for path in self.tmp.rglob("*"):
+            if not path.is_file() or path == lock:
+                continue
+            found[str(path.relative_to(self.tmp))] = path.read_bytes()
+        return found
 
     def up(
         self, slug: str = "acme", *extra: str, stdin: str | None = None
@@ -1007,10 +1114,589 @@ def test_rollback_do_up_religa_mesmo_com_teardown_quebrado(
 
 # --------------------------------------------------------------------------- up
 def test_D2280_1_13b_up_exige_password_stdin(env: Env) -> None:
-    """First creation without --password-stdin exits 2."""
-    rc, _, err = env.cli("up", "acme", "--stop-dashboard")
-    assert rc == 2
-    assert "password-stdin" in err
+    """D-48: sem --password-stdin no cenário limpo → P0, stderr da seção 1, sem readline."""
+    fp_before = env.tree_fingerprint()
+    writes_before = len(env.host.writes())
+    loads_before = len(env.admin.loads)
+    tracked = TrackingStdin("", env=env)
+    rc, _out, err = env.cli("up", "acme", "--stop-dashboard", stdin=tracked)
+    _assert_p0_dec22(
+        env,
+        rc,
+        err,
+        "use --password-stdin e envie a senha pelo stdin (mínimo 20 caracteres)",
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        tracked=tracked,
+        readline_expect=0,
+    )
+
+
+def test_D2280_DEC22_D49_senha_curta_ou_vazia_linha(env: Env) -> None:
+    """D-49: 19 caracteres ou só newline → P0+, senha precisa de pelo menos 20."""
+    fp_before = env.tree_fingerprint()
+    writes_before = len(env.host.writes())
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    for senha, expect_read in (("a" * 19 + "\n", 1), ("\n", 1)):
+        tracked = TrackingStdin(senha, env=env)
+        rc, _out, err = env.cli(
+            "up",
+            "acme",
+            "--stop-dashboard",
+            "--password-stdin",
+            stdin=tracked,
+        )
+        _assert_p0_plus_dec22(
+            env,
+            rc,
+            err,
+            "senha precisa de pelo menos 20 caracteres",
+            fp_before=fp_before,
+            writes_before=writes_before,
+            loads_before=loads_before,
+            calls_before=calls_before,
+            lock_existed_before=False,
+            tracked=tracked,
+            readline_expect=expect_read,
+        )
+
+
+def test_D2280_DEC22_D50_stdin_vazio_eof(env: Env) -> None:
+    """D-50: EOF imediato → P0+ com senha vazia."""
+    tracked = TrackingStdin("", env=env)
+    fp_before = env.tree_fingerprint()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--stop-dashboard",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        "senha vazia: envie pelo stdin com --password-stdin",
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=len(env.admin.loads),
+        calls_before=len(env.host.calls),
+        lock_existed_before=False,
+        tracked=tracked,
+        readline_expect=1,
+    )
+
+
+def test_D2280_DEC22_D51_stdin_indisponivel(env: Env) -> None:
+    """D-51: None, fluxo fechado (ValueError) ou OSError → P0+."""
+    needle = "stdin indisponível: envie a senha pelo stdin com --password-stdin"
+    fp_before = env.tree_fingerprint()
+    writes_before = len(env.host.writes())
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+
+    c = env.ctx()
+    c.in_ = None
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        c.err.getvalue(),
+        needle,
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=False,
+    )
+
+    closed = _ClosedStringIO()
+    closed.close()
+    c = env.ctx()
+    c.in_ = closed
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        c.err.getvalue(),
+        needle,
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=False,
+    )
+
+    c = env.ctx()
+    c.in_ = _BrokenStdin()
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        c.err.getvalue(),
+        needle,
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=False,
+    )
+
+
+def test_D2280_DEC22_D52_stdin_ilegivel_utf8(env: Env) -> None:
+    """D-52: bytes inválidos ou substituto solto → P0+ senha ilegível."""
+    needle = "senha ilegível: envie texto UTF-8 pelo stdin"
+    fp_before = env.tree_fingerprint()
+    writes_before = len(env.host.writes())
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+
+    strict = io.TextIOWrapper(
+        io.BytesIO(b"\xff\n"),
+        encoding="utf-8",
+        errors="strict",
+    )
+    c = env.ctx()
+    c.in_ = strict
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        c.err.getvalue(),
+        needle,
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=False,
+    )
+
+    surrogate_line = (
+        codecs.decode(b"a" * 20 + b"\xed\xa0\x80", "utf-8", "surrogateescape") + "\n"
+    )
+    tracked = TrackingStdin(surrogate_line, env=env)
+    c = env.ctx()
+    c.in_ = tracked
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        c.err.getvalue(),
+        needle,
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=False,
+        tracked=tracked,
+        readline_expect=1,
+    )
+
+
+def _restos_acme_falhou(env: Env) -> None:
+    """Restos como no D-16, com a dashboard de teste ainda ``running``."""
+    env.host.units["demo-prospect@acme.service"] = "failed"
+    env.slug_dir("acme").mkdir(parents=True, exist_ok=True)
+    (env.slug_dir("acme") / "state.json").write_text(
+        json.dumps(
+            {
+                "slug": "acme",
+                "expires_at": _z(T0 + timedelta(minutes=30)),
+                "port": env.inv["prospect_port"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    env.host.add_container(
+        "prospect-acme",
+        IMAGE,
+        "exited",
+        labels={"databoar.prospect": "acme"},
+    )
+
+
+def test_D2280_DEC22_D53_restos_sem_entrada_valida_sem_teardown(env: Env) -> None:
+    """D-53: restos de acme e recusa por senha → P0, sem teardown de restos."""
+    _restos_acme_falhou(env)
+    assert env.slug_dir("acme").exists()
+    assert env.host.state("dashboard") == "running"
+    fp_before = env.tree_fingerprint()
+    writes_before = len(env.host.writes())
+    loads_before = len(env.admin.loads)
+    tracked = TrackingStdin("", env=env)
+    rc, _out, err = env.cli("up", "acme", "--stop-dashboard", stdin=tracked)
+    _assert_p0_dec22(
+        env,
+        rc,
+        err,
+        "use --password-stdin e envie a senha pelo stdin (mínimo 20 caracteres)",
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        tracked=tracked,
+        readline_expect=0,
+        expect_no_slot=True,
+        dash_state="running",
+    )
+    assert env.slug_dir("acme").exists()
+    assert not any(c[:2] == ["podman", "rm"] for c in env.host.calls[writes_before:])
+
+    _restos_acme_falhou(env)
+    fp_before = env.tree_fingerprint()
+    writes_before = len(env.host.writes())
+    tracked = TrackingStdin(f"{TEST_OPERATOR_PASSWORD}\n", env=env)
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_dec22(
+        env,
+        rc,
+        err,
+        "repita com --stop-dashboard",
+        fp_before=fp_before,
+        writes_before=writes_before,
+        loads_before=loads_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=True,
+        dash_state="running",
+    )
+    assert env.slug_dir("acme").exists()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "z" * 20,
+        "z" * 20 + "\r\n",
+        f"{TEST_OPERATOR_PASSWORD}\nsegunda-linha-ignorada\n",
+    ],
+    ids=["sem-newline", "crlf", "primeira-linha-so"],
+)
+def test_D2280_DEC22_D54_leitura_antes_do_lock_criacao(env: Env, payload: str) -> None:
+    """D-54 (criação): readline uma vez antes do lock; hash-password recebe senha + \\n."""
+    tracked = TrackingStdin(payload, env=env)
+    c = env.ctx()
+    c.in_ = tracked
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    assert rc == 0, c.err.getvalue()
+    assert tracked.readline_calls == 1
+    assert tracked.lock_existed_at_read is False
+    assert tracked.executor_calls_at_read == 0
+    esperada = payload.splitlines()[0].rstrip("\r")
+    assert _password_sent_to_hash(env).rstrip("\n") == esperada
+
+
+def test_D2280_DEC22_D54_idempotente_com_senha_valida_ou_curta(env: Env) -> None:
+    """D-54: slug ativo — senha válida idempotente; 19 caracteres → P0+ no passo 1b."""
+    rc, _out1, _ = env.up()
+    assert rc == 0
+    fp = {p: p.read_bytes() for p in env.tmp.rglob("*") if p.is_file()}
+    loads = len(env.admin.loads)
+    before_calls = len(env.host.calls)
+    rc, out2, err = env.cli(
+        "up",
+        "acme",
+        "--password-stdin",
+        stdin=f"{TEST_OPERATOR_PASSWORD}\n",
+    )
+    assert rc == 0, err
+    assert [c for c in env.host.calls[before_calls:] if not is_read(c)] == []
+    assert len(env.admin.loads) == loads
+    assert {p: p.read_bytes() for p in env.tmp.rglob("*") if p.is_file()} == fp
+    assert "senha já emitida" in out2
+
+    calls_before_short = len(env.host.calls)
+    lock_before_short = env.lock_path().exists()
+    tracked = TrackingStdin("x" * 19 + "\n", env=env)
+    fp_before = env.tree_fingerprint()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        "senha precisa de pelo menos 20 caracteres",
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=len(env.admin.loads),
+        calls_before=calls_before_short,
+        lock_existed_before=lock_before_short,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+
+
+def test_D2280_DEC22_D55_rotate_password_sem_stdin(env: Env) -> None:
+    """D-55: --rotate-password sem stdin ou com senha curta → P0+."""
+    rc, _out, _ = env.up()
+    assert rc == 0
+    fp_before = env.tree_fingerprint()
+    frag = (env.caddy_dir / "acme.caddy").read_bytes()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    rc, _out, err = env.cli("up", "acme", "--rotate-password")
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        "use --password-stdin para enviar a nova senha pelo stdin",
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+    assert (env.caddy_dir / "acme.caddy").read_bytes() == frag
+
+    tracked = TrackingStdin("y" * 19 + "\n", env=env)
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--rotate-password",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        "senha precisa de pelo menos 20 caracteres",
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+    assert (env.caddy_dir / "acme.caddy").read_bytes() == frag
+    assert not any(c[-1:] == ["hash-password"] for c in env.host.calls[calls_before:])
+
+
+_MSG_72_BYTES = "senha precisa ter no máximo 72 bytes em UTF-8"
+_MUSICAL = "\U0001d11e"
+
+
+def _assert_stderr_exato(err: str, esperado: str) -> None:
+    linhas = [ln for ln in err.strip().splitlines() if ln.strip()]
+    assert linhas and linhas[-1] == esperado, (linhas, esperado)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "a" * 73 + "\n",
+        "é" * 37 + "\n",
+        _MUSICAL * 20 + "\n",
+    ],
+    ids=["73-ascii", "37-accent-74-bytes", "20-symbols-80-bytes"],
+)
+def test_D2280_DEC22_D56_recusa_acima_72_bytes_utf8(env: Env, payload: str) -> None:
+    """D-56: recusa no passo 1b — P0+, sem slot, sem stop dashboard."""
+    tracked = TrackingStdin(payload, env=env)
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--stop-dashboard",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        _MSG_72_BYTES,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=True,
+        dash_state="running",
+    )
+    _assert_stderr_exato(err, _MSG_72_BYTES)
+    assert not any(c[:4] == ["podman", "stop", "-t", "20"] for c in env.host.calls)
+
+
+@pytest.mark.parametrize(
+    "payload,esperada",
+    [
+        ("a" * 72 + "\n", "a" * 72),
+        ("é" * 36 + "\n", "é" * 36),
+        ("a" * 72 + "\r\n", "a" * 72),
+    ],
+    ids=["72-ascii", "72-accent-bytes", "72-crlf"],
+)
+def test_D2280_DEC22_D57_fronteira_72_bytes_aceita(
+    env: Env, payload: str, esperada: str
+) -> None:
+    """D-57: exatamente 72 bytes UTF-8 segue ao hash-password."""
+    tracked = TrackingStdin(payload, env=env)
+    c = env.ctx()
+    c.in_ = tracked
+    rc = P.main(["up", "acme", "--stop-dashboard", "--password-stdin"], c)
+    assert rc == 0, c.err.getvalue()
+    assert _password_sent_to_hash(env).rstrip("\n") == esperada
+
+
+def test_D2280_DEC22_D57_19_simbolos_ordem_regra_curta(env: Env) -> None:
+    """D-57: 19×𝄞 (76 bytes) → mensagem de mínimo, não a dos 72 bytes."""
+    tracked = TrackingStdin(_MUSICAL * 19 + "\n", env=env)
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--stop-dashboard",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    needle = "senha precisa de pelo menos 20 caracteres"
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        needle,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+    )
+    _assert_stderr_exato(err, needle)
+    assert _MSG_72_BYTES not in err
+
+
+def test_D2280_DEC22_D58_idempotente_recusa_73_bytes(env: Env) -> None:
+    """D-58: slug ativo + 73 bytes → 2 sem chamadas novas ao executor."""
+    rc, _out, _ = env.up()
+    assert rc == 0
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    tracked = TrackingStdin("a" * 73 + "\n", env=env)
+    rc, _out, err = env.cli("up", "acme", "--password-stdin", stdin=tracked)
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        _MSG_72_BYTES,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+    _assert_stderr_exato(err, _MSG_72_BYTES)
+    assert [c for c in env.host.calls[calls_before:] if not is_read(c)] == []
+
+
+def test_D2280_DEC22_D58_rotate_recusa_73_bytes_sem_proxy(env: Env) -> None:
+    """D-58: rotação com 73 bytes → P0+, fragmento intacto."""
+    rc, _out, _ = env.up()
+    assert rc == 0
+    frag = (env.caddy_dir / "acme.caddy").read_bytes()
+    fp_before = env.tree_fingerprint()
+    loads_before = len(env.admin.loads)
+    calls_before = len(env.host.calls)
+    lock_before = env.lock_path().exists()
+    tracked = TrackingStdin("a" * 73 + "\n", env=env)
+    rc, _out, err = env.cli(
+        "up",
+        "acme",
+        "--rotate-password",
+        "--password-stdin",
+        stdin=tracked,
+    )
+    _assert_p0_plus_dec22(
+        env,
+        rc,
+        err,
+        _MSG_72_BYTES,
+        fp_before=fp_before,
+        writes_before=len(env.host.writes()),
+        loads_before=loads_before,
+        calls_before=calls_before,
+        lock_existed_before=lock_before,
+        tracked=tracked,
+        readline_expect=1,
+        expect_no_slot=False,
+        dash_state="exited",
+    )
+    _assert_stderr_exato(err, _MSG_72_BYTES)
+    assert (env.caddy_dir / "acme.caddy").read_bytes() == frag
+    assert not any(c[-1:] == ["hash-password"] for c in env.host.calls[calls_before:])
+    assert len(env.admin.loads) == loads_before
+
+
+def test_D2280_DEC22_D59_runner_run_utf8_stdin() -> None:
+    """D-59: Runner.run envia stdin em UTF-8 mesmo com locale ASCII no filho."""
+    cli_path = str(CLI)
+    child = f"""
+import importlib.util
+import sys
+spec = importlib.util.spec_from_file_location("prospect_cli", {cli_path!r})
+assert spec and spec.loader
+mod = importlib.util.module_from_spec(spec)
+sys.modules["prospect_cli"] = mod
+spec.loader.exec_module(mod)
+rc, out, err = mod.Runner().run(
+    [sys.executable, "-c", "import sys; sys.stdout.write(sys.stdin.buffer.read().hex())"],
+    input="\\u00e9\\n",
+)
+assert rc == 0, (rc, err)
+assert out == "c3a90a"
+"""
+    env = {
+        **os.environ,
+        "LC_ALL": "C",
+        "PYTHONCOERCECLOCALE": "0",
+        "PYTHONUTF8": "0",
+    }
+    r = subprocess.run(
+        [sys.executable, "-c", child],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert r.returncode == 0, (r.stdout, r.stderr)
 
 
 def test_D2280_1_14_caminho_feliz_ordem_e_saida(env: Env) -> None:

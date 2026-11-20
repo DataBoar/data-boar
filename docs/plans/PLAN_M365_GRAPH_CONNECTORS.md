@@ -1,6 +1,6 @@
 # Plan: Microsoft 365 read-only connectors via Microsoft Graph (SharePoint Online, OneDrive, Exchange Online)
 
-**Status:** In progress (Phase 1 reader implemented on the epic branch and tested against a simulated Graph only; not merged; Phase 0 real proof pending)
+**Status:** In progress (Phase 1 reader merged to `main` by PR #2265 and hardened by PR #2271, tested against a simulated Graph only; Phase 0: a probe outside the connector downloaded from a personal OneDrive on 2026-11-17 (evidence in the #2260 comments), the real proof through the Boar connector is still pending)
 **Date:** 2026-11-10 (updated 2026-11-17)
 **Authors:** Fabio Leitao
 **Priority:** H1
@@ -50,8 +50,8 @@ has no reader for these today.
 
 | Phase | Deliverable | Status |
 | ----- | ----------- | ------ |
-| 0 | Real proof against a personal OneDrive in delegated mode (device code, `Files.Read` + `offline_access`, synthetic folder): Graph listing, file in OneDrive, Boar report. This phase proves a personal OneDrive only, not SharePoint Online and not a work tenant. Issue [#2260](https://github.com/DataBoar/data-boar/issues/2260). | ⬜ Pending (needs the operator's app registration) |
-| 1 | `sharepoint_online` reader, delegated mode: device code flow, list/download inside the configured folder, reuse the file-connector extraction and detection, `@odata.nextLink` paging, honour `429` + `Retry-After`, simulated-Graph tests. Issue [#2261](https://github.com/DataBoar/data-boar/issues/2261). Operator runbook: `docs/ops/M365_GRAPH_DELEGATED_RUNBOOK.md`. | 🔄 In progress (implemented and tested against a simulated Graph only; not merged) |
+| 0 | Real proof against a personal OneDrive in delegated mode (device code, `Files.Read` + `offline_access`, synthetic folder): Graph listing, file in OneDrive, Boar report. This phase proves a personal OneDrive only, not SharePoint Online and not a work tenant. Issue [#2260](https://github.com/DataBoar/data-boar/issues/2260). | 🔄 Partial: app registration and consent done 2026-11-17; download proven by a probe outside the connector against a personal OneDrive (#2260 comments); proof through the Boar connector pending |
+| 1 | `sharepoint_online` reader, delegated mode: device code flow, list/download inside the configured folder, reuse the file-connector extraction and detection, `@odata.nextLink` paging, honour `429` + `Retry-After`, simulated-Graph tests. Issue [#2261](https://github.com/DataBoar/data-boar/issues/2261). Operator runbook: `docs/ops/M365_GRAPH_DELEGATED_RUNBOOK.md`. | ✅ Done against a simulated Graph: PR [#2265](https://github.com/DataBoar/data-boar/pull/2265) merged 2026-11-17 (closes #2261) and PR [#2271](https://github.com/DataBoar/data-boar/pull/2271) merged 2026-11-18 (closes #2269, `token_cache_path`); real proof through the connector pending (#2260) |
 | 1c | App-only (client credentials) for a work tenant, `Sites.Selected` vs `Sites.Read.All` to be confirmed. Issue [#2262](https://github.com/DataBoar/data-boar/issues/2262). | ⬜ Blocked: no work-tenant available; roadmap, no proof |
 | 1b | Incremental scan through Graph delta queries | ⬜ Pending |
 | 2 | Exchange Online mail: body and attachments, scoped by mailbox or group, application permission restricted by the tenant access policy | ⬜ Pending |

@@ -115,6 +115,18 @@ pipx install data-boar
 
 See [#929](https://github.com/DataBoar/data-boar/issues/929) and [#1182](https://github.com/DataBoar/data-boar/issues/1182) for wheelhouse evolution.
 
+**V1.8.0 Alpine note (#2189):**
+
+- The v1.8.0 `.apk` bundles a glibc CPython and does NOT run on Alpine (musl).
+- Supported path: virtualenv with musllinux wheels:
+
+  ```bash
+  pip install --only-binary=:all: --extra-index-url https://databoar.com.br/simple/ data-boar==1.8.0
+  ```
+
+- `--version` works; `--demo` produced 26 findings with 0 tracebacks. This was observed on one physical Alpine host (#2189 comment); it is evidence, not a general support guarantee.
+- CPUs without AVX are a separate limitation (see #1236).
+
 ### x86-64-v1 / wheelhouse install (musl, no-AVX, and min-spec hosts)
 
 Use this when **any** of the following apply:

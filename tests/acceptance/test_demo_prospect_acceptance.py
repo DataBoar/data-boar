@@ -54,18 +54,22 @@ USER = "prospect"
 # Design D (#481): operator password via --password-stdin; must not appear on stdout.
 ACEITACAO_SENHA_OPERADOR = "aceitacao-senha-operador-20"
 
-# Podman 5.4+ may expand DropCapability=all instead of a lone ALL token (design A-11).
-_MIN_CAPS_IN_EXPANDED_DROP = 30
-_EXPANDED_DROP_ANCHORS = frozenset({"CHOWN", "DAC_OVERRIDE", "NET_RAW", "SYS_ADMIN"})
-
-
-def _cap_drop_covers_all(drop: list[str]) -> bool:
-    norm = {c.upper() for c in drop}
-    if "ALL" in norm:
-        return True
-    if len(norm) < _MIN_CAPS_IN_EXPANDED_DROP:
-        return False
-    return _EXPANDED_DROP_ANCHORS <= norm
+# Podman 5.4.2 expands DropCapability=all to this fixed set (design A-11 / D-6).
+_PODMAN_5_4_CAP_DROP_ALL = frozenset(
+    {
+        "CAP_CHOWN",
+        "CAP_DAC_OVERRIDE",
+        "CAP_FOWNER",
+        "CAP_FSETID",
+        "CAP_KILL",
+        "CAP_NET_BIND_SERVICE",
+        "CAP_SETFCAP",
+        "CAP_SETGID",
+        "CAP_SETPCAP",
+        "CAP_SETUID",
+        "CAP_SYS_CHROOT",
+    }
+)
 
 
 class CliAusente(Exception):
@@ -82,7 +86,7 @@ def _exige_home_isolado() -> None:
         )
 
 
-def _porta_livre(porta: int) -> bool:
+def _porta_esta_livre(porta: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.bind(("127.0.0.1", porta))
@@ -111,9 +115,18 @@ def _run(
 
 
 def _esperar(
-    cond: Callable[[], bool], timeout: float, passo: float = 2.0, *, msg: str = ""
+    cond: Callable[[], bool],
+    timeout: float,
+    passo: float = 2.0,
+    *,
+    msg: str = "",
+    diag: Callable[[], str] | None = None,
 ) -> None:
-    """Poll ``cond`` until true or ``timeout`` (deadline polling, no fixed sleep)."""
+    """Poll ``cond`` until true or ``timeout`` (deadline polling, no fixed sleep).
+
+    ``diag`` (optional) runs only on timeout and its text is appended to the error, so a
+    timeout says what is holding the resource instead of just that it timed out.
+    """
     limite = time.monotonic() + timeout
     pausa = threading.Event()
     while time.monotonic() < limite:
@@ -121,7 +134,45 @@ def _esperar(
             return
         pausa.wait(passo)
     if not cond():
-        raise AssertionError(f"timeout de {timeout:.0f}s: {msg}")
+        extra = f"\n{diag()}" if diag is not None else ""
+        raise AssertionError(f"timeout de {timeout:.0f}s: {msg}{extra}")
+
+
+def _diagnostico_porta(
+    porta: int,
+    podman: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+) -> str:
+    """Say who holds ``porta`` on the host: every TCP socket with it as local or peer port
+    (with pid/process), listeners, a bind probe and, when given, the Podman containers.
+
+    Used only on timeout of the "pod port is free" wait, to tell a real leftover listener
+    (rootless port forwarder, container, proxy) from a socket in TIME_WAIT.
+    """
+    partes: list[str] = []
+    consultas = (
+        ("ss -tanpe (qualquer estado, porta local ou remota)",
+         ["ss", "-tanpe", f"( sport = :{porta} or dport = :{porta} )"]),
+        ("ss -tlnpe (listeners)", ["ss", "-tlnpe", f"( sport = :{porta} )"]),
+    )  # fmt: skip
+    for rotulo, argv in consultas:
+        try:
+            r = _run(argv, timeout=15.0)
+            partes.append(f"[{rotulo}]\n{(r.stdout + r.stderr).strip() or '(vazio)'}")
+        except (OSError, subprocess.SubprocessError) as exc:
+            partes.append(f"[{rotulo}] indisponível: {exc!r}")
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", porta))
+            partes.append(f"[bind 127.0.0.1:{porta}] ok agora")
+        except OSError as exc:
+            partes.append(f"[bind 127.0.0.1:{porta}] falhou: {exc!r}")
+    if podman is not None:
+        try:
+            r = podman("ps", "-a", "--format", "{{.Names}} {{.Status}} {{.Ports}}")
+            partes.append(f"[podman ps -a]\n{r.stdout.strip() or '(vazio)'}")
+        except (OSError, subprocess.SubprocessError) as exc:
+            partes.append(f"[podman ps -a] indisponível: {exc!r}")
+    return "\n".join(partes)
 
 
 def _esperar_estavel(
@@ -222,12 +273,39 @@ class Harness:
         return _run(["systemctl", "--user", *args])
 
     def cli(
-        self, *args: str, timeout: float = 400.0, stdin: str | None = None
+        self,
+        *args: str,
+        timeout: float = 400.0,
+        stdin: str | None = None,
+        fechado: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         env = {**os.environ, "PROSPECT_INVENTORY": str(self.inventario)}
         argv = [sys.executable, str(CLI), *args]
+        if fechado:
+            wrapper = ["sh", "-c", 'exec "$0" "$@" <&-', sys.executable]
+            prep = subprocess.run(
+                [*wrapper, "-c", "import sys; print(sys.stdin is None)"],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            if prep.returncode != 0 or prep.stdout.strip() != "True":
+                raise AssertionError(
+                    "preparação fd 0 fechado: esperado sys.stdin is None, "
+                    f"rc={prep.returncode} stdout={prep.stdout!r} stderr={prep.stderr!r}"
+                )
+            return subprocess.run(
+                [*wrapper, str(CLI), *args],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
         payload = stdin
-        if "--password-stdin" in args and payload is None:
+        if "--password-stdin" in args and stdin is None:
             payload = f"{ACEITACAO_SENHA_OPERADOR}\n"
         return _run(argv, env=env, timeout=timeout, input=payload)
 
@@ -321,12 +399,18 @@ class Harness:
     def _corpus(self) -> None:
         pasta = self.raiz / "corpus"
         pasta.mkdir(exist_ok=True)
+        # 300 fichas (desenho A-4). Redução temporária a 60 por “lentidão” revertida
+        # após chmod 0770→755/644 no corpus (318aee90); A-4 isolado com 300 ≈47s (2026-11-19).
         for i in range(300):
             cpf = _cpf_sintetico(f"{(i * 7919 + 123456789) % 10**9:09d}")
-            (pasta / f"ficha-{i:03d}.txt").write_text(
+            arquivo = pasta / f"ficha-{i:03d}.txt"
+            arquivo.write_text(
                 f"Cliente ficticio {i}\nCPF: {cpf}\nE-mail: cliente{i}@exemplo.com\n",
                 encoding="utf-8",
             )
+            arquivo.chmod(0o644)
+        # Prospect pod runs non-root (typical 65532:65532); ro bind must allow other read+execute.
+        pasta.chmod(0o755)
 
     def subir(self) -> None:
         self._corpus()
@@ -480,10 +564,11 @@ class Harness:
         )
         self.garantir_dashboard()
         _esperar(
-            lambda: _porta_livre(self.porta_pod),
+            lambda: _porta_esta_livre(self.porta_pod),
             45,
             0.5,
             msg=f"porta do pod {self.porta_pod} livre",
+            diag=lambda: _diagnostico_porta(self.porta_pod, self.podman),
         )
 
     def unidade_prospect_ausente(self, slug: str) -> bool:
@@ -598,6 +683,36 @@ class Harness:
         assert info["State"]["Status"] == "running"
         assert self.dash_saudavel()
         assert not (self.runtime / "demo-prospect" / "slot.json").exists()
+
+
+@pytest.mark.skipif(shutil.which("ss") is None, reason="ss (iproute2) ausente no host")
+def test_diagnostico_porta_distingue_listener_de_time_wait() -> None:
+    """The port-held diagnostic names a live listener (LISTEN + process) and, after the
+    server side closes first, a TIME-WAIT socket that still makes a plain bind fail.
+
+    Runs anywhere (no Podman, no isolated HOME): it only needs ``ss``.
+    """
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    porta = int(srv.getsockname()[1])
+    cli = socket.create_connection(("127.0.0.1", porta))
+    conn, _ = srv.accept()
+    try:
+        vivo = _diagnostico_porta(porta)
+        assert "LISTEN" in vivo and "pid=" in vivo, vivo
+        assert f"bind 127.0.0.1:{porta}] falhou" in vivo, vivo
+    finally:
+        conn.close()  # server side closes first: it keeps the TIME-WAIT
+        cli.close()
+        srv.close()
+    depois = _diagnostico_porta(porta)
+    assert "TIME-WAIT" in depois, depois
+    assert "[ss -tlnpe (listeners)]\nState" in depois
+    assert (
+        "LISTEN" not in depois.split("[ss -tlnpe (listeners)]")[1].split("[bind")[0]
+    ), depois
 
 
 # --------------------------------------------------------------------------- fixtures
@@ -813,11 +928,14 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     assert hc["PidsLimit"] == 256
     assert hc["ReadonlyRootfs"] is True
     drop = [c.upper() for c in (hc.get("CapDrop") or [])]
-    eff = [c.upper() for c in (i.get("EffectiveCaps") or [])]
+    assert "EffectiveCaps" in i, "inspect deve expor EffectiveCaps"
+    # Podman serializa "nenhuma capacidade" como null; a chave precisa existir (assert acima).
+    eff = [c.upper() for c in (i["EffectiveCaps"] or [])]
     assert hc["CapAdd"] in (None, [])
     assert eff == [], f"EffectiveCaps deve ser vazio, veio {eff!r}"
-    assert _cap_drop_covers_all(drop), (
-        f"CapDrop não cobre todas as capabilities (ALL ou expansão completa): {drop!r}"
+    norm = set(drop)
+    assert norm == _PODMAN_5_4_CAP_DROP_ALL or norm == {"ALL"}, (
+        f"CapDrop fora do conjunto Podman 5.4.2 + DropCapability=all: {drop!r}"
     )
     assert "no-new-privileges" in " ".join(hc["SecurityOpt"] or [])
     assert hc["LogConfig"]["Type"] == "none"
@@ -861,9 +979,17 @@ def test_A14_segundo_scan_recebe_409(cenario: Harness) -> None:
     s = h.subir_prospecto()
     host = h.host("acme")
     primeiro = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
-    segundo = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
     assert primeiro in (200, 202)
-    assert segundo == 409
+
+    def em_scan() -> bool:
+        return h.pod_status(s).get("running") is True
+
+    # Não está no desenho A-14: o segundo POST só é 409 com scan ativo (running=true).
+    _esperar(em_scan, 90, 2.0, msg="primeiro POST /scan deve deixar running=true")
+    segundo = h.http(host, "/scan", auth=h.auth(s), metodo="POST")[0]
+    assert segundo == 409, (
+        f"segundo POST com scan ativo deve ser 409, não {segundo} (rate limit 429 é falha)"
+    )
 
 
 def test_A15_troca_de_slot(cenario: Harness) -> None:
@@ -875,6 +1001,7 @@ def test_A15_troca_de_slot(cenario: Harness) -> None:
     inicio_apres = h.inspecionar(h.apres)["State"]["StartedAt"]
     r = h.cli("up", "acme")
     assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "--stop-dashboard" in r.stderr
     assert h.estado(h.dash) == "running"
     assert not h.existe("prospect-acme")
     s = h.subir_prospecto()
@@ -994,3 +1121,122 @@ def test_A19_down_de_outro_slug_e_restore_slot_nao_religam(cenario: Harness) -> 
 
     assert h.cli("down", "acme").returncode == 0
     h.assert_slot_ok(id_dash)
+
+
+def _pos_entrada_invalida_sem_efeito(h: Harness, dash_antes: dict) -> None:
+    """Pós-condições A-20 / A-21 (DEC-22): recusa 2 sem derrubar a dashboard de teste."""
+    depois = h.inspecionar(h.dash)
+    assert depois["Id"] == dash_antes["Id"]
+    assert depois["State"]["StartedAt"] == dash_antes["State"]["StartedAt"]
+    assert depois["State"]["Status"] == "running"
+    assert not h.existe("prospect-acme")
+    assert h.unidade_prospect_ausente("acme")
+    assert not (h.runtime / "demo-prospect" / "acme").exists()
+    assert not (h.runtime / "demo-prospect" / "slot.json").exists()
+    assert list(h.caddy_dir.glob("acme.*")) == []
+    assert h.http(f"ctrl.{DOMAIN}", "/")[0] == 200
+
+
+def test_A20_up_sem_password_stdin_nao_derruba_dashboard(cenario: Harness) -> None:
+    """A-20 (DEC-22): --stop-dashboard sem --password-stdin → 2, dashboard intacta."""
+    h = cenario
+    antes = h.inspecionar(h.dash)
+    r = h.cli("up", "acme", "--stop-dashboard")
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "password-stdin" in r.stderr
+    assert "Traceback" not in r.stderr
+    _pos_entrada_invalida_sem_efeito(h, antes)
+
+
+@pytest.mark.parametrize(
+    ("invocar", "msg_esperada"),
+    [
+        (
+            lambda h: h.cli(
+                "up",
+                "acme",
+                "--stop-dashboard",
+                "--password-stdin",
+                stdin="x" * 19 + "\n",
+            ),
+            "senha precisa de pelo menos 20 caracteres",
+        ),
+        (
+            lambda h: h.cli(
+                "up",
+                "acme",
+                "--stop-dashboard",
+                "--password-stdin",
+                stdin="",
+            ),
+            "senha vazia: envie pelo stdin com --password-stdin",
+        ),
+        (
+            lambda h: h.cli(
+                "up",
+                "acme",
+                "--stop-dashboard",
+                "--password-stdin",
+                fechado=True,
+            ),
+            "stdin indisponível: envie a senha pelo stdin com --password-stdin",
+        ),
+    ],
+    ids=["19-chars", "stdin-vazio", "stdin-fechado"],
+)
+def test_A21_entrada_senha_invalida_sem_efeito(
+    cenario: Harness,
+    invocar: Callable[[Harness], subprocess.CompletedProcess[str]],
+    msg_esperada: str,
+) -> None:
+    """A-21 (DEC-22): três entradas inválidas → 2, mesmas pós-condições do A-20."""
+    h = cenario
+    antes = h.inspecionar(h.dash)
+    r = invocar(h)
+    assert r.returncode == 2, (r.returncode, r.stderr)
+    assert "Traceback" not in r.stderr
+    assert r.stderr.strip() == msg_esperada, r.stderr
+    assert msg_esperada not in r.stdout
+    _pos_entrada_invalida_sem_efeito(h, antes)
+
+
+_MSG_72_UTF8 = "senha precisa ter no máximo 72 bytes em UTF-8"
+_MUSICAL_A22 = "\U0001d11e"
+
+
+@pytest.mark.parametrize(
+    "stdin_bytes",
+    [
+        ("a" * 73 + "\n").encode(),
+        (_MUSICAL_A22 * 20 + "\n").encode(),
+    ],
+    ids=["73-ascii", "20-symbols-80-bytes"],
+)
+def test_A22_senha_acima_72_bytes_sem_efeito(
+    cenario: Harness, stdin_bytes: bytes
+) -> None:
+    """A-22 (revisão 5): recusa acima de 72 bytes UTF-8 — dashboard intacta (StartedAt)."""
+    h = cenario
+    antes = h.inspecionar(h.dash)
+    env = {**os.environ, "PROSPECT_INVENTORY": str(h.inventario)}
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "up",
+            "acme",
+            "--stop-dashboard",
+            "--password-stdin",
+        ],
+        env=env,
+        input=stdin_bytes,
+        capture_output=True,
+        timeout=400.0,
+        check=False,
+    )
+    err = r.stderr.decode("utf-8", errors="replace")
+    assert r.returncode == 2, (r.returncode, err)
+    assert "Traceback" not in err
+    assert err.strip() == _MSG_72_UTF8, err
+    assert _MSG_72_UTF8 not in r.stdout.decode("utf-8", errors="replace")
+    _pos_entrada_invalida_sem_efeito(h, antes)

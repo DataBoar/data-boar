@@ -206,6 +206,44 @@ def test_oauth2_client_secret_from_env_rejects_disallowed_env_name_prefix() -> N
         _assert_rest_credential_hosts_allowlisted(target)
 
 
+@pytest.mark.parametrize(
+    ("bad_env", "expected_label"),
+    [
+        ("AWS_SECRET_ACCESS_KEY", "client_secret_from_env"),
+        ("GITHUB_TOKEN", "auth.client_secret"),
+    ],
+    ids=("client_secret_from_env", "interpolated_client_secret"),
+)
+def test_oauth2_env_credential_rejects_disallowed_prefix_for_each_reference_form(
+    bad_env: str, expected_label: str
+) -> None:
+    """#2258 / #1977: prefix gate must cover every env reference form on OAuth2 connect."""
+    target = {
+        "base_url": "https://api.trusted.example",
+        "auth": {
+            "type": "oauth2_client",
+            "token_url": "https://api.trusted.example/oauth/token",
+            "client_id": "cid",
+            "allowed_hosts": ["api.trusted.example"],
+        },
+    }
+    if expected_label == "client_secret_from_env":
+        target["auth"]["client_secret_from_env"] = bad_env
+        target["auth"]["client_secret"] = "inline"
+    else:
+        target["auth"]["client_secret"] = f"${{{bad_env}}}"
+
+    client = MagicMock()
+    client.headers = {}
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv(bad_env, "leak")
+        with patch("connectors.rest_connector.pinned_httpx_request") as mock_post:
+            with pytest.raises(ValueError, match=rf"{expected_label}.*#1977"):
+                _build_auth(client, target)
+            mock_post.assert_not_called()
+    assert "Authorization" not in client.headers
+
+
 def test_allowed_hosts_string_is_equivalent_to_a_one_item_list() -> None:
     target = {
         "base_url": "https://api.trusted.example",
