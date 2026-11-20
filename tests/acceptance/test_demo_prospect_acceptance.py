@@ -138,7 +138,10 @@ def _esperar(
         raise AssertionError(f"timeout de {timeout:.0f}s: {msg}{extra}")
 
 
-def _diagnostico_porta(porta: int, podman: Callable[..., object] | None = None) -> str:
+def _diagnostico_porta(
+    porta: int,
+    podman: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+) -> str:
     """Say who holds ``porta`` on the host: every TCP socket with it as local or peer port
     (with pid/process), listeners, a bind probe and, when given, the Podman containers.
 
@@ -165,11 +168,9 @@ def _diagnostico_porta(porta: int, podman: Callable[..., object] | None = None) 
             partes.append(f"[bind 127.0.0.1:{porta}] falhou: {exc!r}")
     if podman is not None:
         try:
-            r = podman(  # type: ignore[operator]
-                "ps", "-a", "--format", "{{.Names}} {{.Status}} {{.Ports}}"
-            )
+            r = podman("ps", "-a", "--format", "{{.Names}} {{.Status}} {{.Ports}}")
             partes.append(f"[podman ps -a]\n{r.stdout.strip() or '(vazio)'}")
-        except (OSError, subprocess.SubprocessError, AttributeError) as exc:
+        except (OSError, subprocess.SubprocessError) as exc:
             partes.append(f"[podman ps -a] indisponível: {exc!r}")
     return "\n".join(partes)
 
