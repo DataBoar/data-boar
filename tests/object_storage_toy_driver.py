@@ -7,12 +7,13 @@ authentication by one fixed header. The dev tests D-64 to D-68 use it; no accept
 (A-1 to A-24) does.
 
 Nothing here touches the network: ``ToyStore`` is an ``httpx.MockTransport`` backend. The
-contract types (``ObjectEntry``, ``ListPage``, ``PreparedGet``, ``ErrorClass``) live in
-``connectors/object_storage_driver.py``, which does not exist before task 2306.1, so they are
-imported inside the methods and this module stays importable today. The shape of
-``DriverSettings`` and of ``creds`` is not fixed by section 0: the toy keeps both as plain,
-documented values (``ToySettings`` and a mapping from the ``credential_keys`` name to the
-value) and the dev adjusts the two spots marked ``CONTRACT-GAP`` if the real shape differs.
+contract types live in ``connectors/object_storage_driver.py`` (design revision 3):
+``ToySettings`` inherits the frozen ``DriverSettings`` base (the common layer never reads it),
+and ``creds`` is a read-only ``ResolvedCredentials`` read by name (``creds["token_from_env"]``).
+The classes and NamedTuples are imported at module level (they exist in the skeleton). What
+still depends on 2306.1: building a ``ResolvedCredentials`` (its constructor is a stub today),
+``register_driver`` and ``get_driver``, so ``register_toy_driver`` imports ``register_driver``
+inside the function and only works after 2306.1.
 
 The wire logic is in pure helpers (``toy_list_url``, ``toy_parse_listing``,
 ``toy_classify_status``) so it is testable before the contract module exists.
@@ -25,10 +26,22 @@ import re
 import secrets
 import urllib.parse
 from dataclasses import dataclass
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any, Literal
 
 import httpx
+
+from connectors.object_storage_driver import (
+    DriverConfigError,
+    DriverProtocolError,
+    DriverSettings,
+    ErrorClass,
+    ListPage,
+    ObjectEntry,
+    PreparedGet,
+    ResolvedCredentials,
+)
 
 TOY_HOST = "toy.lab.example"
 TOY_PAGE_SIZE = 2
@@ -181,8 +194,8 @@ class ToyStore:
 
 
 @dataclass(frozen=True)
-class ToySettings:
-    """CONTRACT-GAP: stands in for ``DriverSettings`` (its shape is not fixed by section 0)."""
+class ToySettings(DriverSettings):
+    """Frozen settings of the toy driver (a ``DriverSettings`` subclass, design revision 3)."""
 
     host: str
     container: str
@@ -196,8 +209,6 @@ class ToyDriver:
     forbidden_inline_keys = frozenset({"toy_token", "toy_secret"})
 
     def settings(self, cfg: dict[str, Any]) -> ToySettings:
-        from connectors.object_storage_driver import DriverConfigError
-
         host = cfg.get("host")
         container = cfg.get("container")
         if not isinstance(host, str) or not host:
@@ -214,31 +225,23 @@ class ToyDriver:
         return host.lower() if isinstance(host, str) else ""
 
     @staticmethod
-    def _token(creds: Any) -> str:
-        # CONTRACT-GAP: ``creds`` is read as a mapping keyed by the ``credential_keys`` name.
-        return str(creds["token_from_env"])
+    def _token(creds: ResolvedCredentials) -> str:
+        # Read by name, as the design says (revision 3); the driver keeps no reference.
+        return creds["token_from_env"]
 
     def list_request(
         self,
         settings: ToySettings,
-        creds: Mapping[str, str],
+        creds: ResolvedCredentials,
         prefix: str,
         token: str | None,
         page_size: int,
         now: datetime,
-    ) -> Any:
-        from connectors.object_storage_driver import PreparedGet
-
+    ) -> PreparedGet:
         url = toy_list_url(settings.host, settings.container, prefix, token, page_size)
         return PreparedGet(url, {TOY_AUTH_HEADER: self._token(creds)})
 
-    def parse_list(self, body: bytes) -> Any:
-        from connectors.object_storage_driver import (
-            DriverProtocolError,
-            ListPage,
-            ObjectEntry,
-        )
-
+    def parse_list(self, body: bytes) -> ListPage:
         try:
             entries, nxt, truncated = toy_parse_listing(body)
         except ValueError as exc:
@@ -246,20 +249,21 @@ class ToyDriver:
         return ListPage([ObjectEntry(k, s) for k, s in entries], nxt, truncated)
 
     def get_request(
-        self, settings: ToySettings, creds: Mapping[str, str], key: str, now: datetime
-    ) -> Any:
-        from connectors.object_storage_driver import PreparedGet
-
+        self, settings: ToySettings, creds: ResolvedCredentials, key: str, now: datetime
+    ) -> PreparedGet:
         return PreparedGet(
             toy_blob_url(settings.host, settings.container, key),
             {TOY_AUTH_HEADER: self._token(creds)},
         )
 
     def classify_error(
-        self, status: int, headers: Mapping[str, str], body: bytes, *, during: str
-    ) -> Any:
-        from connectors.object_storage_driver import ErrorClass
-
+        self,
+        status: int,
+        headers: Mapping[str, str],
+        body: bytes,
+        *,
+        during: Literal["list", "get"],
+    ) -> ErrorClass:
         return ErrorClass(*toy_classify_status(status, during=during))
 
     def display_path(self, settings: ToySettings, key: str) -> str:
