@@ -1257,3 +1257,183 @@ def test_D2306_87_chaves_obrigatorias_por_driver(h: Harness) -> None:
     ok = h.run(store.transport, target)
     assert ok.db.failures == []
     assert paths(ok.db) == {"toy://caixa-sintetica/corpus/a.txt"}
+
+
+# ----------------------------------------------------------------------------
+# Revision 6c: private networks, DNS versus refusal, extraction errors
+# ----------------------------------------------------------------------------
+
+_ALWAYS_REFUSED = [
+    "169.254.169.254",
+    "fe80::1",
+    "fd00:ec2::254",
+    "::ffff:169.254.169.254",
+]
+
+
+def test_D2306_88_honors_allow_private_networks_e_obrigatorio() -> None:
+    """D2306-88 (R6c-1): the StorageDriver protocol declares honors_allow_private_networks;
+    every registered driver (and the toy driver) declares it as a bool, with no getattr
+    default in the common layer: s3 False, s3_compatible True."""
+    from connectors.object_storage_driver import StorageDriver, get_driver
+
+    assert "honors_allow_private_networks" in StorageDriver.__annotations__
+    for name in sorted(object_storage_driver._REGISTRY):
+        driver = get_driver(name)
+        assert hasattr(driver, "honors_allow_private_networks"), name
+        assert isinstance(driver.honors_allow_private_networks, bool), name
+    assert get_driver("s3").honors_allow_private_networks is False
+    assert get_driver("s3_compatible").honors_allow_private_networks is True
+    assert hasattr(ToyDriver, "honors_allow_private_networks")
+    assert isinstance(ToyDriver.honors_allow_private_networks, bool)
+    source = CONNECTOR_FILE.read_text(encoding="utf-8")
+    assert not re.search(r"getattr\([^)]*honors_allow_private_networks", source)
+
+
+@pytest.mark.parametrize("ip", _ALWAYS_REFUSED)
+def test_D2306_89_link_local_e_metadados_sempre_recusados(h: Harness, ip: str) -> None:
+    """D2306-89 (R6c-1): with allow_private_networks: true, s3_compatible still refuses
+    link-local (169.254/16, fe80::/10), the AWS IPv6 metadata address and their IPv4-mapped
+    forms: scope_violation and zero requests; 10.0.0.5 runs (control)."""
+    fake = h.minio(ip=ip)
+    out = h.run(fake.transport, compat_target(allow_private_networks=True))
+    assert out.db.reasons() == ["scope_violation"]
+    assert fake.requests == []
+    assert out.db.findings == []
+
+    fake = h.minio(ip=PRIVATE_IP)
+    ok = h.run(fake.transport, compat_target(allow_private_networks=True))
+    assert paths(ok.db) == EXPECTED_PATHS
+
+
+_SAMPLE_IPS = [
+    "1.1.1.1",
+    "8.8.8.8",
+    "10.0.0.5",
+    "172.16.3.4",
+    "192.168.1.1",
+    "127.0.0.1",
+    "169.254.169.254",
+    "0.0.0.0",
+    "224.0.0.1",
+    "240.0.0.1",
+    "100.64.0.1",
+    "2606:4700::1111",
+    "::1",
+    "::",
+    "fe80::1",
+    "fd00:ec2::254",
+    "fc00::1",
+    "ff02::1",
+    "::ffff:10.0.0.5",
+    "::ffff:169.254.169.254",
+    "::ffff:1.1.1.1",
+]
+
+
+def test_D2306_90_regra_propria_igual_ao_url_guard() -> None:
+    """D2306-90 (R6c-2): the common layer's "would the guard refuse it" predicate gives the
+    same answer as ``url_guard._classify(ip) is not None`` on a sample of IPv4 and IPv6
+    addresses (global, private, loopback, link-local, ULA, multicast, reserved,
+    unspecified, mapped). If url_guard changes, this test breaks on purpose. The
+    always-refused rule of R6c-1 covers the four metadata/link-local forms and not 10.0.0.5."""
+    import ipaddress
+
+    import connectors.url_guard as url_guard
+
+    mod = connector_module()
+    assert hasattr(mod, "guard_would_refuse")
+    assert hasattr(mod, "always_refused")
+    for raw in _SAMPLE_IPS:
+        ip = ipaddress.ip_address(raw)
+        assert mod.guard_would_refuse(ip) is (url_guard._classify(ip) is not None), raw
+    for raw in _ALWAYS_REFUSED:
+        assert mod.always_refused(ipaddress.ip_address(raw)) is True, raw
+    for raw in ("10.0.0.5", "192.168.1.1", "fc00::1", "1.1.1.1"):
+        assert mod.always_refused(ipaddress.ip_address(raw)) is False, raw
+
+
+def test_D2306_90_guard_chamado_uma_vez_e_erro_e_dns(
+    h: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D2306-90 (R6c-2): the connector calls url_guard once with allow_private=True and
+    never reads its text: any error is DNS (unreachable), whatever it says; the refusal
+    comes from the connector's own rule on the same IPs (scope_violation)."""
+    import ipaddress
+
+    import connectors.url_guard as url_guard
+
+    calls: list[dict[str, Any]] = []
+
+    def guard(text: str | None, ips: list[str]) -> None:
+        def resolve(url: str, **kw: Any) -> tuple[str | None, list[Any]]:
+            calls.append(kw)
+            return text, [ipaddress.ip_address(i) for i in ips]
+
+        monkeypatch.setattr(url_guard, "resolve_and_validate_outbound_url", resolve)
+
+    guard("scope refused: resolves to a private address (not DNS)", [])
+    fake = h.s3()
+    out = h.run(fake.transport, s3_target())
+    assert out.db.reasons() == ["unreachable"]
+    assert fake.requests == []
+    assert len(calls) == 1
+    assert calls[0].get("allow_private") is True
+
+    calls.clear()
+    guard(None, [PRIVATE_IP])
+    fake = h.s3()
+    out = h.run(fake.transport, s3_target())
+    assert out.db.reasons() == ["scope_violation"]
+    assert fake.requests == []
+    assert len(calls) == 1
+    assert calls[0].get("allow_private") is True
+
+
+@pytest.mark.parametrize("names", [False, True])
+def test_D2306_91_erro_da_extracao_e_por_objeto(
+    h: Harness, caplog: pytest.LogCaptureFixture, names: bool
+) -> None:
+    """D2306-91 (R6c-3): the scanner raising RuntimeError("SYNTH...") only on the second of
+    three objects -> findings of the other two, objects_scanned=2,
+    not_scanned_by_reason == {"extract_failed": 1}, coverage partial, no "error" failure,
+    the marker out of failures and logs; the per-object failure (fixed message) only with
+    report_object_names: true; the temp dir is gone and the target goes on."""
+    caplog.set_level(logging.DEBUG)
+    mark = _marker("SYNTHEX")
+    made = h.spy_mkdtemp()
+    calls = [0]
+
+    def explode(_content: str, _path: Any) -> None:
+        calls[0] += 1
+        if calls[0] == 2:
+            raise RuntimeError(mark)
+
+    fake = h.s3(
+        {"corpus/a.txt": CPF_TXT, "corpus/b.txt": CPF_TXT, "corpus/c.txt": CPF_TXT}
+    )
+    out = h.run(
+        fake.transport,
+        s3_target(report_object_names=names),
+        scanner=SpyScanner(explode),
+    )
+
+    assert paths(out.db) == {
+        f"s3://{BUCKET}/corpus/a.txt",
+        f"s3://{BUCKET}/corpus/c.txt",
+    }
+    assert "error" not in out.db.reasons()
+    ex = executive(out.db)
+    assert ex["objects_scanned"] == 2
+    assert ex["not_scanned_by_reason"] == {"extract_failed": 1}
+    assert ex["coverage"] == "partial"
+    assert "extract_failed=1" in skipped_detail(out.db)
+    if names:
+        assert out.db.details("extract_failed") == [
+            f"s3://{BUCKET}/corpus/b.txt: extraction failed (RuntimeError)"
+        ]
+    else:
+        assert out.db.details("extract_failed") == []
+    assert mark not in out.db.as_text()
+    assert mark not in caplog.text
+    assert made and not any(Path(d).exists() for d in made)

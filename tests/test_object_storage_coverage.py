@@ -381,8 +381,10 @@ def test_D2306_73_linha_sem_bloco_fica_fora_da_cobertura(tmp_path: Path) -> None
 # D-75: hints
 # ----------------------------------------------------------------------------
 
-# Revision 6, R6-1: the 11 reasons with a hint of their own ("error" stays generic).
+# Revision 6, R6-1, with revision 6c (R6c-3): the 12 reasons with a hint of their own
+# ("error" stays generic).
 NEW_REASONS = [
+    "extract_failed",
     "config_error",
     "not_found",
     "throttled",
@@ -413,3 +415,32 @@ def test_D2306_75_dica_de_limit_reached_diz_como_subir_o_limite() -> None:
     hint = failure_hint("limit_reached")
     for key in ("max_objects", "max_download_bytes", "max_object_bytes"):
         assert key in hint
+
+
+POSTURE = (
+    "This report is evidence of what was read. It is not a legal conclusion and does not "
+    "protect against fines."
+)
+
+
+def test_D2306_71_postura_e_listing_complete_yes_no(tmp_path: Path) -> None:
+    """R6c-4: "Listing complete" shows yes or no, in lower case, and the posture text sits
+    in a cell of the "Target coverage" sheet, beside the table, with the exact wording."""
+    wb = _report(
+        tmp_path,
+        [
+            (TARGET_NAME, "object_storage", _block("partial")),
+            ("outro-alvo", "object_storage", _block("partial", listing_complete=False)),
+        ],
+        [(TARGET_NAME, "skipped", "x"), ("outro-alvo", "skipped", "x")],
+    )
+
+    got = {r["Target"]: r for r in _rows(wb, "Target coverage")}
+    assert got[TARGET_NAME]["Listing complete"] == "yes"
+    assert got["outro-alvo"]["Listing complete"] == "no"
+    ws = wb["Target coverage"]
+    cells = [
+        (c.column, c.value) for row in ws.iter_rows() for c in row if c.value == POSTURE
+    ]
+    assert len(cells) == 1
+    assert cells[0][0] > len(COLUMNS)
