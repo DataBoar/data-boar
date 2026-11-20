@@ -115,9 +115,18 @@ def _run(
 
 
 def _esperar(
-    cond: Callable[[], bool], timeout: float, passo: float = 2.0, *, msg: str = ""
+    cond: Callable[[], bool],
+    timeout: float,
+    passo: float = 2.0,
+    *,
+    msg: str = "",
+    diag: Callable[[], str] | None = None,
 ) -> None:
-    """Poll ``cond`` until true or ``timeout`` (deadline polling, no fixed sleep)."""
+    """Poll ``cond`` until true or ``timeout`` (deadline polling, no fixed sleep).
+
+    ``diag`` (optional) runs only on timeout and its text is appended to the error, so a
+    timeout says what is holding the resource instead of just that it timed out.
+    """
     limite = time.monotonic() + timeout
     pausa = threading.Event()
     while time.monotonic() < limite:
@@ -125,7 +134,44 @@ def _esperar(
             return
         pausa.wait(passo)
     if not cond():
-        raise AssertionError(f"timeout de {timeout:.0f}s: {msg}")
+        extra = f"\n{diag()}" if diag is not None else ""
+        raise AssertionError(f"timeout de {timeout:.0f}s: {msg}{extra}")
+
+
+def _diagnostico_porta(porta: int, podman: Callable[..., object] | None = None) -> str:
+    """Say who holds ``porta`` on the host: every TCP socket with it as local or peer port
+    (with pid/process), listeners, a bind probe and, when given, the Podman containers.
+
+    Used only on timeout of the "pod port is free" wait, to tell a real leftover listener
+    (rootless port forwarder, container, proxy) from a socket in TIME_WAIT.
+    """
+    partes: list[str] = []
+    consultas = (
+        ("ss -tanpe (qualquer estado, porta local ou remota)",
+         ["ss", "-tanpe", f"( sport = :{porta} or dport = :{porta} )"]),
+        ("ss -tlnpe (listeners)", ["ss", "-tlnpe", f"( sport = :{porta} )"]),
+    )  # fmt: skip
+    for rotulo, argv in consultas:
+        try:
+            r = _run(argv, timeout=15.0)
+            partes.append(f"[{rotulo}]\n{(r.stdout + r.stderr).strip() or '(vazio)'}")
+        except (OSError, subprocess.SubprocessError) as exc:
+            partes.append(f"[{rotulo}] indisponível: {exc!r}")
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", porta))
+            partes.append(f"[bind 127.0.0.1:{porta}] ok agora")
+        except OSError as exc:
+            partes.append(f"[bind 127.0.0.1:{porta}] falhou: {exc!r}")
+    if podman is not None:
+        try:
+            r = podman(  # type: ignore[operator]
+                "ps", "-a", "--format", "{{.Names}} {{.Status}} {{.Ports}}"
+            )
+            partes.append(f"[podman ps -a]\n{r.stdout.strip() or '(vazio)'}")
+        except (OSError, subprocess.SubprocessError, AttributeError) as exc:
+            partes.append(f"[podman ps -a] indisponível: {exc!r}")
+    return "\n".join(partes)
 
 
 def _esperar_estavel(
@@ -521,6 +567,7 @@ class Harness:
             45,
             0.5,
             msg=f"porta do pod {self.porta_pod} livre",
+            diag=lambda: _diagnostico_porta(self.porta_pod, self.podman),
         )
 
     def unidade_prospect_ausente(self, slug: str) -> bool:
@@ -635,6 +682,36 @@ class Harness:
         assert info["State"]["Status"] == "running"
         assert self.dash_saudavel()
         assert not (self.runtime / "demo-prospect" / "slot.json").exists()
+
+
+@pytest.mark.skipif(shutil.which("ss") is None, reason="ss (iproute2) ausente no host")
+def test_diagnostico_porta_distingue_listener_de_time_wait() -> None:
+    """The port-held diagnostic names a live listener (LISTEN + process) and, after the
+    server side closes first, a TIME-WAIT socket that still makes a plain bind fail.
+
+    Runs anywhere (no Podman, no isolated HOME): it only needs ``ss``.
+    """
+    srv = socket.socket()
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    porta = int(srv.getsockname()[1])
+    cli = socket.create_connection(("127.0.0.1", porta))
+    conn, _ = srv.accept()
+    try:
+        vivo = _diagnostico_porta(porta)
+        assert "LISTEN" in vivo and "pid=" in vivo, vivo
+        assert f"bind 127.0.0.1:{porta}] falhou" in vivo, vivo
+    finally:
+        conn.close()  # server side closes first: it keeps the TIME-WAIT
+        cli.close()
+        srv.close()
+    depois = _diagnostico_porta(porta)
+    assert "TIME-WAIT" in depois, depois
+    assert "[ss -tlnpe (listeners)]\nState" in depois
+    assert (
+        "LISTEN" not in depois.split("[ss -tlnpe (listeners)]")[1].split("[bind")[0]
+    ), depois
 
 
 # --------------------------------------------------------------------------- fixtures
