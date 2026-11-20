@@ -952,7 +952,8 @@ Listen on all interfaces (e.g.\& LAN or container without Docker env); use only 
 Start a full audit:
 .RS
 .nf
-curl \-X POST http://localhost:8088/scan
+curl \-X POST http://localhost:8088/scan \\
+  \-H "Content\-Type: application/json"
 .fi
 .RE
 .
@@ -1078,10 +1079,12 @@ When API key is required (X-API-Key or Bearer):
 .RS
 .nf
 curl \-X POST http://localhost:8088/scan \\
-  \-H "X-API-Key: your-secret-key"
+  \-H "X-API-Key: your-secret-key" \\
+  \-H "Content\-Type: application/json"
 # or
 curl \-X POST http://localhost:8088/scan \\
-  \-H "Authorization: Bearer your-secret-key"
+  \-H "Authorization: Bearer your-secret-key" \\
+  \-H "Content\-Type: application/json"
 .fi
 .RE
 .

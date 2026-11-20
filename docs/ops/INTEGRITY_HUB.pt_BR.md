@@ -32,7 +32,9 @@ Fonte → Build → Deploy → Runtime → Docs/ADR
 | Módulo / doc | Papel |
 | ------------ | ----- |
 | [`core/runtime_trust.py`](../../core/runtime_trust.py) | Estado tinted, modo degradado quando checagens falham |
-| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | Tier / hash de runtime contra **`core/licensing/integrity_manifest.json`** empacotado (Ed25519 com a chave pública da licença; `validated` só quando CRITICAL_MODULES batem — ADR-0093 / #2168). Este arquivo **não** é o `release-manifest.json` opcional da GitHub Release. |
+| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | Verificação de tier / manifesto de licença (checagem do digest de build embutido e verificador do `release-manifest.json` **opcional** da GitHub Release, `verify_manifest_optional`) |
+| [`core/integrity_signed_manifest.py`](../../core/integrity_signed_manifest.py) | Manifesto assinado **empacotado** **`core/licensing/integrity_manifest.json`** (Ed25519 com a chave pública da licença): `evaluate_signed_manifest` devolve `validated` só quando os hashes de `CRITICAL_MODULES` batem (ADR-0093 / #2168). O primeiro release assinado grava o arquivo; ele não existe numa árvore de código-fonte, onde o runtime reporta `tampered` com o detalhe `signed_manifest_absent`. Não é o `release-manifest.json` opcional. |
+| [`core/integrity_anchor.py`](../../core/integrity_anchor.py) | Âncora de startup: chama `evaluate_signed_manifest` e persiste o resultado forense (ADR-0093 / #2168) |
 | [`core/maturity_assessment/integrity.py`](../../core/maturity_assessment/integrity.py) | Selo do maturity assessment (`DATA_BOAR_MATURITY_INTEGRITY_SECRET`) |
 | [INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md) | Especificação de design para hashes opcionais na subida (alpha) |
 

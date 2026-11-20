@@ -32,7 +32,9 @@ Source → Build → Deploy → Runtime → Docs/ADR
 | Module / doc | Role |
 | ------------ | ---- |
 | [`core/runtime_trust.py`](../../core/runtime_trust.py) | Tinted state, degraded mode when trust checks fail |
-| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | License tier / runtime hash vs packaged **`core/licensing/integrity_manifest.json`** (Ed25519 with the license public key; `validated` only when CRITICAL_MODULES match — ADR-0093 / #2168). This file is **not** the optional GitHub Release `release-manifest.json`. |
+| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | License tier / manifest verification (embedded build digest check and the **optional** GitHub Release `release-manifest.json` verifier, `verify_manifest_optional`) |
+| [`core/integrity_signed_manifest.py`](../../core/integrity_signed_manifest.py) | Signed **packaged** manifest **`core/licensing/integrity_manifest.json`** (Ed25519 with the license public key): `evaluate_signed_manifest` returns `validated` only when `CRITICAL_MODULES` hashes match (ADR-0093 / #2168). The first signed release writes the file; it is absent in a source tree, where the runtime reports `tampered` with detail `signed_manifest_absent`. Not the optional `release-manifest.json`. |
+| [`core/integrity_anchor.py`](../../core/integrity_anchor.py) | Startup anchor: calls `evaluate_signed_manifest` and persists the forensic result (ADR-0093 / #2168) |
 | [`core/maturity_assessment/integrity.py`](../../core/maturity_assessment/integrity.py) | Maturity assessment seal (`DATA_BOAR_MATURITY_INTEGRITY_SECRET`) |
 | [INTEGRITY_CHECK_ALPHA_LOGIC.md](INTEGRITY_CHECK_ALPHA_LOGIC.md) | Design spec for optional startup hash checks (alpha) |
 
