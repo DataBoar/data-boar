@@ -851,7 +851,8 @@ def test_A11_endurecimento_do_pod(cenario: Harness) -> None:
     assert hc["ReadonlyRootfs"] is True
     drop = [c.upper() for c in (hc.get("CapDrop") or [])]
     assert "EffectiveCaps" in i, "inspect deve expor EffectiveCaps"
-    eff = [c.upper() for c in i["EffectiveCaps"]]
+    # Podman serializa "nenhuma capacidade" como null; a chave precisa existir (assert acima).
+    eff = [c.upper() for c in (i["EffectiveCaps"] or [])]
     assert hc["CapAdd"] in (None, [])
     assert eff == [], f"EffectiveCaps deve ser vazio, veio {eff!r}"
     norm = set(drop)
