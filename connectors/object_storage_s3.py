@@ -138,6 +138,9 @@ class S3Driver:
         if variant == "s3":
             misnamed["endpoint_url"] = "use driver s3_compatible"
         self.misnamed_keys: Mapping[str, str] = misnamed
+        # Revision 6b (R6-8): checked by the common layer before settings(), in both
+        # variants; endpoint_url keeps its own message in settings() (s3_addressing).
+        self.required_keys: tuple[str, ...] = ("bucket", "region")
 
     # -- configuration -----------------------------------------------------
 

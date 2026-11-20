@@ -745,7 +745,6 @@ def _gate_error(cfg: dict[str, Any], reset, driver: str) -> Exception | None:
     return None
 
 
-@pending_assert("2306 pending: A2306-17")
 def test_A2306_17_tier_enterprise_fail_closed(tmp_path, clean_license_guard):
     """A2306-17 (revisao 4: as duas chaves de tier; so Enterprise, ou Tier.OPEN)."""
     from core.connector_registry import tier_feature_for_target
@@ -773,7 +772,6 @@ def test_A2306_17_tier_enterprise_fail_closed(tmp_path, clean_license_guard):
         assert isinstance(err, FeatureTierBlockedError), driver
 
 
-@pending_assert("2306 pending: A2306-18")
 def test_A2306_18_registro_resolve_o_conector_novo():
     """A2306-18 (connector_for_target devolve ObjectStorageConnector, nos dois drivers)."""
     import core.engine  # noqa: F401 - the engine imports the connector modules (registration)
@@ -1291,3 +1289,43 @@ def test_selfcheck_backend_de_brinquedo_pagina_de_2_exige_cabecalho_e_decodifica
     with pytest.raises(ValueError):
         toy_parse_listing(b'{"items": 3}')
     assert store.violations == []
+
+
+def test_selfcheck_botoes_hostis_mais_entradas_que_max_keys_e_corpo_cru():
+    fake, c = _fresh(objects={f"corpus/k{i}.txt": b"x" for i in range(15)})
+    q = "/?list-type=2&prefix=corpus%2F&max-keys=10&encoding-type=url"
+    assert len(_keys(_get(fake, c, q))) == 10
+    fake.extra_entries_beyond_max_keys(5)
+    resp = _get(fake, c, q)
+    assert len(_keys(resp)) == 15
+    assert "<IsTruncated>false</IsTruncated>" in resp.text
+    fake.extra_entries_beyond_max_keys(0)
+    hostile = (
+        b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///x">]><r>&x;</r>'
+    )
+    fake.raw_listing_body(hostile)
+    assert _get(fake, c, q).content == hostile
+    fake.raw_listing_body(None)
+    assert len(_keys(_get(fake, c, q))) == 10
+
+
+def test_selfcheck_toystore_declara_tamanho_diferente_do_real():
+    token = new_toy_token()
+    store = ToyStore(
+        "brinquedo",
+        {"corpus/a.txt": b"12345", "corpus/b.txt": b"1"},
+        token,
+        declared_sizes={"corpus/a.txt": 999},
+    )
+    with httpx.Client(transport=store.transport) as client:
+        resp = client.get(
+            toy_list_url(store.host, "brinquedo", "corpus/", None, 2),
+            headers={TOY_AUTH_HEADER: token},
+        )
+        entries, _n, _t = toy_parse_listing(resp.content)
+        assert entries == [("corpus/a.txt", 999), ("corpus/b.txt", 1)]
+        blob = client.get(
+            toy_blob_url(store.host, "brinquedo", "corpus/a.txt"),
+            headers={TOY_AUTH_HEADER: token},
+        )
+        assert blob.content == b"12345"

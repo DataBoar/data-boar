@@ -129,6 +129,9 @@ class StorageDriver(Protocol):
     credential_keys: tuple[tuple[str, bool], ...]  # (auth.*_from_env key, required?)
     forbidden_inline_keys: frozenset[str]
     misnamed_keys: Mapping[str, str]  # destination key under another name -> hint
+    # Target keys the driver needs (revision 6, R6-8); the common layer checks them before
+    # settings() and records config_error "missing required key: <key>".
+    required_keys: tuple[str, ...]
 
     def settings(self, cfg: dict[str, Any]) -> DriverSettings: ...
 

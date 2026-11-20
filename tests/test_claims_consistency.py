@@ -59,7 +59,8 @@ def feature_gate_calls() -> set[str]:
 def connectors_without_tier() -> list[str]:
     # aliases: connector registrado que mapeia p/ a família de tier de OUTRO connector.
     # PLAN_CONNECTOR_TIER_GATING: powerapps targets → connector_dataverse.
-    aliases = {"powerapps": "dataverse"}
+    # #2306: object_storage targets resolve the tier by driver (s3 -> s3_object_storage).
+    aliases = {"powerapps": "dataverse", "object_storage": "s3_object_storage"}
     keys, regs = tier_map_keys(), registered_connectors()
     missing = []
     for c in regs:

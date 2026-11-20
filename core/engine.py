@@ -95,6 +95,7 @@ try:
 except ImportError:
     pass  # optional connector not installed
 import connectors.sharepoint_online_connector  # noqa: F401 - httpx only (2206.1)
+import connectors.object_storage_connector  # httpx and defusedxml only (2306.2)
 
 try:
     import connectors.nfs_connector
@@ -628,6 +629,7 @@ class AuditEngine:
                 "smb",
                 "cifs",
                 "nfs",
+                "object_storage",
             ):
                 connector = connector_class(
                     target_with_fs,

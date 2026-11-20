@@ -92,7 +92,9 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "compliance_grade_report": Tier.PRO,  # DPO A+→F score — see #697
     "connector_snowflake": Tier.PRO,
     "connector_sap": Tier.PRO,
-    "connector_s3_object_storage": Tier.PRO,
+    # #2306 (DEC-16): S3 and S3-compatible object storage start at Enterprise.
+    "connector_s3_object_storage": Tier.ENTERPRISE,
+    "connector_s3_compatible": Tier.ENTERPRISE,
     "connector_azure_blob": Tier.PRO,
     "connector_gcs": Tier.PRO,
     # Managed corporate infrastructure connectors (#843 boundary)
