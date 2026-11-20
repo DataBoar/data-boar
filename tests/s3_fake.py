@@ -424,6 +424,7 @@ class FakeS3:
         self.doctype_entity = False
         self.oversized_listing = False
         self.encoding_type: Literal["url"] | None = "url"
+        # Any namespace is an ACCEPTED listing (design rev. 5, D-78: read by local name).
         self.namespace: Literal["aws", "other"] | None = "aws"
         self.error_body_echo = False
         self.pagination_mode: Literal["missing_token", "repeat_token"] | None = None

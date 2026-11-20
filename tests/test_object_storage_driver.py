@@ -548,8 +548,18 @@ def test_D2306_82_chave_que_nao_decodifica_vira_none(raw_key: str) -> None:
         b'<?xml version="1.0"?><ListBucketResult><Name>x</Name><Contents><Key>a',
         b"not xml at all",
         b"",
-        _listing(_item("corpus/a.txt", "1"), ns="http://example.invalid/ns"),
         _listing(_item("corpus/a.txt", "1"), truncated="maybe"),
+        # D2306-42 (revision 5 arbitration): a DOCTYPE without any entity is refused too.
+        (
+            b'<?xml version="1.0"?><!DOCTYPE ListBucketResult>'
+            b"<ListBucketResult><IsTruncated>false</IsTruncated>"
+            b"<Contents><Key>a</Key><Size>1</Size></Contents></ListBucketResult>"
+        ),
+        # D2306-42: wrong root element, with and without the AWS namespace.
+        b"<Error><IsTruncated>false</IsTruncated></Error>",
+        _listing(_item("corpus/a.txt", "1")).replace(
+            b"ListBucketResult", b"ListAllMyBucketsResult"
+        ),
         (
             b'<?xml version="1.0"?><!DOCTYPE ListBucketResult [<!ENTITY boom "boom">]>'
             b"<ListBucketResult><IsTruncated>false</IsTruncated>"
@@ -567,6 +577,31 @@ def test_extra_parse_list_resposta_ruim_e_driver_protocol_error(body: bytes) -> 
     with pytest.raises(DriverProtocolError) as info:
         S3Driver().parse_list(body)
     assert str(info.value) == "malformed listing response"
+
+
+def test_D2306_85_namespace_nao_muda_a_leitura_da_listagem() -> None:
+    """Section 7, revision 5 arbitration: elements are read by local name only, so the
+    AWS namespace, no namespace and any other namespace give the same page."""
+    contents = (
+        _item("corpus/a+b%2Bc.txt", "3")
+        + _item("corpus/%FF.txt", "2")
+        + _item("corpus/sem-size.txt", None)
+    )
+    driver = S3Driver()
+    pages = [
+        driver.parse_list(_listing(contents, ns=ns, truncated="true", token="t+/="))
+        for ns in (AWS_NS, None, "http://example.invalid/ns")
+    ]
+    expected = ListPage(
+        [
+            ObjectEntry("corpus/a b+c.txt", 3),
+            ObjectEntry(None, 2),
+            ObjectEntry(None, None),
+        ],
+        "t+/=",
+        True,
+    )
+    assert pages == [expected, expected, expected]
 
 
 # ----------------------------------------------------------------------------
