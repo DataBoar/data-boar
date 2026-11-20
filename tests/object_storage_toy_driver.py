@@ -212,6 +212,8 @@ class ToyDriver:
     max_key_bytes = 256
     # Design R6-8: keys the target must carry (the common layer checks them).
     required_keys: tuple[str, ...] = ("host", "container")
+    # Design D-88: mandatory attribute; the toy never opens private networks.
+    honors_allow_private_networks = False
     credential_keys: tuple[tuple[str, bool], ...] = (("token_from_env", True),)
     forbidden_inline_keys = frozenset({"toy_token", "toy_secret"})
     # Design revision 5: the toy uses ``host`` (the S3 drivers refuse it as misnamed), so it
