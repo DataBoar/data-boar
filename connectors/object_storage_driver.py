@@ -82,33 +82,44 @@ class ResolvedCredentials(Mapping[str, str]):
     __slots__ = ("_values",)
 
     def __init__(self, values: Mapping[str, str]) -> None:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        self._values: dict[str, str] = {str(k): str(v) for k, v in values.items()}
 
     def __getitem__(self, key: str) -> str:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        return self._values[key]
 
     def __iter__(self) -> Iterator[str]:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        return iter(list(self._values))
 
     def __len__(self) -> int:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        return len(self._values)
 
     def __repr__(self) -> str:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        return f"<ResolvedCredentials redacted keys={sorted(self._values)}>"
 
     __str__ = __repr__
 
     def __eq__(self, other: object) -> bool:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        return self is other
 
     def __hash__(self) -> int:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        return id(self)
 
     def __reduce__(self) -> Any:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        raise TypeError("ResolvedCredentials cannot be pickled or copied")
+
+    def __reduce_ex__(self, protocol: Any) -> Any:
+        raise TypeError("ResolvedCredentials cannot be pickled or copied")
+
+    def __copy__(self) -> ResolvedCredentials:
+        raise TypeError("ResolvedCredentials cannot be pickled or copied")
+
+    def __deepcopy__(self, memo: Any) -> ResolvedCredentials:
+        raise TypeError("ResolvedCredentials cannot be pickled or copied")
 
     def clear(self) -> None:
-        raise NotImplementedError("2306.1: ResolvedCredentials")
+        for key in list(self._values):
+            self._values[key] = ""
+        self._values.clear()
 
 
 class StorageDriver(Protocol):
@@ -205,9 +216,24 @@ _REGISTRY: dict[str, Callable[[], StorageDriver]] = {
 
 
 def register_driver(name: str, factory: Callable[[], StorageDriver]) -> None:
-    raise NotImplementedError("2306.1: register_driver")
+    """Register (or replace) the factory of a driver; the factory is not called here."""
+    if not isinstance(name, str) or not name or not callable(factory):
+        raise ValueError(
+            "register_driver needs a non-empty name and a callable factory"
+        )
+    _REGISTRY[name] = factory
 
 
 def get_driver(name: str) -> StorageDriver:
-    """Return a driver instance; ``KeyError`` with a fixed message for an unknown name."""
-    raise NotImplementedError("2306.1: get_driver")
+    """Return a new driver instance; ``KeyError`` with a fixed message for an unknown name.
+
+    ``args[0]`` of the ``KeyError`` is the message of section 0: planned providers give
+    "driver <x> is not available yet"; any other value gives the registry names, sorted.
+    The value itself is never echoed (only the fixed planned names are).
+    """
+    factory = _REGISTRY.get(name) if isinstance(name, str) else None
+    if factory is not None:
+        return factory()
+    if isinstance(name, str) and name in NOT_AVAILABLE_YET:
+        raise KeyError(f"driver {name} is not available yet")
+    raise KeyError("driver must be one of: " + ", ".join(sorted(_REGISTRY)))

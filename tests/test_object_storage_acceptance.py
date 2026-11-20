@@ -470,7 +470,6 @@ def _config_with(target: dict[str, Any]) -> dict[str, Any]:
     return {"targets": [target], "api": {}, "report": {"output_dir": "."}}
 
 
-@pending_assert("2306 pending: A2306-8")
 def test_A2306_8_nome_de_variavel_sem_prefixo_e_recusado(monkeypatch):
     """A2306-8 (access_key_id_from_env: S3_KEY, sem o prefixo do #1977, da ValueError)."""
     from config.loader import normalize_config
@@ -491,7 +490,6 @@ def test_A2306_8_nome_de_variavel_sem_prefixo_e_recusado(monkeypatch):
     assert isinstance(err, ValueError)
 
 
-@pending_assert("2306 pending: A2306-9")
 def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypatch):
     """A2306-9 (secret_access_key no alvo: ValueError com o nome da chave, sem o valor)."""
     from config.loader import normalize_config
@@ -1213,10 +1211,15 @@ def test_selfcheck_botoes_de_listagem_defeituosa():
     ).text
     assert f"<NextContinuationToken>{token}<" in rep2
     fake.pagination(None)
+    fake.namespace = "aws"
+    with_aws = _keys(_get(fake, c, q))
     fake.namespace = None
     assert "xmlns" not in _get(fake, c, q).text
+    assert _keys(_get(fake, c, q)) == with_aws
     fake.namespace = "other"
     assert "example.invalid" in _get(fake, c, q).text
+    # A foreign namespace is an accepted listing: same keys as AWS and as no namespace.
+    assert _keys(_get(fake, c, q)) == with_aws and len(with_aws) == 2
     fake.encoding_type = None
     assert "EncodingType" not in _get(fake, c, q).text
     fake.malformed_xml = True

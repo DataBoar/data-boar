@@ -305,6 +305,16 @@ def _credential_destination_groups(cfg: dict[str, Any]) -> list[set[str]] | None
     if kind == "nfs":
         host = str(cfg.get("host") or cfg.get("server") or "").strip().lower()
         return _one(host)
+    if kind == "object_storage":
+        # The single connected host comes from the target's driver (#2306, section 3).
+        # Imported here to avoid an import cycle. Unknown driver: empty group (fail closed).
+        from connectors.object_storage_driver import get_driver
+
+        try:
+            driver = get_driver(str(cfg.get("driver") or ""))
+        except KeyError:
+            return [set()]
+        return _one(driver.destination_host(cfg))
     if kind in _HOST_DESTINATION_KINDS:
         host = str(cfg.get("host") or "").strip().lower()
         if not host:
@@ -519,6 +529,71 @@ def _gate_non_rest_env_credential(
         _assert_yaml_hosts_within_operator(target, label)
         return
     assert_non_rest_env_credential(target, env_name, label)
+
+
+def _gate_object_storage_credentials(target: dict[str, Any]) -> None:
+    """Credential gate of an ``object_storage`` target (#2306, design section 3).
+
+    1. Inline credential keys are refused (name only, never the value): at the target
+       level the common list, the driver list and the driver's credential key names; in
+       ``auth`` the same minus the driver's credential key names.
+    2. The driver's required ``auth.*_from_env`` names must be non-empty strings.
+    3. Each name uses a #1977 prefix and is not a reserved process name.
+    4. Destination allowlist (only with DATA_BOAR_CREDENTIAL_STRICT=1).
+    5. Warning when a referenced variable is unset or empty.
+
+    No value is read into the dict: the connector reads the environment in ``run()``.
+    An unknown driver does not fail the load (the connector records ``config_error``),
+    but the common list still applies and strict mode fails closed (empty group).
+    """
+    from connectors.object_storage_driver import (
+        COMMON_FORBIDDEN_INLINE_KEYS,
+        get_driver,
+    )
+
+    prefix = f"object_storage target '{target.get('name', '?')}'"
+    auth_raw = target.get("auth")
+    auth: dict[str, Any] = auth_raw if isinstance(auth_raw, dict) else {}
+    try:
+        driver = get_driver(str(target.get("driver") or ""))
+    except KeyError:
+        driver = None
+
+    credential_names: frozenset[str] = frozenset()
+    driver_forbidden: frozenset[str] = frozenset()
+    if driver is not None:
+        credential_names = frozenset(key for key, _required in driver.credential_keys)
+        driver_forbidden = frozenset(driver.forbidden_inline_keys)
+    at_target = COMMON_FORBIDDEN_INLINE_KEYS | driver_forbidden | credential_names
+    in_auth = (COMMON_FORBIDDEN_INLINE_KEYS | driver_forbidden) - credential_names
+    for where, keys, forbidden in (("", target, at_target), ("auth.", auth, in_auth)):
+        for key in sorted(str(k) for k in keys):
+            if key in forbidden:
+                raise ValueError(
+                    f"{prefix}: {where}{key} is not accepted; "
+                    f"use auth.<credential>_from_env (#2306)"
+                )
+    if driver is None:
+        assert_explicit_destination_allowlisted(target, "object_storage target")
+        return
+
+    names: list[tuple[str, str]] = []
+    for key, required in driver.credential_keys:
+        if key not in auth:
+            if required:
+                raise ValueError(f"{prefix}: auth.{key} is required (#2306)")
+            continue
+        value = auth.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{prefix}: auth.{key} must name an environment variable (#2306)"
+            )
+        label = f"{prefix} auth.{key}"
+        assert_credential_env_name(value.strip(), label)
+        names.append((key, value.strip()))
+    assert_explicit_destination_allowlisted(target, "object_storage target")
+    for key, env_name in names:
+        _warn_if_env_from_key_unset_or_empty(env_name, f"auth.{key}")
 
 
 def _notification_env_value(
@@ -1574,6 +1649,11 @@ def _normalize_config_body(
     # Resolve credential-from-env for targets (Phase A: secrets in env, not in config)
     for t in out.get("targets") or []:
         if not isinstance(t, dict):
+            continue
+        if _credential_target_kind(t) == "object_storage":
+            # Driver-generic branch (#2306, section 3): runs before the generic branches
+            # and never copies a credential value into the target dict.
+            _gate_object_storage_credentials(t)
             continue
         if _credential_target_kind(t) == "sharepoint_online":
             # No env secret, but a runtime bearer token: the operator host list
