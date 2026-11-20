@@ -75,58 +75,54 @@ def toy_blob_url(host: str, container: str, key: str) -> str:
 
 def toy_parse_listing(
     body: bytes,
-) -> tuple[list[tuple[str, int | None]], str | None, bool]:
-    """(entries as (key, size), next cursor, truncated). ``ValueError`` on a malformed body."""
+) -> tuple[list[tuple[str | None, int | None]], str | None, bool]:
+    """(entries as (key, size), next cursor, truncated). ``ValueError`` on a malformed body.
+
+    Design revision 5: an entry the driver cannot use (name not a string, or ``bytes`` absent,
+    not an integer or negative) comes back with ``key=None`` and the common layer counts it
+    as ``invalid_key``; the other entries of the page are normal.
+    """
     try:
         doc = json.loads(body)
         items = doc["items"]
         nxt = doc["next"]
         if not isinstance(items, list) or not (nxt is None or isinstance(nxt, str)):
             raise ValueError("unexpected listing shape")
-        entries: list[tuple[str, int | None]] = []
+        entries: list[tuple[str | None, int | None]] = []
         for it in items:
+            name = it.get("name")
             size = it.get("bytes")
-            entries.append(
-                (it["name"], size if isinstance(size, int) and size >= 0 else None)
-            )
-    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            bad_size = not isinstance(size, int) or isinstance(size, bool) or size < 0
+            if not isinstance(name, str) or bad_size:
+                entries.append((None, None))
+            else:
+                entries.append((name, size))
+    except (KeyError, TypeError, AttributeError, json.JSONDecodeError) as exc:
         raise ValueError("malformed toy listing") from exc
     return entries, nxt, nxt is not None
 
 
 def toy_classify_status(
     status: int, *, during: str
-) -> tuple[str, str | None, bool, bool]:
-    """(reason, code, retryable, ends_target) for the toy protocol."""
+) -> tuple[str, str | None, bool, bool, str]:
+    """(reason, code, retryable, ends_target, message): fixed texts of the toy driver."""
     if status == 401:
-        return "auth_failed", None, False, True
+        return "auth_failed", None, False, True, "toy provider refused the token"
     if status == 403:
-        return (
-            ("permission_denied" if during == "list" else "download_failed"),
-            None,
-            False,
-            during == "list",
-        )
+        if during == "list":
+            return "permission_denied", None, False, True, "toy listing denied"
+        return "download_failed", None, False, False, "toy blob denied"
     if status == 404:
-        return (
-            ("not_found" if during == "list" else "download_failed"),
-            None,
-            False,
-            during == "list",
-        )
+        if during == "list":
+            return "not_found", None, False, True, "toy container not found"
+        return "download_failed", None, False, False, "toy blob not found"
     if status == 429 or status >= 500:
-        return (
-            ("unreachable" if during == "list" else "download_failed"),
-            None,
-            True,
-            False,
-        )
-    return (
-        ("protocol_error" if during == "list" else "download_failed"),
-        None,
-        False,
-        False,
-    )
+        if during == "list":
+            return "unreachable", None, True, False, "toy provider unavailable"
+        return "download_failed", None, True, False, "toy blob unavailable"
+    if during == "list":
+        return "protocol_error", None, False, False, f"toy error HTTP {status}"
+    return "download_failed", None, False, False, f"toy error HTTP {status}"
 
 
 # ----------------------------------------------------------------------------
@@ -207,6 +203,10 @@ class ToyDriver:
     max_key_bytes = 256
     credential_keys: tuple[tuple[str, bool], ...] = (("token_from_env", True),)
     forbidden_inline_keys = frozenset({"toy_token", "toy_secret"})
+    # Design revision 5: the toy uses ``host`` (the S3 drivers refuse it as misnamed), so it
+    # declares only its own wrong spellings. The credential lives in ``auth.token_from_env``;
+    # ``token_from_env`` at target level is refused by the loader (D-83).
+    misnamed_keys: Mapping[str, str] = {"url": "use host", "endpoint": "use host"}
 
     def settings(self, cfg: dict[str, Any]) -> ToySettings:
         host = cfg.get("host")

@@ -62,6 +62,7 @@ from tests.object_storage_toy_driver import (
 from tests.s3_fake import (
     EMPTY_SHA256,
     EVIL_HOST,
+    aws_doc_example_secret,
     GOOD_IP,
     METADATA_IP,
     PRIVATE_IP,
@@ -964,24 +965,78 @@ def _fresh(**kw: Any) -> tuple[FakeS3, Creds]:
     return fake, c
 
 
-def test_selfcheck_sigv4_confere_com_o_exemplo_publicado_pela_aws():
-    """The verifier reproduces the GET Object example of the AWS SigV4 documentation.
-
-    The documented example secret is assembled at run time (no literal with the shape of a
-    secret); the access key id is not part of the signature, so none is needed here.
-    """
-    secret = "wJalrXUtnFEMI/K7MDENG/" + "bPxRfiCYEXAMPLEKEY"
+def _doc_signature(
+    path: str, query: str, extra: dict[str, str] | None = None
+) -> tuple[str, str]:
     headers = {
         "host": "examplebucket.s3.amazonaws.com",
-        "range": "bytes=0-9",
         "x-amz-content-sha256": EMPTY_SHA256,
         "x-amz-date": "20130524T000000Z",
+        **(extra or {}),
     }
-    cr = canonical_request(
-        "GET", "/test.txt", "", headers, sorted(headers), EMPTY_SHA256
+    signed = sorted(headers)
+    cr = canonical_request("GET", path, query, headers, signed, EMPTY_SHA256)
+    sig = compute_signature(
+        aws_doc_example_secret(), "us-east-1", "20130524T000000Z", cr
     )
-    sig = compute_signature(secret, "us-east-1", "20130524T000000Z", cr)
-    assert sig == "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+    return sig, ";".join(signed)
+
+
+@pytest.mark.parametrize(
+    ("path", "query", "extra", "signed", "expected"),
+    [
+        (
+            "/test.txt",
+            "",
+            {"range": "bytes=0-9"},
+            "host;range;x-amz-content-sha256;x-amz-date",
+            "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
+        ),
+        (
+            "/",
+            "lifecycle",
+            None,
+            "host;x-amz-content-sha256;x-amz-date",
+            "fea454ca298b7da1c68078a5d1bdbfbbe0d65c699e0f91ac7a200a0136783543",
+        ),
+        (
+            "/",
+            "max-keys=2&prefix=J",
+            None,
+            "host;x-amz-content-sha256;x-amz-date",
+            "34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7",
+        ),
+    ],
+)
+def test_selfcheck_sigv4_confere_com_os_tres_vetores_s3_da_aws(
+    path, query, extra, signed, expected
+):
+    """The verifier reproduces the three published AWS S3 examples (D2306-0d, step 4)."""
+    sig, signed_headers = _doc_signature(path, query, extra)
+    assert signed_headers == signed
+    assert sig == expected
+
+
+def test_selfcheck_verificador_do_simulado_aceita_range_assinado_e_recusa_nao_assinado():
+    fake, c = _fresh()
+    path = "/corpus/o1.txt"
+    assert (
+        _get(fake, c, path, range="bytes=0-0").status_code == 403
+    )  # Range sent but not signed
+    url = f"https://{fake.host_header}{path}"
+    headers = sign_get_headers(
+        url=url,
+        host_header=fake.host_header,
+        region=fake.region,
+        access_key_id=c.access_key_id,
+        secret_access_key=c.secret_access_key,
+        session_token=c.session_token,
+        amz_date=AMZ,
+        extra_headers={"range": "bytes=0-0"},
+    )
+    with httpx.Client(transport=fake.transport) as client:
+        assert client.get(url, headers=headers).status_code == 200
+    assert len(fake.auth_failures) == 1
 
 
 def test_selfcheck_uri_encode_segue_a_regra_da_aws():
@@ -1225,6 +1280,11 @@ def test_selfcheck_backend_de_brinquedo_pagina_de_2_exige_cabecalho_e_decodifica
         assert blob.content == b"espaco"
         unauth = client.get(toy_list_url(store.host, "brinquedo", "", None, 2))
         assert unauth.status_code == 401
+    entries, _nxt, _more = toy_parse_listing(
+        b'{"items": [{"name": "a.txt", "bytes": 3}, {"name": "b.txt"}, '
+        b'{"name": 7, "bytes": 1}, {"name": "c.txt", "bytes": -1}], "next": null}'
+    )
+    assert entries == [("a.txt", 3), (None, None), (None, None), (None, None)]
     with pytest.raises(ValueError):
         toy_parse_listing(b'{"items": 3}')
     assert store.violations == []

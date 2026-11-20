@@ -143,6 +143,7 @@ def sign_get_headers(
     secret_access_key: str,
     session_token: str | None,
     amz_date: str,
+    extra_headers: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """A by-hand GET client for the simulator's own self-checks (not for the project)."""
     parts = urllib.parse.urlsplit(url)
@@ -153,6 +154,7 @@ def sign_get_headers(
     }
     if session_token:
         headers["x-amz-security-token"] = session_token
+    headers.update({k.lower(): v for k, v in (extra_headers or {}).items()})
     signed = sorted(headers)
     cr = canonical_request(
         "GET", parts.path, parts.query, headers, signed, EMPTY_SHA256
@@ -168,6 +170,19 @@ def sign_get_headers(
 # ----------------------------------------------------------------------------
 # Small test doubles shared by the acceptance tests
 # ----------------------------------------------------------------------------
+
+
+# Synthetic access key id for the AWS documentation vectors (the signature does not depend
+# on it); deliberately without the shape of a real key id.
+DOC_EXAMPLE_ACCESS_KEY_ID = "SYNTHAK" + "0" * 16
+
+
+def aws_doc_example_secret() -> str:
+    """The example secret of the AWS SigV4 documentation, assembled at run time.
+
+    Accepted repo practice (no literal with the shape of a secret in the file).
+    """
+    return "wJalrXUtnFEMI/K7MDENG/" + "bPxRfiCYEXAMPLEKEY"
 
 
 class Creds(NamedTuple):
@@ -639,6 +654,11 @@ class FakeS3:
         expected = ["host", "x-amz-content-sha256", "x-amz-date"]
         if self.session_token:
             expected.append("x-amz-security-token")
+        if (
+            "range" in headers
+        ):  # an extra header the client sends must be signed (rev. 5)
+            expected.append("range")
+        expected.sort()
         if m.group("signed") != ";".join(expected):
             return "SignatureDoesNotMatch", f"SignedHeaders is {m.group('signed')}"
         if headers.get("x-amz-content-sha256") != EMPTY_SHA256:
