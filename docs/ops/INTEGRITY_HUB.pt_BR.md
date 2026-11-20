@@ -21,8 +21,8 @@ Fonte → Build → Deploy → Runtime → Docs/ADR
 | ----- | ----------------- |
 | Fonte | Tags Git, commits assinados (política do operador) |
 | Build | [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md), evidência Rust determinística em [RELEASE_INTEGRITY.pt_BR.md](RELEASE_INTEGRITY.pt_BR.md) |
-| Deploy | [docs/RELEASE_INTEGRITY.pt_BR.md](../RELEASE_INTEGRITY.pt_BR.md) (digest de licenciamento + manifesto opcional), [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) |
-| Runtime | `core/runtime_trust.py`, [INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md) |
+| Deploy | [docs/RELEASE_INTEGRITY.pt_BR.md](../RELEASE_INTEGRITY.pt_BR.md) (digest de licenciamento + `release-manifest.json` **opcional** do workflow SBOM), [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) |
+| Runtime | `core/runtime_trust.py`, `core/licensing/integrity_manifest.json` empacotado ([ADR-0093](../adr/ADR-0093-signed-integrity-manifest.md)), [INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md) |
 | Docs/ADR | `scripts/inv-adr.ps1`, [docs/adr/INVENTORY.txt](../adr/INVENTORY.txt) |
 
 ## Índice rápido por camada
@@ -32,7 +32,9 @@ Fonte → Build → Deploy → Runtime → Docs/ADR
 | Módulo / doc | Papel |
 | ------------ | ----- |
 | [`core/runtime_trust.py`](../../core/runtime_trust.py) | Estado tinted, modo degradado quando checagens falham |
-| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | Verificação de tier / manifesto de licença |
+| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | Verificação de tier / manifesto de licença (checagem do digest de build embutido e verificador do `release-manifest.json` **opcional** da GitHub Release, `verify_manifest_optional`) |
+| [`core/integrity_signed_manifest.py`](../../core/integrity_signed_manifest.py) | Manifesto assinado **empacotado** **`core/licensing/integrity_manifest.json`** (Ed25519 com a chave pública da licença): `evaluate_signed_manifest` devolve `validated` só quando os hashes de `CRITICAL_MODULES` batem (ADR-0093 / #2168). O primeiro release assinado grava o arquivo; ele não existe numa árvore de código-fonte, onde o runtime reporta `tampered` com o detalhe `signed_manifest_absent`. Não é o `release-manifest.json` opcional. |
+| [`core/integrity_anchor.py`](../../core/integrity_anchor.py) | Âncora de startup: chama `evaluate_signed_manifest` e persiste o resultado forense (ADR-0093 / #2168) |
 | [`core/maturity_assessment/integrity.py`](../../core/maturity_assessment/integrity.py) | Selo do maturity assessment (`DATA_BOAR_MATURITY_INTEGRITY_SECRET`) |
 | [INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md](INTEGRITY_CHECK_ALPHA_LOGIC.pt_BR.md) | Especificação de design para hashes opcionais na subida (alpha) |
 
@@ -44,7 +46,7 @@ Fonte → Build → Deploy → Runtime → Docs/ADR
 | [RELEASE_INTEGRITY.pt_BR.md](RELEASE_INTEGRITY.pt_BR.md) | **Especificação operacional de release** — evidência Rust, throttling SRE, taxonomia GRC, checklist de release |
 | [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) | Roadmap de identidade de build e integridade de release mais forte |
 | [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) | Script de verificação pós-release |
-| [example-release-manifest.json](../../scripts/example-release-manifest.json) | Exemplo de schema de manifesto assinado |
+| [example-release-manifest.json](../../scripts/example-release-manifest.json) | Schema de exemplo do artefato **opcional** SBOM/release `release-manifest.json` (GitHub Releases). Distinto do `integrity_manifest.json` empacotado no runtime. |
 | [NATIVE_PACKAGE_RELEASE.pt_BR.md](NATIVE_PACKAGE_RELEASE.pt_BR.md) | Pacotes nativos `.deb`/`.rpm`/`.apk`/pacman na Release do produto + verificação air-gap (#1408) |
 
 ### 3. Evidência (árvore privada — hashes legais / operador)
@@ -68,6 +70,7 @@ Fonte → Build → Deploy → Runtime → Docs/ADR
 | [ADR-0037](../adr/ADR-0037-data-boar-self-audit-log-governance.md) | Governança do log de autoauditoria (o que existe hoje vs lacunas) |
 | [ADR-0039](../adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) | Retenção e postura de evidência em contextos regulados complexos |
 | [ADR-0051](../adr/ADR-0051-incremental-filesystem-scan-file-identity-fingerprint.md) | Impressão digital de arquivo para scan incremental (não é tamper-evidence criptográfico) |
+| [ADR-0093](../adr/ADR-0093-signed-integrity-manifest.md) | `integrity_manifest.json` empacotado no runtime (não o `release-manifest.json` opcional do SBOM) |
 
 ## Quando acionar Safe-Hold
 

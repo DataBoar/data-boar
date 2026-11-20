@@ -21,8 +21,8 @@ Source → Build → Deploy → Runtime → Docs/ADR
 | ----- | -------------- |
 | Source | Git tags, signed commits (operator policy) |
 | Build | [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md), deterministic Rust evidence in [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md) |
-| Deploy | [docs/RELEASE_INTEGRITY.md](../RELEASE_INTEGRITY.md) (licensing digest + optional manifest), [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) |
-| Runtime | `core/runtime_trust.py`, [INTEGRITY_CHECK_ALPHA_LOGIC.md](INTEGRITY_CHECK_ALPHA_LOGIC.md) |
+| Deploy | [docs/RELEASE_INTEGRITY.md](../RELEASE_INTEGRITY.md) (licensing digest + optional **release** `release-manifest.json` from the SBOM workflow), [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) |
+| Runtime | `core/runtime_trust.py`, packaged `core/licensing/integrity_manifest.json` ([ADR-0093](../adr/ADR-0093-signed-integrity-manifest.md)), [INTEGRITY_CHECK_ALPHA_LOGIC.md](INTEGRITY_CHECK_ALPHA_LOGIC.md) |
 | Docs/ADR | `scripts/inv-adr.ps1`, [docs/adr/INVENTORY.txt](../adr/INVENTORY.txt) |
 
 ## Quick index by layer
@@ -32,7 +32,9 @@ Source → Build → Deploy → Runtime → Docs/ADR
 | Module / doc | Role |
 | ------------ | ---- |
 | [`core/runtime_trust.py`](../../core/runtime_trust.py) | Tinted state, degraded mode when trust checks fail |
-| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | License tier / manifest verification |
+| [`core/licensing/integrity.py`](../../core/licensing/integrity.py) | License tier / manifest verification (embedded build digest check and the **optional** GitHub Release `release-manifest.json` verifier, `verify_manifest_optional`) |
+| [`core/integrity_signed_manifest.py`](../../core/integrity_signed_manifest.py) | Signed **packaged** manifest **`core/licensing/integrity_manifest.json`** (Ed25519 with the license public key): `evaluate_signed_manifest` returns `validated` only when `CRITICAL_MODULES` hashes match (ADR-0093 / #2168). The first signed release writes the file; it is absent in a source tree, where the runtime reports `tampered` with detail `signed_manifest_absent`. Not the optional `release-manifest.json`. |
+| [`core/integrity_anchor.py`](../../core/integrity_anchor.py) | Startup anchor: calls `evaluate_signed_manifest` and persists the forensic result (ADR-0093 / #2168) |
 | [`core/maturity_assessment/integrity.py`](../../core/maturity_assessment/integrity.py) | Maturity assessment seal (`DATA_BOAR_MATURITY_INTEGRITY_SECRET`) |
 | [INTEGRITY_CHECK_ALPHA_LOGIC.md](INTEGRITY_CHECK_ALPHA_LOGIC.md) | Design spec for optional startup hash checks (alpha) |
 
@@ -44,7 +46,7 @@ Source → Build → Deploy → Runtime → Docs/ADR
 | [RELEASE_INTEGRITY.md](RELEASE_INTEGRITY.md) | **Ops release specification** — Rust build evidence, SRE throttling, GRC taxonomy, release checklist |
 | [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](../plans/PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md) | Roadmap for build identity and stronger release integrity |
 | [release-integrity-check.ps1](../../scripts/release-integrity-check.ps1) | Post-release verification script |
-| [example-release-manifest.json](../../scripts/example-release-manifest.json) | Example signed-manifest schema |
+| [example-release-manifest.json](../../scripts/example-release-manifest.json) | Example schema for the **optional** SBOM/release artifact `release-manifest.json` (GitHub Releases). Distinct from the runtime packaged `integrity_manifest.json`. |
 | [NATIVE_PACKAGE_RELEASE.md](NATIVE_PACKAGE_RELEASE.md) | Native `.deb`/`.rpm`/`.apk`/pacman on the product Release + air-gap verify (#1408) |
 
 ### 3. Evidence (private tree — legal / operator hashes)
@@ -68,6 +70,7 @@ Source → Build → Deploy → Runtime → Docs/ADR
 | [ADR-0037](../adr/ADR-0037-data-boar-self-audit-log-governance.md) | Self-audit log governance (what the auditor logs today vs gaps) |
 | [ADR-0039](../adr/ADR-0039-retention-evidence-posture-bonded-customs-adjacent-contexts.md) | Retention and evidence posture in complex regulated contexts |
 | [ADR-0051](../adr/ADR-0051-incremental-filesystem-scan-file-identity-fingerprint.md) | File identity fingerprint for incremental scans (not cryptographic tamper-evidence) |
+| [ADR-0093](../adr/ADR-0093-signed-integrity-manifest.md) | Packaged runtime `integrity_manifest.json` (not the optional SBOM `release-manifest.json`) |
 
 ## When to trigger Safe-Hold
 
