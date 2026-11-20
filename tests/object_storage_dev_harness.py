@@ -8,10 +8,11 @@ Not a test file. Shared by ``tests/test_object_storage_connector.py``,
 It drives the connector only through the seams of section 13 (``_transport``, ``_sleep``,
 ``_now``), the driver registry and ``connectors.url_guard``. The QA helpers
 (``tests/s3_fake.py``, ``tests/object_storage_toy_driver.py``) are used as they are; the two
-subclasses below add hostile behaviour the D cases need and the QA simulator does not offer
-(reported to the PM as a gap for the QA): a listing body replaced as a whole (D-42), a
-server that returns more entries than ``max-keys`` (D-48) and a toy provider that lies about
-the size (D-68).
+hostile listings come from the QA buttons (``FakeS3.raw_listing_body``,
+``FakeS3.extra_entries_beyond_max_keys``, ``ToyStore(declared_sizes=...)``, design R6-10).
+The two classes kept below cover what no QA button offers yet: a toy driver that reports no
+size for valid keys and a toy store that streams blobs with a declared Content-Length
+(D-86, R6-2).
 
 No network, no real credential: credentials are generated at run time with greppable markers
 (``SYNTHAK``/``SYNTHSK``/``SYNTHST``), and the synthetic personal data is the corpus already used
@@ -20,8 +21,6 @@ by the acceptance tests.
 
 from __future__ import annotations
 
-import json
-import re
 import tempfile
 import urllib.parse
 from collections.abc import Callable, Iterator
@@ -164,51 +163,6 @@ class SpyScanner(RegexScanner):
         if self._hook is not None:
             self._hook(content, file_path)
         return super().scan_file_content(content, file_path)
-
-
-class HostileFakeS3(FakeS3):
-    """``FakeS3`` with two hostile behaviours the QA simulator does not have.
-
-    ``listing_body``: every listing answers exactly these bytes (D-42).
-    ``overshoot``: the listing returns ``overshoot`` entries more than the ``max-keys`` the
-    client asked for (D-48); the request itself (and its signature) is unchanged.
-    """
-
-    listing_body: bytes | None = None
-    overshoot: int = 0
-
-    def _listing_xml(self, *args: Any, **kwargs: Any) -> bytes:
-        if self.listing_body is not None:
-            return self.listing_body
-        return super()._listing_xml(*args, **kwargs)
-
-    def _list(self, raw_query: str, headers: dict[str, str]) -> httpx.Response:
-        if self.overshoot:
-            raw_query = re.sub(
-                r"(^|&)max-keys=(\d+)",
-                lambda m: f"{m.group(1)}max-keys={int(m.group(2)) + self.overshoot}",
-                raw_query,
-            )
-        return super()._list(raw_query, headers)
-
-
-class LyingToyStore(ToyStore):
-    """``ToyStore`` whose listing declares ``declared[key]`` bytes for some blobs (D-68)."""
-
-    def __init__(self, *args: Any, declared: dict[str, int], **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.declared = dict(declared)
-
-    def _handle(self, request: httpx.Request) -> httpx.Response:
-        response = super()._handle(request)
-        path = request.url.raw_path.decode("ascii").partition("?")[0]
-        if response.status_code != 200 or not path.endswith("/list"):
-            return response
-        doc = json.loads(response.content)
-        for item in doc["items"]:
-            if item["name"] in self.declared:
-                item["bytes"] = self.declared[item["name"]]
-        return httpx.Response(200, json=doc)
 
 
 class NoSizeToyDriver(ToyDriver):

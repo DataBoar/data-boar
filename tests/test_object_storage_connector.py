@@ -42,7 +42,6 @@ from tests.object_storage_dev_harness import (
     REGION,
     TARGET_NAME,
     Harness,
-    HostileFakeS3,
     NoSizeToyDriver,
     SpyScanner,
     StreamingToyStore,
@@ -535,25 +534,25 @@ def test_D2306_42_xml_ruim_da_protocol_error_e_nenhum_get(
     """D2306-42 (revision 5 arbitration): malformed XML, any DOCTYPE (even without entity),
     internal or external entity, or a root whose local name is not ListBucketResult ->
     protocol_error and zero GetObject. A listing in another namespace is accepted (control)."""
-    fake = h.s3(cls=HostileFakeS3)
+    fake = h.s3()
     if case == "malformed":
         fake.malformed_xml = True
     elif case == "doctype_entity":
         fake.doctype_entity = True
     elif case == "doctype_plain":
-        fake.listing_body = (
+        fake.raw_listing_body(
             b'<?xml version="1.0"?><!DOCTYPE ListBucketResult>' + _LISTING_OK_TAIL
         )
     elif case == "external_entity":
-        fake.listing_body = (
+        fake.raw_listing_body(
             b'<?xml version="1.0"?><!DOCTYPE ListBucketResult [<!ENTITY ext SYSTEM '
             b'"file:///etc/hostname">]><ListBucketResult><IsTruncated>false'
             b"</IsTruncated><Contents><Key>&ext;</Key><Size>1</Size></Contents>"
             b"</ListBucketResult>"
         )
     else:
-        fake.listing_body = _LISTING_OK_TAIL.replace(
-            b"ListBucketResult", b"ListAllMyBucketsResult"
+        fake.raw_listing_body(
+            _LISTING_OK_TAIL.replace(b"ListBucketResult", b"ListAllMyBucketsResult")
         )
     out = h.run(fake.transport, s3_target())
 

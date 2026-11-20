@@ -223,6 +223,59 @@ class ScanFailure(Base):
     created_at = Column(DateTime, default=_utc_now)
 
 
+# #2306 (design 2306, R6-1): reasons with a hint of their own. "error" (unexpected) stays
+# on the generic hint on purpose.
+_OBJECT_STORAGE_HINTS: dict[str, str] = {
+    "config_error": (
+        "The target configuration was refused before any request. Fix the key named in the "
+        "detail (driver, bucket, region, endpoint_url, limits, timeout or auth.*_from_env) "
+        "and re-run; see USAGE.md."
+    ),
+    "not_found": (
+        "The bucket or container was not found. Check its name and region (or endpoint_url) "
+        "in the target configuration."
+    ),
+    "throttled": (
+        "The provider kept throttling the listing (SlowDown). Re-run later or off-peak, or "
+        "lower max_objects to list less per run."
+    ),
+    "scope_violation": (
+        "The destination host was refused (outbound guard or a redirect). Check the "
+        "endpoint and region; for a private endpoint of an S3-compatible server set "
+        "allow_private_networks: true on that target only."
+    ),
+    "protocol_error": (
+        "The server answered something the reader could not use (malformed, oversized or "
+        "looping listing). Objects listed before it were scanned; the rest was not. Check "
+        "the server version and re-run."
+    ),
+    "limit_reached": (
+        "Raise or disable the limit for this target in config (max_objects, "
+        "max_download_bytes, max_object_bytes); see USAGE.md. Coverage is partial until then."
+    ),
+    "too_large": (
+        "An object was larger than max_object_bytes and was not scanned. Raise "
+        "max_object_bytes (or set it to unlimited) for this target to include it."
+    ),
+    "unsafe_key": (
+        "An object key has a '.' or '..' segment and cannot be requested safely; it was not "
+        "read. Rename the object to scan it."
+    ),
+    "size_mismatch": (
+        "An object did not match the size the listing declared and was discarded. Re-run; if "
+        "it repeats, check the object or the server."
+    ),
+    "download_failed": (
+        "Some objects could not be downloaded (access denied, missing or a server error). "
+        "Check the read permission on the objects and re-run; see the Target coverage sheet."
+    ),
+    "skipped": (
+        "Some listed objects were not scanned (see the counts per reason). This is not a "
+        "clean result; see the Target coverage sheet and the hints of each reason."
+    ),
+}
+
+
 def failure_hint(reason: str) -> str:
     """
     Map a failure reason into a human-friendly next step.
@@ -267,6 +320,9 @@ def failure_hint(reason: str) -> str:
             "Password was provided but decryption failed. Verify file_scan.file_passwords for this "
             "extension; a wrong password is not a clean scan result."
         )
+    hint = _OBJECT_STORAGE_HINTS.get(r)
+    if hint is not None:
+        return hint
     return (
         "Unexpected error. Review the detailed message and audit log, verify the target configuration "
         "(host, port, path, credentials) and test connectivity manually before re-running."

@@ -141,6 +141,9 @@ class S3Driver:
         # Revision 6b (R6-8): checked by the common layer before settings(), in both
         # variants; endpoint_url keeps its own message in settings() (s3_addressing).
         self.required_keys: tuple[str, ...] = ("bucket", "region")
+        # Section 2a: allow_private_networks only counts for the endpoint_url of
+        # s3_compatible; driver s3 always runs the guard with allow_private=False.
+        self.honors_allow_private_networks: bool = variant == "s3_compatible"
 
     # -- configuration -----------------------------------------------------
 

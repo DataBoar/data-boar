@@ -25,8 +25,6 @@ from tests.object_storage_dev_harness import (
     EXPECTED_PATHS,
     MIB,
     Harness,
-    HostileFakeS3,
-    LyingToyStore,
     capture_pinned_client,
     executive,
     ops,
@@ -187,8 +185,8 @@ def test_D2306_48_max_objects_corta_a_listagem(h: Harness) -> None:
     assert len(fake.fetched) == 10
     assert "limit_reached" not in out.db.reasons()
 
-    fake = h.s3(_small(15), cls=HostileFakeS3)
-    fake.overshoot = 5
+    fake = h.s3(_small(15))
+    fake.extra_entries_beyond_max_keys(5)
     out = h.run(fake.transport, s3_target(max_objects=10))
     assert len(fake.fetched) == 10
     assert out.db.details("limit_reached") == [
@@ -319,7 +317,7 @@ def test_D2306_68_limites_iguais_com_o_driver_de_brinquedo(
         fake.lie_size(key, declared, len(objects[key]))
     s3_out = h.run(fake.transport, s3_target(**limits))
 
-    store = h.toy(objects, store=LyingToyStore, declared=lies)
+    store = h.toy(objects, declared_sizes=lies)
     toy_out = h.run(store.transport, toy_target(**limits))
 
     assert s3_out.db.failures

@@ -8,28 +8,12 @@ Black-box rules: the connector is driven only through its public contract (confi
 ``tests/s3_fake.py``. No network, no container, no real credential, only synthetic data.
 Credentials are built at run time (``SYNTHAK``/``SYNTHSK``/``SYNTHST`` plus random hex).
 
-Pending marker (the design, "Marca de pendente"): ``xfail(strict=True)``.
+History: the cases entered as pending (``xfail(strict=True)``, design "Marca de pendente")
+before the implementation, and each mark left in the commit that made its test pass. No mark
+is left: every case here is a normal test.
 
-- ``raises=NotImplementedError`` for the behavioural tests. The helper ``connector_class``
-  converts into ``NotImplementedError`` only the ``ModuleNotFoundError`` whose ``name`` is
-  ``connectors.object_storage_connector``; any other import or setup error stays an error.
-- ``raises=AssertionError`` for the config, registry and tier tests (A-8, A-9, A-17, A-18),
-  written with plain ``assert`` (no ``pytest.raises``) in the order the design fixes, so the
-  first assertion fails on today's code.
-
-A passing marked test is ``XPASS(strict)`` and breaks the run, so the commit that makes a
-test pass removes its mark in the same commit. Which commit removes which mark is fixed in
-the design: A-8 and A-9 leave with the loader ``feat:`` of 2306.1; A-17 and A-18 with the
-registered skeleton of 2306.2; the other A cases with the ``feat:`` that makes each pass, and
-A-23 and A-24 with the report-coverage ``feat:`` (section 14).
-Revision 3 rule: in the commit that wires ``run()``, every A still failing swaps its mark to
-``raises=AssertionError`` (A-23 and A-24 included); the behavioural tests therefore fail on a
-plain ``assert`` first, never on KeyError, IndexError or TypeError. Every mark carries the
-text ``2306 pending`` (``git grep -n "2306 pending" tests/`` lists them all).
-
-The last section (``Self-checks of the simulator``) is NOT pending: it proves the simulator
-itself (``tests/s3_fake.py``) and the toy backend (``tests/object_storage_toy_driver.py``),
-because the pending cases cannot run their bodies until the connector exists.
+The last section (``Self-checks of the simulator``) proves the simulator itself
+(``tests/s3_fake.py``) and the toy backend (``tests/object_storage_toy_driver.py``).
 
 Contradictions between A-7 and A-21/A-22 and the rest of the design are noted on A-7.
 """
@@ -110,22 +94,6 @@ def corpus() -> dict[str, bytes]:
         "corpus/sub/c.csv": C_CSV,
         "outro/d.txt": PII_TXT,
     }
-
-
-def pending(case: str) -> pytest.MarkDecorator:
-    return pytest.mark.xfail(
-        strict=True,
-        raises=NotImplementedError,
-        reason=f"{case} (connector not implemented yet)",
-    )
-
-
-def pending_assert(case: str) -> pytest.MarkDecorator:
-    return pytest.mark.xfail(
-        strict=True,
-        raises=AssertionError,
-        reason=f"{case} (loader/registry/tier not wired yet)",
-    )
 
 
 def connector_class() -> type:
@@ -331,7 +299,6 @@ def report_info_value(wb: Any, field: str) -> list[str]:
 # ----------------------------------------------------------------------------
 
 
-@pending("2306 pending: A2306-1")
 def test_A2306_1_prefixo_gera_achados_so_dos_arquivos_com_dado(make_fake):
     """A2306-1 (prefix corpus/; a.txt e sub/c.csv; nada de b.txt nem de outro/d.txt)."""
     scanner = RegexScanner()
@@ -355,7 +322,6 @@ def test_A2306_1_prefixo_gera_achados_so_dos_arquivos_com_dado(make_fake):
     assert not any("outro" in r.path for r in fake.requests)
 
 
-@pending("2306 pending: A2306-2")
 def test_A2306_2_minio_por_caminho_com_rede_privada_autorizada(make_fake):
     """A2306-2 (endpoint_url https; allow_private_networks; 10.0.0.5; tudo no caminho)."""
     fake = make_fake(
@@ -373,7 +339,6 @@ def test_A2306_2_minio_por_caminho_com_rede_privada_autorizada(make_fake):
     assert all(r.path.startswith(f"/{BUCKET}") for r in fake.requests)
 
 
-@pending("2306 pending: A2306-3")
 def test_A2306_3_inventario_e_achados_no_relatorio(make_fake, tmp_path):
     """A2306-3 (LocalDBManager + generate_report; tipo de origem e produto certos)."""
     fake = make_fake()
@@ -397,7 +362,6 @@ def test_A2306_3_inventario_e_achados_no_relatorio(make_fake, tmp_path):
         assert expected in fs_text
 
 
-@pending("2306 pending: A2306-4")
 def test_A2306_4_max_objects_limita_e_avisa(make_fake):
     """A2306-4 (30 objetos, max_objects 10: no maximo 10 considerados e limit_reached)."""
     objects = {f"corpus/obj-{i:02d}.txt": B_TXT for i in range(30)}
@@ -413,7 +377,6 @@ def test_A2306_4_max_objects_limita_e_avisa(make_fake):
     assert "max-keys=10" in listings[0].raw_query.split("&")
 
 
-@pending("2306 pending: A2306-5")
 def test_A2306_5_max_download_bytes_corta_o_terceiro(make_fake):
     """A2306-5 (3 objetos de 40 bytes, teto 100: 2 baixados e limit_reached)."""
     body = "Cliente: CPF 123.456.789-09".ljust(39).encode() + b"\n"
@@ -428,7 +391,6 @@ def test_A2306_5_max_download_bytes_corta_o_terceiro(make_fake):
     assert any("max_download_bytes" in d for d in out.db.details("limit_reached"))
 
 
-@pending("2306 pending: A2306-6")
 def test_A2306_6_timeout_esgotado_nao_espera_de_verdade(make_fake):
     """A2306-6 (ReadTimeout sempre, timeout 5: unreachable, sleep [1, 2, 4], sem achados)."""
     fake = make_fake()
@@ -442,7 +404,6 @@ def test_A2306_6_timeout_esgotado_nao_espera_de_verdade(make_fake):
     assert fake.operations.count("GetObject") == 0
 
 
-@pending("2306 pending: A2306-7")
 def test_A2306_7_objeto_acima_de_max_object_bytes_nao_e_pedido(make_fake):
     """A2306-7 (2 MiB, max_object_bytes 1 MiB; nunca pedido; contado como too_large).
 
@@ -508,7 +469,6 @@ def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypat
     assert marker not in str(err)
 
 
-@pending("2306 pending: A2306-10")
 @pytest.mark.parametrize(
     ("empty_env", "label"),
     [
@@ -531,7 +491,6 @@ def test_A2306_10_variavel_vazia_na_varredura_e_config_error(
     assert out.db.findings == []
 
 
-@pending("2306 pending: A2306-11")
 def test_A2306_11_credencial_da_aws_no_ambiente_nunca_e_usada(make_fake, monkeypatch):
     """A2306-11 (so AWS_*; DATA_BOAR_* vazias: zero requisicoes e config_error)."""
     decoys = new_credentials()
@@ -549,7 +508,6 @@ def test_A2306_11_credencial_da_aws_no_ambiente_nunca_e_usada(make_fake, monkeyp
         assert marker not in out.db.as_text()
 
 
-@pending("2306 pending: A2306-12")
 def test_A2306_12_destino_interno_e_recusado_sem_requisicao(make_fake):
     """A2306-12 (10.0.0.5 sem opt-in; metadados 169.254.169.254 mesmo com opt-in na AWS)."""
     fake = make_fake(
@@ -570,7 +528,6 @@ def test_A2306_12_destino_interno_e_recusado_sem_requisicao(make_fake):
     assert out2.db.findings == []
 
 
-@pending("2306 pending: A2306-13")
 def test_A2306_13_redirect_nao_e_seguido(make_fake):
     """A2306-13 (307 com Location em evil.example: nenhuma requisicao la, scope_violation)."""
     fake = make_fake()
@@ -584,7 +541,6 @@ def test_A2306_13_redirect_nao_e_seguido(make_fake):
     assert out.db.findings == []
 
 
-@pending("2306 pending: A2306-14")
 def test_A2306_14_chaves_hostis_nao_sao_pedidas(make_fake):
     """A2306-14 (../x, corpus/../x e outro/y injetadas: nada pedido, resumo conta os motivos)."""
     fake = make_fake({"corpus/ok.txt": A_TXT})
@@ -606,7 +562,6 @@ def test_A2306_14_chaves_hostis_nao_sao_pedidas(make_fake):
         assert hostile not in out.db.as_text()
 
 
-@pending("2306 pending: A2306-15")
 def test_A2306_15_nenhum_segredo_em_log_saida_falha_achado_ou_inventario(
     make_fake, caplog, capsys
 ):
@@ -655,7 +610,6 @@ def test_A2306_15_nenhum_segredo_em_log_saida_falha_achado_ou_inventario(
         assert value not in haystack
 
 
-@pending("2306 pending: A2306-16")
 def test_A2306_16_so_get_e_so_listagem_e_download(make_fake):
     """A2306-16 (todos os metodos GET; operations so ListObjectsV2 e GetObject)."""
     fake = make_fake()
@@ -783,7 +737,6 @@ def test_A2306_18_registro_resolve_o_conector_novo():
         assert resolved[0].__name__ == "ObjectStorageConnector", driver
 
 
-@pending("2306 pending: A2306-19")
 def test_A2306_19_azure_blob_ainda_nao_existe(make_fake):
     """A2306-19 (driver azure_blob: config_error 'not available yet', zero requisicoes)."""
     fake = make_fake()
@@ -795,7 +748,6 @@ def test_A2306_19_azure_blob_ainda_nao_existe(make_fake):
     assert out.db.findings == []
 
 
-@pending("2306 pending: A2306-20")
 def test_A2306_20_slowdown_com_retry_after_espera_e_segue(make_fake):
     """A2306-20 (503 SlowDown com Retry-After 7 na primeira listagem: sleep [7], mesmos achados)."""
     fake = make_fake()
@@ -808,7 +760,6 @@ def test_A2306_20_slowdown_com_retry_after_espera_e_segue(make_fake):
     assert out.db.failures == []
 
 
-@pending("2306 pending: A2306-25")
 def test_A2306_25_driver_s3_recusa_endpoint_url(make_fake):
     """A2306-25 (driver s3 com endpoint_url: config_error 'use driver s3_compatible', 0 req)."""
     fake = make_fake(
@@ -822,7 +773,6 @@ def test_A2306_25_driver_s3_recusa_endpoint_url(make_fake):
     assert out.db.findings == []
 
 
-@pending("2306 pending: A2306-26")
 def test_A2306_26_s3_compatible_exige_endpoint_url(make_fake):
     """A2306-26 (s3_compatible sem endpoint_url: config_error 'endpoint_url is required')."""
     fake = make_fake()
@@ -841,7 +791,6 @@ def _named_object() -> dict[str, bytes]:
     return {f"corpus/{MARKER_NAME}.txt": PII_TXT + b" " * 2048}
 
 
-@pending("2306 pending: A2306-21")
 def test_A2306_21_nome_do_objeto_nao_varrido_nao_vai_para_o_relatorio(
     make_fake, tmp_path, caplog, capsys
 ):
@@ -864,7 +813,6 @@ def test_A2306_21_nome_do_objeto_nao_varrido_nao_vai_para_o_relatorio(
         assert MARKER_NAME not in place
 
 
-@pending("2306 pending: A2306-22")
 def test_A2306_22_com_report_object_names_o_nome_aparece_na_falha(make_fake):
     """A2306-22 (report_object_names true: falha too_large cita s3://...)."""
     fake = make_fake(_named_object())
@@ -876,7 +824,6 @@ def test_A2306_22_com_report_object_names_o_nome_aparece_na_falha(make_fake):
     assert any(f"s3://{BUCKET}/corpus/{MARKER_NAME}.txt" in d for d in details)
 
 
-@pending("2306 pending: A2306-23")
 def test_A2306_23_cobertura_parcial_nunca_e_so_sem_achados(make_fake, tmp_path):
     """A2306-23 (2 MiB com CPF, limite 1 MiB: PARTIAL, 1 objeto e 2097152 bytes)."""
     big = PII_TXT + b" " * (2 * MIB - len(PII_TXT))
@@ -896,7 +843,6 @@ def test_A2306_23_cobertura_parcial_nunca_e_so_sem_achados(make_fake, tmp_path):
     assert "PARTIAL" in coverage[0]
 
 
-@pending("2306 pending: A2306-24")
 def test_A2306_24_limite_desligado_por_alvo_com_unlimited(make_fake, tmp_path):
     """A2306-24 (max_object_bytes unlimited: baixa, ha achado, COMPLETE, limite citado)."""
     big = PII_TXT + b" " * (2 * MIB - len(PII_TXT))
