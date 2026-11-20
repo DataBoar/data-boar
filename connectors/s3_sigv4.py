@@ -1,35 +1,17 @@
-"""SigV4 for GET requests of the ``object_storage`` reader, driver ``s3`` (#2306, task 2306.1).
+"""SigV4 for GET requests of the ``object_storage`` reader, drivers ``s3`` and ``s3_compatible``.
 
-Source: ``docs/desenho/2306.md``, section 5, option B of P-1 (operator decision, 2026-11-20):
-``botocore.auth.S3SigV4Auth`` signs with explicit ``Credentials``. No ``boto3``, no botocore
-session or client, no implicit credential chain. ``botocore`` is imported lazily, inside
-the functions, because it ships in the optional ``cloud`` extra.
-
-``botocore.auth`` logs the canonical request (which carries ``x-amz-security-token``) at
-DEBUG. :data:`BOTOCORE_AUTH_LOG_FILTER` drops every record of that logger; it is installed
-once by :func:`install_botocore_log_filter` and never changes any logger level.
+Source: ``docs/desenho/2306.md``, section 5, option A of P-1 (operator decision, revision 5,
+2026-11-20): the project's own AWS Signature Version 4, GET only, service ``s3``, algorithm
+``AWS4-HMAC-SHA256``, with ``hmac`` and ``hashlib`` from the standard library. No third-party
+signer and no new dependency. The clock is the ``now`` argument. This module logs nothing,
+and the secret access key never leaves :func:`sign_get` (not in the return value, not in an
+exception, not in a log).
 """
 
 from __future__ import annotations
 
-import logging
+from collections.abc import Mapping
 from datetime import datetime
-
-BOTOCORE_AUTH_LOGGER = "botocore.auth"
-
-
-class _DropAllRecords(logging.Filter):
-    """Logger filter that discards every record (section 5, item 6)."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        raise NotImplementedError("2306.1: botocore.auth log filter")
-
-
-BOTOCORE_AUTH_LOG_FILTER = _DropAllRecords()
-
-
-def install_botocore_log_filter() -> None:
-    raise NotImplementedError("2306.1: install_botocore_log_filter")
 
 
 def uri_encode(value: str, *, keep_slash: bool) -> str:
@@ -46,6 +28,11 @@ def sign_get(
     secret_access_key: str,
     session_token: str | None,
     now: datetime,
+    extra_headers: Mapping[str, str] | None = None,
 ) -> tuple[str, dict[str, str]]:
-    """Return ``(exact_query_string_to_send, headers_to_send)``."""
+    """Return ``(exact_query_string_to_send, headers_to_send)``.
+
+    ``extra_headers`` are additional headers that are also signed (lower-case name, value
+    stripped at both ends), such as ``range``. The connector of this delivery passes none.
+    """
     raise NotImplementedError("2306.1: sign_get")

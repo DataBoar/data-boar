@@ -9,7 +9,7 @@ driver returns and never imports a concrete driver.
 
 The registry keeps a **factory** per driver name. Built-in drivers are seeded by name with a
 factory that imports the driver module only when the driver is requested, so importing this
-module has no side effect (no network, no optional dependency such as ``botocore``).
+module has no side effect (no network).
 """
 
 from __future__ import annotations
@@ -21,12 +21,15 @@ from typing import Any, Literal, NamedTuple, Protocol
 
 
 class ObjectEntry(NamedTuple):
-    """One listed object. ``key`` is already decoded by the driver."""
+    """One listed object (revision 5).
 
-    key: str
-    size: (
-        int | None
-    )  # None when the provider does not report it or the value is invalid
+    ``key`` is already decoded by the driver. ``None`` means the key does not decode or the
+    entry is invalid for the driver; the common layer counts it as ``invalid_key``.
+    ``size`` is ``None`` when the provider does not report the size.
+    """
+
+    key: str | None
+    size: int | None
 
 
 class ListPage(NamedTuple):
@@ -45,6 +48,9 @@ class ErrorClass(NamedTuple):
     code: str | None  # only when it is in the driver vocabulary
     retryable: bool
     ends_target: bool
+    # Fixed driver text, recorded as is (revision 5): fixed phrases of the driver, validated
+    # config values and a code of its vocabulary; never server body, header or URL text.
+    message: str
 
 
 @dataclass(frozen=True)
@@ -111,6 +117,7 @@ class StorageDriver(Protocol):
     max_key_bytes: int
     credential_keys: tuple[tuple[str, bool], ...]  # (auth.*_from_env key, required?)
     forbidden_inline_keys: frozenset[str]
+    misnamed_keys: Mapping[str, str]  # destination key under another name -> hint
 
     def settings(self, cfg: dict[str, Any]) -> DriverSettings: ...
 
@@ -152,8 +159,9 @@ class StorageDriver(Protocol):
     def inventory_identity(self, settings: DriverSettings) -> dict[str, str]: ...
 
 
-# Inline keys refused for every driver (section 3, revision 2). The loader refuses the union
-# of this set and ``driver.forbidden_inline_keys``, minus the driver's own credential keys.
+# Inline keys refused for every driver (section 3, revision 2). At the ``auth`` level the
+# loader refuses (this set | driver.forbidden_inline_keys) - names of driver.credential_keys;
+# at the target level nothing is subtracted (revision 5).
 COMMON_FORBIDDEN_INLINE_KEYS = frozenset(
     {
         "pass",

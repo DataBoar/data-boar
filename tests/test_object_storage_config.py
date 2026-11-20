@@ -472,3 +472,24 @@ def test_secao3_driver_desconhecido_carrega_e_estrito_falha_fechado(
     monkeypatch.setenv(STRICT, "1")
     monkeypatch.setenv(OPERATOR_HOSTS, AWS_HOST)
     _refused(monkeypatch, _s3_target(driver="no_such_driver", allowed_hosts=[AWS_HOST]))
+
+
+# ----------------------------------------------------------------------------
+# D2306-83: credential keys of the driver are subtracted only at the auth level
+# ----------------------------------------------------------------------------
+
+
+def test_D2306_83_token_from_env_do_brinquedo_so_vale_em_auth(
+    toy_registered: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    register_toy_driver()
+    out = _load(monkeypatch, _toy_target())
+    assert out["targets"][0]["auth"]["token_from_env"] == "DATA_BOAR_TOY_TOKEN"
+    # At the target level nothing is subtracted: credentials live only in auth.
+    message = _refused(monkeypatch, _toy_target(token_from_env="DATA_BOAR_TOY_TOKEN"))
+    assert "token_from_env" in message
+    # The S3 driver does not declare token_from_env: still refused in auth.
+    target = _s3_target()
+    target["auth"]["token_from_env"] = "DATA_BOAR_S3_TOKEN"
+    message = _refused(monkeypatch, target)
+    assert "token_from_env" in message

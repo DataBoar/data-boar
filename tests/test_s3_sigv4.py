@@ -1,50 +1,43 @@
-"""Dev tests of task 2306.1: httpx premises, SigV4 wrapper and credential isolation.
+"""Dev tests of task 2306.1: httpx premises and the project's own SigV4 (GET only).
 
-Source: ``docs/desenho/2306.md``, section 5 (option B of P-1: ``botocore.auth.S3SigV4Auth``
-only signs) and the TDD specification:
+Source: ``docs/desenho/2306.md`` revision 5, section 5 (option A of P-1, operator decision:
+own signature with ``hmac``/``hashlib``, no third-party signer) and the TDD specification:
 
 - D2306-0a .. D2306-0c: premises about httpx and the pinned client, against a local HTTP
   server on ``127.0.0.1``. They do not use project code under test (paths are built with the
   independent encoder of ``tests/s3_fake.py``), so they pass before the implementation.
-- D2306-0e, D2306-0f: no implicit AWS credential chain; the DEBUG log of ``botocore.auth``
-  never reaches a handler.
-- D2306-9 .. D2306-14: ``uri_encode`` and ``sign_get``.
+- D2306-0d: the three S3 signing examples published by AWS, then hard keys where
+  ``sign_get`` and the independent verifier of ``tests/s3_fake.py`` must agree.
+- D2306-9 .. D2306-14: ``uri_encode`` and ``sign_get``, clock from the ``now`` argument.
 
 No external network. Credentials are synthetic and built at run time
-(``tests.s3_fake.new_credentials``). The signature is checked against the independent
-SigV4 oracle of ``tests/s3_fake.py`` (written from the AWS specification).
+(``tests.s3_fake.new_credentials``). The AWS documentation secret of D-0d is never written
+in this repository: it comes from the helper of ``tests/s3_fake.py`` (QA), built at run time.
 """
 
 from __future__ import annotations
 
 import hashlib
-import logging
-import os
 import re
-import sys
 import threading
 import traceback
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Any
 
-import httpx
 import pytest
 
-from connectors import s3_sigv4
-from connectors.object_storage_driver import ResolvedCredentials
-from connectors.object_storage_s3 import S3Driver
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
 from connectors.s3_sigv4 import (
-    BOTOCORE_AUTH_LOG_FILTER,
-    BOTOCORE_AUTH_LOGGER,
     sign_get,
     uri_encode,
 )
 from connectors.url_guard import build_pinned_httpx_client
 from tests import s3_fake
-from tests.s3_fake import FakeS3, canonical_request, compute_signature, new_credentials
+from tests.s3_fake import canonical_request, compute_signature, new_credentials
 
 BUCKET = "databoar-sintetico"
 REGION = "sa-east-1"
@@ -202,159 +195,39 @@ def test_D2306_0c_host_header_traz_a_porta_fora_de_80_e_443(local_server: Any) -
 
 
 # ----------------------------------------------------------------------------
-# D2306-0e: no implicit credential chain, no socket
+# D2306-0d: AWS published examples and agreement with the independent verifier
 # ----------------------------------------------------------------------------
 
-_AUDIT: dict[str, Any] = {"on": False, "opened": [], "connects": []}
-_AUDIT_INSTALLED: list[bool] = []
-
-
-def _audit_hook(event: str, args: tuple[Any, ...]) -> None:
-    if not _AUDIT["on"]:
-        return
-    if event == "open" and args:
-        _AUDIT["opened"].append(str(args[0]))
-    elif event == "socket.connect" and len(args) > 1:
-        _AUDIT["connects"].append(str(args[1]))
-
-
-def _arm_audit() -> None:
-    # sys.addaudithook cannot be removed: install once, switch with a flag.
-    if not _AUDIT_INSTALLED:
-        sys.addaudithook(_audit_hook)
-        _AUDIT_INSTALLED.append(True)
-    _AUDIT["opened"].clear()
-    _AUDIT["connects"].clear()
-    _AUDIT["on"] = True
-
-
-def _s3_cfg(**extra: Any) -> dict[str, Any]:
-    cfg: dict[str, Any] = {
-        "name": "bucket-sintetico",
-        "type": "object_storage",
-        "driver": "s3",
-        "bucket": BUCKET,
-        "region": REGION,
-    }
-    cfg.update(extra)
-    return cfg
-
-
-def test_D2306_0e_nenhuma_cadeia_de_credencial_implicita_nem_socket(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    good = new_credentials(with_token=True)
-    decoy = new_credentials(with_token=True)
-    decoy_ini = (
-        "[default]\n"
-        f"aws_access_key_id = {decoy.access_key_id}\n"
-        f"aws_secret_access_key = {decoy.secret_access_key}\n"
-        f"aws_session_token = {decoy.session_token}\n"
-    )
-    home = tmp_path / "home"
-    (home / ".aws").mkdir(parents=True)
-    decoys = [
-        tmp_path / "decoy-credentials",
-        tmp_path / "decoy-config",
-        home / ".aws" / "credentials",
-        home / ".aws" / "config",
-    ]
-    for path in decoys:
-        path.write_text(decoy_ini, encoding="utf-8")
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setenv("AWS_ACCESS_KEY_ID", decoy.access_key_id)
-    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", decoy.secret_access_key)
-    monkeypatch.setenv("AWS_SESSION_TOKEN", str(decoy.session_token))
-    monkeypatch.setenv("AWS_PROFILE", "default")
-    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(decoys[0]))
-    monkeypatch.setenv("AWS_CONFIG_FILE", str(decoys[1]))
-    monkeypatch.setenv("DATA_BOAR_S3_ACCESS_KEY_ID", good.access_key_id)
-    monkeypatch.setenv("DATA_BOAR_S3_SECRET_ACCESS_KEY", good.secret_access_key)
-    monkeypatch.setenv("DATA_BOAR_S3_SESSION_TOKEN", str(good.session_token))
-
-    objects = {"corpus/a.txt": b"alpha", "corpus/sub/b c.csv": b"beta"}
-    fake = FakeS3(
-        BUCKET,
-        objects,
-        host=AWS_HOST,
-        region=REGION,
-        access_key_id=good.access_key_id,
-        session_token=good.session_token,
-        secret_access_key=good.secret_access_key,
-    )
-    creds = ResolvedCredentials(
-        {
-            "access_key_id_from_env": os.environ["DATA_BOAR_S3_ACCESS_KEY_ID"],
-            "secret_access_key_from_env": os.environ["DATA_BOAR_S3_SECRET_ACCESS_KEY"],
-            "session_token_from_env": os.environ["DATA_BOAR_S3_SESSION_TOKEN"],
-        }
-    )
-    driver = S3Driver()
-    _arm_audit()
-    try:
-        # sign_get alone, then a full list + get through the simulator.
-        sign_get(
-            host_header=AWS_HOST,
-            canonical_uri="/",
-            query=[("list-type", "2")],
-            region=REGION,
-            access_key_id=creds["access_key_id_from_env"],
-            secret_access_key=creds["secret_access_key_from_env"],
-            session_token=creds["session_token_from_env"],
-            now=T0,
-        )
-        settings = driver.settings(_s3_cfg())
-        with httpx.Client(transport=fake.transport, follow_redirects=False) as client:
-            prep = driver.list_request(settings, creds, "corpus/", None, 1000, T0)
-            resp = client.get(prep.url, headers=prep.headers)
-            assert resp.status_code == 200, resp.text
-            page = driver.parse_list(resp.content)
-            assert sorted(e.key for e in page.entries) == sorted(objects)
-            for entry in page.entries:
-                prep = driver.get_request(settings, creds, entry.key, T0)
-                got = client.get(prep.url, headers=prep.headers)
-                assert got.status_code == 200, entry.key
-                assert got.content == objects[entry.key]
-    finally:
-        _AUDIT["on"] = False
-
-    decoy_paths = {str(p) for p in decoys}
-    opened_decoys = [p for p in _AUDIT["opened"] if p in decoy_paths]
-    assert opened_decoys == []
-    assert _AUDIT["connects"] == []
-    assert fake.auth_failures == []
-    assert fake.violations == []
-    assert len(fake.requests) == 1 + len(objects)
-    for req in fake.requests:
-        match = _AUTH_RE.match(req.headers["authorization"])
-        assert match is not None
-        assert match.group("key") == good.access_key_id
-        assert req.headers["x-amz-security-token"] == good.session_token
-        flat = " ".join(f"{k}:{v}" for k, v in req.headers.items()) + req.url
-        for value in (
-            decoy.access_key_id,
-            decoy.secret_access_key,
-            str(decoy.session_token),
-        ):
-            assert value not in flat
-
-
-# ----------------------------------------------------------------------------
-# D2306-0f: botocore.auth DEBUG never reaches a handler
-# ----------------------------------------------------------------------------
-
-
-def _sign_with_session(creds: s3_fake.Creds) -> tuple[str, dict[str, str]]:
-    return sign_get(
-        host_header=AWS_HOST,
-        canonical_uri="/corpus/a.txt",
-        query=[],
-        region=REGION,
-        access_key_id=creds.access_key_id,
-        secret_access_key=creds.secret_access_key,
-        session_token=creds.session_token,
-        now=T0,
-    )
+# "Examples: Signature Calculations" of "Authenticating Requests: Using the Authorization
+# Header (AWS Signature Version 4)", S3 API reference (design fact P19). The access key id
+# does not enter the signature, so a synthetic one is used. The documentation secret is
+# provided at run time by the QA helper (never a literal in this repository).
+AWS_DOC_HOST = "examplebucket.s3.amazonaws.com"
+AWS_DOC_REGION = "us-east-1"
+AWS_DOC_NOW = datetime(2013, 5, 24, 0, 0, 0, tzinfo=timezone.utc)
+AWS_DOC_VECTORS = [
+    (
+        "/test.txt",
+        [],
+        {"range": "bytes=0-9"},
+        "host;range;x-amz-content-sha256;x-amz-date",
+        "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
+    ),
+    (
+        "/",
+        [("lifecycle", "")],
+        None,
+        "host;x-amz-content-sha256;x-amz-date",
+        "fea454ca298b7da1c68078a5d1bdbfbbe0d65c699e0f91ac7a200a0136783543",
+    ),
+    (
+        "/",
+        [("max-keys", "2"), ("prefix", "J")],
+        None,
+        "host;x-amz-content-sha256;x-amz-date",
+        "34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7",
+    ),
+]
 
 
 def _signature_of(headers: dict[str, str]) -> str:
@@ -364,54 +237,103 @@ def _signature_of(headers: dict[str, str]) -> str:
     return match.group("sig")
 
 
-def _leaks(records: list[logging.LogRecord], secrets_: list[str]) -> list[str]:
-    found = []
-    for rec in records:
-        text = rec.getMessage() + (rec.exc_text or "")
-        found.extend(s for s in secrets_ if s in text)
-    return found
-
-
-def test_D2306_0f_log_debug_do_botocore_auth_nunca_chega_a_um_handler(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("uri", "query", "extra", "signed", "expected"), AWS_DOC_VECTORS
+)
+def test_D2306_0d_vetores_publicados_pela_aws(
+    uri: str,
+    query: list[tuple[str, str]],
+    extra: dict[str, str] | None,
+    signed: str,
+    expected: str,
 ) -> None:
-    creds = new_credentials(with_token=True)
-    caplog.set_level(logging.DEBUG)
-    auth_logger = logging.getLogger(BOTOCORE_AUTH_LOGGER)
-    levels_before = (
-        logging.getLogger().level,
-        logging.getLogger("botocore").level,
-        auth_logger.level,
+    secret = s3_fake.aws_doc_example_secret()
+    access_key_id = new_credentials(with_token=False).access_key_id
+    _raw_query, headers = sign_get(
+        host_header=AWS_DOC_HOST,
+        canonical_uri=uri,
+        query=query,
+        region=AWS_DOC_REGION,
+        access_key_id=access_key_id,
+        secret_access_key=secret,
+        session_token=None,
+        now=AWS_DOC_NOW,
+        extra_headers=extra,
     )
+    lower = {k.lower(): v for k, v in headers.items()}
+    match = _AUTH_RE.match(lower["authorization"])
+    assert match is not None
+    assert match.group("key") == access_key_id
+    assert match.group("scope") == "20130524/us-east-1/s3/aws4_request"
+    assert match.group("signed") == signed
+    assert match.group("sig") == expected
+    assert lower["x-amz-date"] == "20130524T000000Z"
+    if extra:
+        assert lower["range"] == "bytes=0-9"
 
-    _query, headers = _sign_with_session(creds)
-    signature = _signature_of(headers)
-    watched = [creds.secret_access_key, str(creds.session_token), signature]
 
-    assert [r for r in caplog.records if r.name.startswith(BOTOCORE_AUTH_LOGGER)] == []
-    assert _leaks(caplog.records, watched) == []
-    assert BOTOCORE_AUTH_LOG_FILTER in auth_logger.filters
-    # The filter never changes any logger level.
-    assert (
-        logging.getLogger().level,
-        logging.getLogger("botocore").level,
-        auth_logger.level,
-    ) == levels_before
+def _verifier_signature(
+    creds: s3_fake.Creds, uri: str, raw_query: str, headers: dict[str, str]
+) -> str:
+    lower = {k.lower(): v for k, v in headers.items()}
+    match = _AUTH_RE.match(lower["authorization"])
+    assert match is not None
+    signed = match.group("signed").split(";")
+    lower["host"] = AWS_HOST
+    cr = canonical_request("GET", uri, raw_query, lower, signed, EMPTY_SHA256)
+    return compute_signature(creds.secret_access_key, REGION, lower["x-amz-date"], cr)
 
-    # Negative control: without the filter the same signing leaks into the log, which
-    # proves the assertions above can fail.
-    monkeypatch.setattr(s3_sigv4, "install_botocore_log_filter", lambda: None)
-    auth_logger.removeFilter(BOTOCORE_AUTH_LOG_FILTER)
-    try:
-        caplog.clear()
-        _query, headers = _sign_with_session(creds)
-        unfiltered = [
-            r for r in caplog.records if r.name.startswith(BOTOCORE_AUTH_LOGGER)
-        ]
-        assert unfiltered != []
-        assert str(creds.session_token) in " ".join(r.getMessage() for r in unfiltered)
-    finally:
-        auth_logger.addFilter(BOTOCORE_AUTH_LOG_FILTER)
+
+P11_KEYS = [
+    "corpus/a b.txt",
+    "corpus/a+b.txt",
+    "corpus/a%b.txt",
+    "corpus/a~b.txt",
+    "corpus/[1].txt",
+    "corpus/#?=&.txt",
+    "corpus/ação.txt",
+    "corpus//dup.txt",
+    "corpus/.oculto.txt",
+    "corpus/a\x01.txt",
+    *KEYS_40,
+]
+
+
+def _agree(creds: s3_fake.Creds, key: str) -> None:
+    uri = "/" + s3_fake.uri_encode(key, keep_slash=True)
+    query = [("prefix", key), ("list-type", "2"), ("continuation-token", key + "+/=")]
+    raw_query, headers = sign_get(
+        host_header=AWS_HOST,
+        canonical_uri=uri,
+        query=query,
+        region=REGION,
+        access_key_id=creds.access_key_id,
+        secret_access_key=creds.secret_access_key,
+        session_token=creds.session_token,
+        now=T0,
+    )
+    assert _signature_of(headers) == _verifier_signature(creds, uri, raw_query, headers)
+
+
+def test_D2306_0d_chaves_dificeis_concordam_com_o_verificador_do_simulado() -> None:
+    for with_token in (False, True):
+        creds = new_credentials(with_token=with_token)
+        for key in P11_KEYS:
+            _agree(creds, key)
+
+
+_SEGMENT = st.text(min_size=1, max_size=12).filter(
+    lambda s: s not in (".", "..") and "/" not in s
+)
+
+
+@settings(max_examples=150, deadline=None)
+@given(segments=st.lists(_SEGMENT, min_size=1, max_size=4), double=st.booleans())
+def test_D2306_0d_chaves_geradas_concordam_com_o_verificador(
+    segments: list[str], double: bool
+) -> None:
+    key = ("//" if double else "/").join(segments)
+    _agree(new_credentials(with_token=True), key)
 
 
 # ----------------------------------------------------------------------------
@@ -446,6 +368,7 @@ def _sign(
     host_header: str = AWS_HOST,
     region: str = REGION,
     now: datetime = T0,
+    extra_headers: dict[str, str] | None = None,
 ) -> tuple[str, dict[str, str]]:
     raw_query, headers = sign_get(
         host_header=host_header,
@@ -456,6 +379,7 @@ def _sign(
         secret_access_key=creds.secret_access_key,
         session_token=creds.session_token,
         now=now,
+        extra_headers=extra_headers,
     )
     return raw_query, {k.lower(): v for k, v in headers.items()}
 
@@ -493,6 +417,20 @@ def test_D2306_11_signed_headers_exatos_com_e_sem_sessao() -> None:
         "host;x-amz-content-sha256;x-amz-date;x-amz-security-token"
     )
     assert headers["x-amz-security-token"] == with_token.session_token
+
+    # extra_headers are signed too (name lower-cased, value stripped).
+    plain = new_credentials(with_token=False)
+    _q, headers = _sign(creds=plain, extra_headers={"Range": "  bytes=0-9 "})
+    match = _AUTH_RE.match(headers["authorization"])
+    assert match is not None
+    assert match.group("signed") == "host;range;x-amz-content-sha256;x-amz-date"
+    assert headers["range"] == "bytes=0-9"
+    _q, headers = _sign(creds=with_token, extra_headers={"range": "bytes=0-9"})
+    match = _AUTH_RE.match(headers["authorization"])
+    assert match is not None
+    assert match.group("signed") == (
+        "host;range;x-amz-content-sha256;x-amz-date;x-amz-security-token"
+    )
 
 
 def test_D2306_12_hash_do_corpo_e_o_do_corpo_vazio() -> None:
@@ -534,6 +472,12 @@ def test_D2306_13_relogio_injetado_define_data_escopo_e_assinatura() -> None:
         now=datetime(2020, 2, 29, 23, 59, 59, tzinfo=timezone.utc),
     )
     assert old["x-amz-date"] == "20200229T235959Z"
+
+    # A clock without a time zone is refused, without the secret in the message.
+    with pytest.raises(ValueError) as info:
+        _sign(creds=creds, now=datetime(2026, 11, 20, 12, 0, 0))
+    assert creds.secret_access_key not in str(info.value)
+    assert creds.secret_access_key not in repr(info.value)
 
 
 def test_D2306_14_segredo_nao_sai_em_cabecalho_nem_em_excecao() -> None:

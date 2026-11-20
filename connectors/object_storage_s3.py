@@ -55,6 +55,12 @@ class S3Driver:
 
     def __init__(self, variant: S3Variant = "s3") -> None:
         self.name: str = variant
+        misnamed = dict.fromkeys(
+            ("endpoint", "url", "base_url", "host"), "use endpoint_url"
+        )
+        if variant == "s3":
+            misnamed["endpoint_url"] = "use driver s3_compatible"
+        self.misnamed_keys: Mapping[str, str] = misnamed
 
     def settings(self, cfg: dict[str, Any]) -> S3Settings:
         raise NotImplementedError("2306.1: S3Driver.settings")

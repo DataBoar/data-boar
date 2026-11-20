@@ -20,6 +20,7 @@ import pickle
 import secrets
 from collections.abc import Iterator
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -161,8 +162,6 @@ def test_D2306_64_importar_o_registro_nao_importa_o_driver_s3() -> None:
         "assert 'botocore' not in sys.modules\n"
         "assert 'connectors.s3_sigv4' not in sys.modules\n"
     )
-    from pathlib import Path
-
     result = subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True,
@@ -512,9 +511,35 @@ def test_extra_parse_list_sem_namespace_e_aceito() -> None:
 
 
 @pytest.mark.parametrize("size", [None, "-1", "abc", "1.5", "", " 7"])
-def test_extra_parse_list_size_invalido_vira_none(size: str | None) -> None:
-    page = S3Driver().parse_list(_listing(_item("corpus/a.txt", size)))
-    assert page.entries == [ObjectEntry("corpus/a.txt", None)]
+def test_D2306_82_entrada_sem_size_valido_vira_chave_none(size: str | None) -> None:
+    body = _listing(
+        _item("corpus/ok-1.txt", "4")
+        + _item("corpus/a.txt", size)
+        + _item("corpus/ok-2.txt", "0")
+    )
+    page = S3Driver().parse_list(body)
+    assert page.entries == [
+        ObjectEntry("corpus/ok-1.txt", 4),
+        ObjectEntry(None, None),
+        ObjectEntry("corpus/ok-2.txt", 0),
+    ]
+
+
+@pytest.mark.parametrize(
+    "raw_key", ["corpus/%FF.txt", "corpus/%C3.txt", "corpus/%ZZ%E9.txt"]
+)
+def test_D2306_82_chave_que_nao_decodifica_vira_none(raw_key: str) -> None:
+    body = _listing(
+        _item("corpus/ok-1.txt", "4")
+        + _item(raw_key, "3")
+        + _item("corpus/ok-2.txt", "1")
+    )
+    page = S3Driver().parse_list(body)
+    assert page.entries == [
+        ObjectEntry("corpus/ok-1.txt", 4),
+        ObjectEntry(None, 3),
+        ObjectEntry("corpus/ok-2.txt", 1),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -632,7 +657,8 @@ def test_extra_classify_error_segue_a_tabela(
 ) -> None:
     got = S3Driver().classify_error(status, {}, _error_body(code), during=during)
     assert isinstance(got, ErrorClass)
-    assert tuple(got) == expected
+    assert tuple(got)[:4] == expected
+    assert got.message
 
 
 @pytest.mark.parametrize("status", [500, 502, 503, 504])
@@ -682,6 +708,7 @@ def test_extra_classify_error_codigo_fora_do_vocabulario_nao_sai() -> None:
         got = driver.classify_error(400, {}, body, during="get")
         assert got.code is None
         assert mark not in repr(got)
+        assert got.message == "S3 error HTTP 400"
 
 
 def test_extra_classify_error_corpo_com_eco_nao_vaza_marcadores() -> None:
@@ -697,3 +724,86 @@ def test_extra_classify_error_corpo_com_eco_nao_vaza_marcadores() -> None:
     assert got.code == "SignatureDoesNotMatch"
     for value in (raw.access_key_id, str(raw.session_token)):
         assert value not in repr(got)
+
+
+# ----------------------------------------------------------------------------
+# D2306-81: fixed driver messages; D2306-84: misnamed keys of the S3 driver
+# ----------------------------------------------------------------------------
+
+S3_TABLE_CODES = [
+    ("list", 403, "AccessDenied"),
+    ("list", 403, "AllAccessDisabled"),
+    ("list", 404, "NoSuchBucket"),
+    ("list", 403, "InvalidAccessKeyId"),
+    ("list", 403, "SignatureDoesNotMatch"),
+    ("list", 400, "ExpiredToken"),
+    ("list", 400, "InvalidToken"),
+    ("list", 400, "TokenRefreshRequired"),
+    ("list", 403, "RequestTimeTooSkewed"),
+    ("list", 301, "PermanentRedirect"),
+    ("list", 400, "AuthorizationHeaderMalformed"),
+    ("list", 503, "SlowDown"),
+    ("get", 403, "AccessDenied"),
+    ("get", 404, "NoSuchKey"),
+    ("get", 400, "InvalidRequest"),
+]
+
+
+@pytest.mark.parametrize(("during", "status", "code"), S3_TABLE_CODES)
+def test_D2306_81_mensagem_fixa_sem_trecho_do_corpo_nem_do_cabecalho(
+    during: Any, status: int, code: str
+) -> None:
+    mark = _marker()
+    body = _error_body(code, f"<Detail>{mark}</Detail><HostId>{mark}</HostId>")
+    headers = {"x-amz-request-id": mark, "Server": mark, "Location": f"https://{mark}/"}
+    driver = S3Driver()
+    got = driver.classify_error(status, headers, body, during=during)
+    assert isinstance(got.message, str)
+    assert got.message
+    assert mark not in got.message
+    assert mark not in repr(got)
+    # Same input, same text: the message is fixed, not built from the response.
+    again = driver.classify_error(
+        status, {"x-amz-request-id": "other"}, _error_body(code), during=during
+    )
+    assert again.message == got.message
+    if code == "RequestTimeTooSkewed":
+        assert "clock skew between this host and the server" in got.message
+    if code in ("PermanentRedirect", "AuthorizationHeaderMalformed"):
+        assert "bucket is not in region" in got.message
+    if during == "get" and code in ("AccessDenied", "NoSuchKey", "InvalidRequest"):
+        assert code in got.message
+
+
+def test_D2306_81_frases_do_s3_so_existem_no_modulo_do_driver_s3() -> None:
+    root = Path(__file__).resolve().parents[1] / "connectors"
+    phrases = ("bucket is not in region", "clock skew")
+    s3_text = (root / "object_storage_s3.py").read_text(encoding="utf-8")
+    for phrase in phrases:
+        assert phrase in s3_text
+    for name in ("object_storage_driver.py", "object_storage_connector.py"):
+        path = root / name
+        if not path.exists():  # the connector module arrives in task 2306.2
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in phrases:
+            assert phrase not in text, (name, phrase)
+
+
+def test_D2306_84_misnamed_keys_do_s3_e_do_s3_compatible() -> None:
+    hint = "use endpoint_url"
+    assert dict(S3Driver("s3").misnamed_keys) == {
+        "endpoint": hint,
+        "url": hint,
+        "base_url": hint,
+        "host": hint,
+        "endpoint_url": "use driver s3_compatible",
+    }
+    assert dict(S3Driver("s3_compatible").misnamed_keys) == {
+        "endpoint": hint,
+        "url": hint,
+        "base_url": hint,
+        "host": hint,
+    }
+    # The toy driver keeps using ``host``: it is not one of its misnamed keys.
+    assert "host" not in getattr(ToyDriver, "misnamed_keys", {})
