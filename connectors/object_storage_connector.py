@@ -20,6 +20,7 @@ Security notes (section 6 and section 12):
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import shutil
 import tempfile
@@ -100,10 +101,18 @@ _NOT_SCANNED_REASONS = (
     "over_budget",
     "size_mismatch",
     "download_failed",
+    "extract_failed",
 )
 # Reasons whose listed size counts in bytes_not_scanned (section 8, step 8).
 _SIZED_REASONS = frozenset(
-    {"too_large", "over_budget", "unsafe_key", "size_mismatch", "download_failed"}
+    {
+        "too_large",
+        "over_budget",
+        "unsafe_key",
+        "size_mismatch",
+        "download_failed",
+        "extract_failed",
+    }
 )
 # Order of the "skipped" summary (section 8, step 6).
 _SKIPPED_SUMMARY = (
@@ -113,6 +122,7 @@ _SKIPPED_SUMMARY = (
     "invalid_key",
     "size_mismatch",
     "download_failed",
+    "extract_failed",
 )
 # Fixed per-object messages (only written with report_object_names: true).
 _OBJECT_MESSAGES = {
@@ -223,6 +233,36 @@ def _restrict_temp_dir(path: str) -> None:
             "the download temporary directory could not be restricted to the "
             "current user",
         ) from None
+
+
+_AWS_IMDS_V6 = ipaddress.ip_address("fd00:ec2::254")
+
+
+def guard_would_refuse(ip: url_guard.IpAddr) -> bool:
+    """True when ``url_guard`` would refuse *ip* without the opt-in (R6c-2).
+
+    Same chain as ``url_guard._classify``: link-local, loopback, private, unspecified,
+    reserved or multicast, non-global (D2306-90 locks the equivalence).
+    """
+    return bool(
+        ip.is_link_local
+        or ip.is_loopback
+        or ip.is_private
+        or ip.is_unspecified
+        or ip.is_reserved
+        or ip.is_multicast
+        or not ip.is_global
+    )
+
+
+def always_refused(ip: url_guard.IpAddr) -> bool:
+    """Refused even with ``allow_private_networks`` (R6c-1): link-local (169.254/16,
+    fe80::/10, where cloud metadata lives), the AWS IPv6 metadata address and the
+    IPv4-mapped forms of these."""
+    candidates: list[url_guard.IpAddr] = [ip]
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        candidates.append(ip.ipv4_mapped)
+    return any(c.is_link_local or c == _AWS_IMDS_V6 for c in candidates)
 
 
 def _readable_int(value: Any) -> bool:
@@ -560,20 +600,25 @@ class ObjectStorageConnector:
         if parts.scheme != "https" or not parts.hostname:
             raise _Stop("config_error", "the driver destination must be an https URL")
         self._host = parts.hostname.lower()
-        honors = bool(getattr(driver, "honors_allow_private_networks", False))
-        allow_private = honors and url_guard.target_allows_private(self.config)
+        # R6c-2: the guard is called once, with allow_private=True. The URL is built by the
+        # driver (https, host validated), so any error here is DNS; its text (host, IP) is
+        # never read nor recorded. The refusal is this module's own rule, on the same IPs
+        # that go to the pin.
         err, ips = url_guard.resolve_and_validate_outbound_url(
-            url, allow_private=allow_private, label="object_storage endpoint"
+            url, allow_private=True, label="object_storage endpoint"
         )
         if err is not None or not ips:
-            # The guard text names the host and the IP: never recorded (section 6).
-            text = err or ""
-            if "DNS resolution failed" in text or "resolved to no addresses" in text:
-                raise _Stop("unreachable", "the destination host could not be resolved")
-            raise _Stop(
-                "scope_violation",
-                "the destination host was refused by the outbound guard",
-            )
+            raise _Stop("unreachable", "the destination host could not be resolved")
+        opt_in = (
+            driver.honors_allow_private_networks
+            and url_guard.target_allows_private(self.config)
+        )
+        for ip in ips:
+            if always_refused(ip) or (not opt_in and guard_would_refuse(ip)):
+                raise _Stop(
+                    "scope_violation",
+                    "the destination host resolves to an address that is not allowed",
+                )
         connect, read = self._timeouts
         timeout = httpx.Timeout(connect=connect, read=read, write=read, pool=connect)
         headers = {"User-Agent": get_http_user_agent()}
@@ -871,7 +916,16 @@ class ObjectStorageConnector:
             finally:
                 response.close()
             self._stats.bytes_downloaded += os.path.getsize(local)
-            self._extract(local, key, ext)
+            try:
+                self._extract(local, key, ext)
+            except KeyboardInterrupt:
+                raise
+            except (
+                Exception
+            ) as exc:  # R6c-3: per object, class name only, target goes on
+                raise _ObjectFailed(
+                    "extract_failed", f"extraction failed ({type(exc).__name__})"
+                ) from None
             self._stats.scanned += 1
         except _ObjectFailed as failed:
             self._not_scanned(entry, failed.reason, failed.message)

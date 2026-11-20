@@ -213,9 +213,10 @@ _COVERAGE_COLUMNS = (
     "Limits disabled",
     "Note",
 )
+# Section 14, item 6, exact text fixed by revision 6c (R6c-4).
 _COVERAGE_POSTURE = (
-    "Evidence of what was read, not a legal conclusion; a partial target is not a clean "
-    "result and does not protect against fines."
+    "This report is evidence of what was read. It is not a legal conclusion and does not "
+    "protect against fines."
 )
 
 

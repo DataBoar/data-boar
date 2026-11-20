@@ -269,6 +269,11 @@ _OBJECT_STORAGE_HINTS: dict[str, str] = {
         "Some objects could not be downloaded (access denied, missing or a server error). "
         "Check the read permission on the objects and re-run; see the Target coverage sheet."
     ),
+    "extract_failed": (
+        "An object was downloaded but the file pipeline failed on it, so it was not scanned "
+        "(the rest of the target was). Check the file type and the extraction options under "
+        "file_scan, then re-run."
+    ),
     "skipped": (
         "Some listed objects were not scanned (see the counts per reason). This is not a "
         "clean result; see the Target coverage sheet and the hints of each reason."

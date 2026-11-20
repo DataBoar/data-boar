@@ -132,6 +132,9 @@ class StorageDriver(Protocol):
     # Target keys the driver needs (revision 6, R6-8); the common layer checks them before
     # settings() and records config_error "missing required key: <key>".
     required_keys: tuple[str, ...]
+    # Revision 6c (R6c-1): whether the target's allow_private_networks opt-in counts for
+    # this driver's destination (s3 False, s3_compatible True). Required, no default.
+    honors_allow_private_networks: bool
 
     def settings(self, cfg: dict[str, Any]) -> DriverSettings: ...
 
