@@ -89,7 +89,7 @@ Para tratamento forense, consulte [FORENSICS_AND_EVIDENCE_PRIMER.pt_BR.md](FOREN
 - PUC-Rio. *Análise Forense de Cibercrime e Investigação de Incidentes*, Aulas 1 e 2. Especialização em Compliance de Cibersegurança e Proteção de Dados, Sprint 1 (2026).
 - DAMA International. *DAMA-DMBOK: Data Management Body of Knowledge*, 2ª edição.
 - ISACA. *COBIT 2019 Framework: Governance and Management Objectives*.
-- ISO/IEC 27014:2020. *Information security, cybersecurity and privacy protection — Governance of information security*. https://www.iso.org/standard/74046.html
-- ISO/IEC 27037:2012. *Guidelines for identification, collection, acquisition and preservation of digital evidence*. https://www.iso.org/standard/44381.html
+- ISO/IEC 27014:2020. *Information security, cybersecurity and privacy protection — Governance of information security*. [iso.org/standard/74046.html](https://www.iso.org/standard/74046.html)
+- ISO/IEC 27037:2012. *Guidelines for identification, collection, acquisition and preservation of digital evidence*. [iso.org/standard/44381.html](https://www.iso.org/standard/44381.html)
 
 Este primer é uma síntese original para contexto de produto e aprendizagem. Para interpretação normativa oficial, consulte os padrões aplicáveis e profissionais qualificados.
