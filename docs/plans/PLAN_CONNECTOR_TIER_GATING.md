@@ -28,13 +28,15 @@ route level only).
 | Tier | Connectors |
 | ---- | ---------- |
 | **Open-core** | filesystem · self-hosted SQL/NoSQL (sqlite/pg/mysql/mongo/redis) · compressed · generic REST |
-| **Pro** | PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle + Snowflake/SAP/S3/Azure/GCS |
-| **Enterprise** | plugin/partner remediation · CMDB connectors · findings-sink to corp DB · scheduled-scan UI |
+| **Pro** | PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle + Snowflake/SAP/Azure/GCS |
+| **Enterprise** | plugin/partner remediation · CMDB connectors · findings-sink to corp DB · scheduled-scan UI · S3 and S3-compatible object storage (#2306) |
 
 Principles (non-negotiable): open-core stays useful (never gate "scan your
 own data soup"); fail-loud actionable errors + `scan_failures` row (never a
 silent skip); gate bites only in `licensing.mode: enforced` — `Tier.OPEN`
 stays free for dev and lab.
+
+**Update 2026-11-20 (operator decision, #2306):** S3 (`driver: s3`, feature key `connector_s3_object_storage`) and S3-compatible object storage (`driver: s3_compatible`, key `connector_s3_compatible`) start at **Enterprise**, by the new-feature rule (Enterprise until validated; only the operator lowers a tier). Azure Blob (`connector_azure_blob`) moves to Enterprise in the PR that implements #2307.
 
 ## Phases
 
