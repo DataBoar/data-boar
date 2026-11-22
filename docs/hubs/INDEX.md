@@ -55,6 +55,7 @@
 | Docs README | `docs/README.md` | EN/pt-BR doc tables |
 | Audience guide | `docs/AUDIENCE_GUIDE.md` | Who reads what |
 | Concern map | `docs/MAP.md` | Topic-first navigation |
+| **Functional domains** | `docs/FUNCTIONAL_DOMAINS.md` | Canonical FD-01…FD-08 taxonomy; vertical crosswalk and guardrails |
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Storyboards + product scenarios |
 | Pitch decks | `docs/pitch/INDEX.md` | Stakeholder / DPO / CISO / CDO / CIO / PMO / CFO / CCO |
 | Educational hub | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, AI primer anti-hype, framework primers path |
