@@ -42,8 +42,8 @@ These are positioning boundaries, not a current competitive feature audit. Vendo
 ## Five product pillars
 
 1. **Data Soup — discover.** Modular ingestion across filesystems, network shares, databases, business systems, collaboration platforms, cloud and legacy sources.
-2. **Exposure Graph — understand.** A logical, source-aware model of resources, identities, groups, grants, links and relationships. This is a data model, not a graph-database commitment.
-3. **Risk Intelligence — prioritize.** Deterministic, explainable exposure profiles and aggregation, reversible to underlying findings and evidence.
+2. **Exposure Graph — understand.** A logical, source-aware model of resources, identities, groups, grants, links and relationships. This is a data model, not a graph-database commitment or a requirement for a graph-navigation UI in 1.9.
+3. **Risk Intelligence — prioritize.** Deterministic, explainable exposure profiles and, later, aggregation; outputs remain reversible to underlying findings and evidence.
 4. **Coverage Attestation — prove the boundary.** Show declared, attempted, reached, partially reached, inaccessible, unsupported and not-assessed scope. Unreached sources produce no inferred findings.
 5. **Evidence First — prove each claim.** Preserve provenance, timestamps, source semantics, limitations, integrity and reproducibility. Claims must not exceed observed evidence.
 
@@ -70,16 +70,39 @@ Exit evidence: source capability matrices; declared-vs-reached states; target-le
 
 ### Stage B — Exposure foundation
 
+The only initial 1.9 capability candidates are the following three contract/specification slices. They are not unconditional release commitments; implementation must pass the dependency gates below.
+
 1. **Identity inventory contract:** normalize source-aware identity and group records while preserving provider semantics and unresolved/cyclic/partial edges. Connector acquisition remains in #2327 and the contract is #2343.
 2. **Resource/access inventory contract:** represent resources, principals, grants/permissions, links, source, observation time and limitations. Reuse #1083 and connector-native permission metadata; do not imply universal ACL coverage. Contract: #2344.
 3. **Exposure Profile v1 specification:** only after the first two contracts are sufficiently stable. Define dimensions, missing-value semantics, rule versioning, confidence/coverage presentation and calibration before selecting a formula. Specification: #2346.
 
-### Stage C — Risk intelligence
+#### Release-scope guardrails
+
+- The 1.9 candidate scope is Identity Inventory, Access Inventory and Exposure Profile v1, with Data Soup and Coverage Attestation as prerequisites—not six independent feature epics.
+- The Exposure Graph is a logical model and traceability structure in this increment. A graph browser, visualization or graph database is not part of the 1.9 definition of done.
+- Risk aggregation and Blast Radius remain later-stage capabilities. They require validated identity/access semantics, cycle-safe traversal, explicit unknowns, reproducible calculations and curated evaluation fixtures.
+- Governance Assist, ownership inference, risk acceptance workflows, approvals, ticketing and remediation remain deferred.
+- HTML reports and JSON export should reuse existing reporting/export infrastructure. First verify actual gaps; do not create a parallel reporting subsystem merely to satisfy a proposal.
+- Connector acceptance is source-specific. M365 SharePoint/OneDrive, SMB, local filesystem and object storage do not share a universal identity or ACL model. Each connector must declare exactly what it observes and what it cannot establish.
+
+#### Dependency gates (must pass before implementation is promoted)
+
+| Gate | Required evidence | If not met |
+|---|---|---|
+| G0 — Source capability | Connector capability declaration, supported scopes, source semantics, rate/volume limits and explicit unsupported states | Keep the source out of the evaluated population; do not infer coverage |
+| G1 — Identity contract | Stable source/tenant-namespaced IDs, provenance, membership semantics, unresolved references, cycle handling and partial enumeration tests | Do not claim a consolidated or complete identity inventory |
+| G2 — Access contract | Resource/principal identity, direct/inherited/link semantics where exposed, source timestamp, provenance and limitations | Do not claim effective access or universal ACL normalization |
+| G3 — Exposure Profile | Versioned deterministic rules, explicit missing-value/abstention behavior, separate risk/confidence/coverage, reproducibility and curated calibration results | Emit not-assessed/partial/unsupported; do not manufacture a numeric score or rank |
+| G4 — Reporting | Traceable profile/evidence references and coverage limitations; reuse verified existing report/export paths | Do not add new reporting infrastructure without a demonstrated gap |
+
+### Stage C — Risk intelligence (post-foundation)
 
 - Reversible, explainable aggregation of findings into reviewable risk candidates.
 - Deterministic evidence-linked narratives, including unknowns and conflicting evidence.
 - Bounded potential audience/reachability analysis only after identity and access semantics are validated.
 - Estimated reachability is not actual incident impact or number of affected people.
+
+Risk Aggregation and Blast Radius are separate capabilities with separate validation requirements. They must not be bundled into the 1.9 foundation merely because they share the Exposure Graph model.
 
 ### Stage D — Governance assist
 
@@ -96,13 +119,13 @@ Potential dimensions: (a) sensitivity evidence, keeping Data Boar detections dis
 
 Do not adopt a multiplicative Sensitivity × Reachability × Audience formula (or another composite) until there are documented scales/normalization, explicit missing-value semantics, versioned deterministic rules, separate risk/confidence/coverage outputs, curated synthetic calibration fixtures, and measurements of false positives, false negatives, abstention and reviewer agreement.
 
-Do not conflate an exposure profile with the quasi-identification risk_score/confidence_score contract in ADR-0017.
+Do not conflate an exposure profile with the quasi-identification risk_score/confidence_score contract in ADR-0017. Exposure Profile v1 may initially be a categorical, reason-coded assessment; a numeric score is not a prerequisite.
 
 ## Logical Exposure Graph — not a database mandate
 
 The first graph is a conceptual entity/relationship model reconstructible from source evidence. Candidate nodes include resources, identities, groups, grants, links, findings and source systems; candidate edges include membership, grant, ownership assertion, containment and lineage.
 
-Every edge needs source, observation time, provenance, semantics and completeness state. Support cycles, unresolved endpoints, stale data, conflicting assertions and partial traversal. A graph database is not a prerequisite; storage choice follows measured query, scale and operational requirements.
+Every edge needs source, observation time, provenance, semantics and completeness state. Support cycles, unresolved endpoints, stale data, conflicting assertions and partial traversal. A graph database is not a prerequisite; storage choice follows measured query, scale and operational requirements. A navigable graph UI is a separate product decision, not implied by this model.
 
 ## Evidence and coverage measurement
 
@@ -127,13 +150,13 @@ A future dashboard must be generated from inspectable project data. Never hand-a
 - LLM-generated risk narratives or governance decisions.
 - Automatic remediation, permission mutation, retention enforcement or deletion.
 - Breach-impact, legal-compliance or certification claims unsupported by direct evidence.
-- Mandatory graph database, heavyweight graph infrastructure or broad workflow engine.
+- Mandatory graph database, heavyweight graph infrastructure, graph-navigation UI in 1.9, or broad workflow engine.
 
 ## Existing work and dependencies
 
 #2342 strategic umbrella; #2327 directory/IAM acquisition; #1083 audit-first sensitivity × excessive-permission signal; #1169 declared-sources vs reached Coverage Attestation; #1527 target-level attempted/findings/failures rollup; #2273 source inventory completeness; #2297 M365/Copilot permission research; #2301 stale ownership signals; #2331 catalog/lineage acquisition; #1667 Data Soup gap map; ADR-0017 risk/confidence contract.
 
-Initial child work is limited to #2343, #2344 and #2346. Risk aggregation, blast radius, narratives and governance remain deferred until upstream evidence contracts are validated.
+Initial child work is limited to #2343, #2344 and #2346. Risk aggregation, blast radius, graph navigation, narratives and governance remain deferred until upstream evidence contracts are validated. Do not create duplicate epics where existing acquisition or foundation issues already own the work.
 
 ## Acceptance criteria for the 1.9 direction
 
@@ -141,10 +164,11 @@ Initial child work is limited to #2343, #2344 and #2346. Risk aggregation, blast
 - [ ] No duplicate connector work is created where source acquisition is already tracked.
 - [ ] Identity and access contracts preserve source-native semantics, stable IDs and provenance.
 - [ ] Unknown, unsupported, partial and not-assessed states remain explicit.
-- [ ] Exposure profiles are deterministic, explainable, versioned and calibrated before prioritization.
+- [ ] Exposure profiles are deterministic, explainable, versioned and calibrated before prioritization; unsupported inputs result in abstention, not a fabricated score.
 - [ ] Risk outputs are reversible to source findings and observations.
 - [ ] Coverage/evidence metrics have explicit denominators, freshness and eligibility rules.
 - [ ] No unsupported claim of effective access, breach impact, legal compliance or complete coverage.
-- [ ] No Trust Score, mandatory graph database, LLM dependency or workflow-engine expansion is introduced.
+- [ ] No Trust Score, mandatory graph database, graph UI commitment, LLM dependency or workflow-engine expansion is introduced.
+- [ ] Each proposed release capability passes its dependency gate and is reflected in the relevant issue/milestone before being called committed scope.
 
 **Planning note:** Quarter-by-quarter sequencing is not adopted as a commitment. Schedule against dependencies, actual capacity, existing milestone status and implementation evidence.
