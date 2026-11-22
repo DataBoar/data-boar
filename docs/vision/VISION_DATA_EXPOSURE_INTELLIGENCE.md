@@ -247,3 +247,20 @@ This vision is deliberately broader than a release plan. The staged, dependency-
 Strategic umbrella: #2342  
 Initial contract/spec issues: #2343, #2344, #2346  
 Plan materialization and index synchronization: #2347
+
+## Strategic Doctrine Set
+
+This document is the umbrella vision. The following companion documents define the product doctrines behind its pillars; they are strategic references, not independent delivery plans or release commitments:
+
+- [Vision: Data Soup](VISION_DATA_SOUP.md) — source acquisition, connector semantics, discovery boundaries and coverage honesty.
+- [Vision: Trust Intelligence](VISION_TRUST_INTELLIGENCE.md) — provenance, integrity, freshness, confidence, coverage and abstention without premature composite scoring.
+- [Vision: Evidence First](VISION_EVIDENCE_FIRST.md) — claim-to-evidence traceability, epistemic states, coverage attestation and evidence custody.
+
+The hierarchy is intentional:
+
+1. **Vision documents** define product principles and long-horizon direction.
+2. **Plans** translate validated direction into dependency-aware delivery proposals.
+3. **Issues and milestones** represent executable work and current commitments.
+
+No vision document overrides implementation evidence, accepted ADRs, existing issue scope or milestone state. Where a vision hypothesis conflicts with observed source behavior or an established architectural contract, the evidence and accepted contract take precedence until the decision is explicitly revisited.
+
