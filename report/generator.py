@@ -197,6 +197,138 @@ def _split_inventory_details(raw_details: object) -> tuple[str, str]:
     return _format_inventory_details(payload), ""
 
 
+_SHEET_TARGET_COVERAGE = "Target coverage"
+_COVERAGE_COLUMNS = (
+    "Target",
+    "Source type",
+    "Coverage",
+    "Objects listed",
+    "Objects scanned",
+    "Objects not scanned",
+    "Bytes not scanned",
+    "Bytes not scanned (readable)",
+    "Objects with unknown size",
+    "Listing complete",
+    "Not scanned by reason",
+    "Limits disabled",
+    "Note",
+)
+# Section 14, item 6, exact text fixed by revision 6c (R6c-4).
+_COVERAGE_POSTURE = (
+    "This report is evidence of what was read. It is not a legal conclusion and does not "
+    "protect against fines."
+)
+
+
+def _readable_bytes(value: int) -> str:
+    """Binary units with one decimal; below 1024, an integer with B (#2306, R6-6)."""
+    if value < 1024:
+        return f"{value} B"
+    amount = value / 1024.0
+    units = ("KiB", "MiB", "GiB", "TiB")
+    index = 0
+    while amount >= 1024.0 and index < len(units) - 1:
+        amount /= 1024.0
+        index += 1
+    return f"{amount:.1f} {units[index]}"
+
+
+def _coverage_int(block: dict, key: str) -> int:
+    value = block.get(key)
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def _coverage_rows(inv_rows: list[dict], finding_targets: set[str]) -> list[dict]:
+    """Rows of the "Target coverage" sheet (#2306, section 14): one per inventory row that
+    carries the generic coverage block, whatever the connector type."""
+    rows: list[dict] = []
+    for inv in inv_rows:
+        try:
+            payload = json.loads(str(inv.get("raw_details") or ""))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+        block = payload.get("executive") if isinstance(payload, dict) else None
+        if not isinstance(block, dict) or block.get("coverage") not in (
+            "complete",
+            "partial",
+        ):
+            continue
+        target = str(inv.get("target_name") or "")
+        partial = block["coverage"] == "partial"
+        not_scanned = _coverage_int(block, "objects_not_scanned")
+        bytes_not = _coverage_int(block, "bytes_not_scanned")
+        readable = _readable_bytes(bytes_not)
+        reasons = block.get("not_scanned_by_reason")
+        reasons = reasons if isinstance(reasons, dict) else {}
+        reason_text = ", ".join(
+            f"{k}={v}" for k, v in sorted(reasons.items()) if isinstance(v, int) and v
+        )
+        limits = block.get("limits_disabled")
+        limits_text = (
+            ", ".join(str(x) for x in limits) if isinstance(limits, list) else ""
+        )
+        listing_complete = block.get("listing_complete") is True
+        note = ""
+        if partial:
+            if target in finding_targets:
+                note = (
+                    f"{not_scanned} objects ({readable}) were not scanned; findings "
+                    "cover the scanned part only."
+                )
+            else:
+                note = (
+                    f"No findings in the scanned part only. {not_scanned} objects "
+                    f"({readable}) were not scanned; this is not a clean result."
+                )
+            if not listing_complete:
+                note += (
+                    " Listing stopped before the end; the number of unlisted objects "
+                    "is unknown."
+                )
+        rows.append(
+            {
+                "Target": target,
+                "Source type": str(inv.get("source_type") or ""),
+                "Coverage": "PARTIAL" if partial else "COMPLETE",
+                "Objects listed": _coverage_int(block, "objects_listed"),
+                "Objects scanned": _coverage_int(block, "objects_scanned"),
+                "Objects not scanned": not_scanned,
+                "Bytes not scanned": bytes_not,
+                "Bytes not scanned (readable)": readable,
+                "Objects with unknown size": _coverage_int(
+                    block, "objects_unknown_size"
+                ),
+                "Listing complete": "yes" if listing_complete else "no",
+                "Not scanned by reason": reason_text,
+                "Limits disabled": limits_text,
+                "Note": note,
+            }
+        )
+    return rows
+
+
+def _write_target_coverage_sheet(writer: Any, coverage_rows: list[dict]) -> None:
+    if not coverage_rows:
+        return
+    _excel_safe_dataframe(
+        pd.DataFrame(coverage_rows, columns=list(_COVERAGE_COLUMNS))
+    ).to_excel(writer, sheet_name=_SHEET_TARGET_COVERAGE, index=False)
+    if getattr(writer, "engine", None) != "openpyxl":
+        return
+    from openpyxl.styles import Font, PatternFill
+
+    ws = writer.sheets[_SHEET_TARGET_COVERAGE]
+    # Section 14, item 6: the posture text, beside the table (one blank column between).
+    ws.cell(row=1, column=len(_COVERAGE_COLUMNS) + 2, value=_COVERAGE_POSTURE)
+    col = _COVERAGE_COLUMNS.index("Coverage") + 1
+    alert = PatternFill(fill_type="solid", start_color="FFC7CE", end_color="FFC7CE")
+    for row_idx in range(2, ws.max_row + 1):
+        cell = ws.cell(row=row_idx, column=col)
+        if cell.value == "PARTIAL":
+            cell.fill = alert
+            cell.font = Font(bold=True, color="9C0006")
+
+
 def _filter_by_min_sensitivity(rows: list[dict], min_sensitivity: str) -> list[dict]:
     """Keep only rows with sensitivity_level >= min_sensitivity (HIGH > MEDIUM > LOW)."""
     if not min_sensitivity or (min_sensitivity or "").upper() == "LOW":
@@ -1101,6 +1233,7 @@ def _write_excel_sheets(
     trust_tint: dict | None = None,
     app_rows_for_sheets: list[dict] | None = None,
     current_app: int = 0,
+    coverage_rows: list[dict] | None = None,
 ) -> None:
     """Write all Excel sheets (Report info, Executive summary, findings, recommendations, trends, heatmap data)."""
     from report.trust_tint import stub_detail_sheet_rows
@@ -1115,6 +1248,8 @@ def _write_excel_sheets(
     _excel_safe_dataframe(report_info).to_excel(
         writer, sheet_name=_SHEET_REPORT_INFO, index=False
     )
+    # #2306 (section 14): partial coverage right after Report info.
+    _write_target_coverage_sheet(writer, coverage_rows or [])
     # Small mascot branding in top-right of Report info (D1), minimal; table stays in A:B
     mascot = _mascot_path()
     if mascot and getattr(writer, "engine", None) == "openpyxl":
@@ -1720,6 +1855,27 @@ def generate_report(
     tint_rows = trust_tint_report_info_rows(trust_tint)
     if tint_rows:
         report_info = tint_rows + report_info
+    # #2306 (section 14): coverage per target from the generic inventory block.
+    coverage_rows: list[dict] = []
+    if hasattr(db_manager, "get_data_source_inventory"):
+        finding_targets = {
+            str(r.get("target_name") or "")
+            for r in list(db_rows) + list(fs_rows) + list(app_rows)
+        }
+        coverage_rows = _coverage_rows(
+            db_manager.get_data_source_inventory(session_id) or [], finding_targets
+        )
+    partial_count = sum(1 for r in coverage_rows if r["Coverage"] == "PARTIAL")
+    if partial_count:
+        report_info = report_info + [
+            {
+                "Field": "Coverage",
+                "Value": (
+                    f"PARTIAL: {partial_count} target(s) with objects not scanned "
+                    "(see Target coverage)"
+                ),
+            }
+        ]
     lic_footer = None
     if lic_ctx is not None:
         lic_footer = f"License: {lic_ctx.state}"
@@ -1763,6 +1919,7 @@ def generate_report(
                 trust_tint=trust_tint,
                 app_rows_for_sheets=copy.deepcopy(app_rows_for_sheets),
                 current_app=current_app,
+                coverage_rows=coverage_rows,
             )
         if primary_path is None or fmt == "xlsx":
             primary_path = out_path

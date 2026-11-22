@@ -4,7 +4,7 @@
 
 **Issues:** [#2260](https://github.com/DataBoar/data-boar/issues/2260) (Fase 0, prova real) e [#2261](https://github.com/DataBoar/data-boar/issues/2261) (o leitor `sharepoint_online`). Épico [#2206](https://github.com/DataBoar/data-boar/issues/2206).
 
-**Situação:** a Fase 0 está **pendente**. O leitor está implementado e testado **só contra um Microsoft Graph simulado**. Nada neste repositório prova ainda que ele lê um OneDrive real.
+**Situação:** prova em OneDrive **pessoal** pelo conector em **2026-11-18**: [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). O CI continua com Graph simulado. SharePoint Online e tenants de trabalho **não** validados.
 
 **O que a Fase 0 pode provar, e o que não pode.** A Fase 0 roda o leitor contra o **OneDrive pessoal do operador**, numa pasta sintética, com uma pessoa entrando por device code. Ela prova **só o OneDrive pessoal**. Ela **não** prova SharePoint Online, tenant de trabalho ou escola, políticas de acesso condicional de um tenant, acesso app-only (sem pessoa) nem throttling real. Nada disso pode ser afirmado a partir da Fase 0.
 

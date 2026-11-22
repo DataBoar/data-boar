@@ -137,13 +137,22 @@ _ENV_FIELDS_TARGET = (
     "token_from_env",
     "api_key_from_env",
 )
-_ENV_FIELDS_AUTH = ("client_secret_from_env",)
+_ENV_FIELDS_AUTH = (
+    "client_secret_from_env",
+    # object_storage, driver s3 / s3_compatible (#2306)
+    "access_key_id_from_env",
+    "secret_access_key_from_env",
+    "session_token_from_env",
+)
 _SENSITIVE_FIELDS = frozenset(
     {
         "pass_from_env",
         "token_from_env",
         "api_key_from_env",
         "client_secret_from_env",
+        "access_key_id_from_env",
+        "secret_access_key_from_env",
+        "session_token_from_env",
     }
 )
 

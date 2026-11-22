@@ -1288,11 +1288,128 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
     path: "/mnt/nfs_data"   # ponto de montagem local
 ```
 
+## Armazenamento de objetos (Amazon S3 e APIs compatíveis)
+
+Leitura somente (**listagem + GET**) em **um único bucket**, depois o mesmo pipeline de arquivos dos conectores de compartilhamento (extensões, arquivos compactados, SQLite opcional como banco). Tier **Enterprise**. Drivers embutidos: `s3` (AWS) e `s3_compatible` (exige `endpoint_url` para MinIO, Cloudflare R2, gateway S3 do SeaweedFS, etc.). Assinatura SigV4 no próprio produto (**sem** `boto3` / `botocore` / extra `[cloud]`).
+
+```yaml
+
+- name: "compat-lab-bucket"
+  type: object_storage
+  driver: s3_compatible
+  bucket: scan-target
+  region: us-east-1
+  endpoint_url: https://s3.example.com
+  prefix: corpus/
+  addressing_style: path       # path | virtual; muitos endpoints compatíveis pedem path
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+    # session_token_from_env: DATA_BOAR_S3_SESSION_TOKEN   # STS / credencial temporária (opcional)
+  allow_private_networks: true # laboratório / RFC1918 / loopback; desligue na AWS pública
+  connect_timeout_seconds: 10
+  read_timeout_seconds: 60
+  max_objects: 10000
+  max_download_bytes: 1073741824
+  max_object_bytes: 104857600
+  report_object_names: false
+```
+
+Para **só AWS**, use `driver: s3` (virtual-hosted; não defina `endpoint_url` nem `addressing_style` nesse driver).
+
+O tipo `object_storage` usa **um driver por provedor**; os drivers entregues são `s3` e `s3_compatible`.
+
+### Exemplo — Amazon S3 (não testado contra o serviço AWS real)
+
+```yaml
+
+- name: "aws-audit-prefix"
+  type: object_storage
+  driver: s3
+  bucket: customer-audit-bucket
+  region: sa-east-1
+  prefix: lgpd-corpus/
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+```
+
+**Não testado contra o Amazon S3 real** na evidência publicada neste repositório. Valide na sua conta antes de produção.
+
+### Exemplo — MinIO / endpoint compatível genérico (não testado contra appliances de fornecedor)
+
+Use `driver: s3_compatible` e `endpoint_url` (muitas vezes `addressing_style: path`). Mesmo padrão de credenciais do YAML acima.
+
+**Não testado contra MinIO real ou outros appliances** sem a sua própria prova. A evidência local do operador usou **SeaweedFS 4.54** (API compatível com S3), não MinIO.
+
+### Exemplo — Cloudflare R2 (não testado contra o serviço R2 real)
+
+```yaml
+
+- name: "r2-read-prefix"
+  type: object_storage
+  driver: s3_compatible
+  bucket: audit-bucket
+  region: auto
+  endpoint_url: https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+  prefix: exports/
+  addressing_style: path
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+```
+
+Substitua `<ACCOUNT_ID>` pelo id da conta Cloudflare. **Não testado contra o Cloudflare R2 real** na evidência publicada.
+
+- **Credenciais:** valores só no ambiente, via nomes `auth.*_from_env` (sem chaves inline, sem cadeia de credenciais da AWS, sem arquivo de perfil compartilhado, sem metadados de instância, sem acesso anônimo). Os nomes das variáveis seguem as regras de prefixo do projeto ([#1977](https://github.com/DataBoar/data-boar/issues/1977)). `session_token_from_env` opcional para chaves temporárias no estilo STS.
+- **Transporte:** só `https`; verificação de certificado TLS sempre ativa. `allow_private_networks: true` vale **somente** com `endpoint_url` de laboratório em `s3_compatible` (RFC1918, loopback ou outros destinos privados permitidos pela sua política).
+- **Limites (padrões são sugestões):** `max_objects`, `max_download_bytes` e `max_object_bytes` podem ser inteiro positivo ou `unlimited`. Ao atingir um teto, a listagem ou o download para, a varredura registra **cobertura parcial** (contagens e bytes não varridos) e a planilha **Target coverage** no Excel explica o motivo. Subir limites aumenta tráfego de listagem, disco temporário e tempo de execução. Ajuste pontual de limite por varredura **não** entra nesta entrega ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Chaves de objeto:** segmentos com `.` ou `..` são ignorados e reportados como `unsafe_key`. Versões de objeto e buckets anônimos **não** são suportados.
+- **Cobertura parcial vs “sem achados”:** **Target coverage** pode mostrar `PARTIAL` com a planilha de achados vazia — isso **não** é atestado de higiene. Por padrão, **nomes de objetos não varridos** aparecem só como **contagens**; use `report_object_names: true` no alvo se precisar dos nomes na cobertura (achados sempre carregam o caminho do objeto quando há hit).
+- **LGPD / GDPR:** varrer um bucket do cliente processa **dados pessoais dele**. Base legal, finalidade, retenção e DPA continuam com o **cliente**; o Data Boar faz leitura e classificação técnicas.
+- **Postura de evidência:** os relatórios descrevem o que foi lido sob a sua config — **evidência para triagem, não conclusão jurídica** e sem proteção contra multa regulatória.
+- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 e Cloudflare R2 seguem **não testados contra o serviço de nuvem real** nessa evidência.
+
+### IAM — menor privilégio (AWS)
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListOnlyThePrefix",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::<bucket>",
+      "Condition": { "StringLike": { "s3:prefix": ["<prefix>*"] } }
+    },
+    {
+      "Sid": "ReadOnlyThePrefix",
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::<bucket>/<prefix>*"
+    }
+  ]
+}
+```
+
+Notas:
+
+- Sem `prefix` no alvo, omita o bloco `Condition` e use `arn:aws:s3:::<bucket>/*` em `GetObject`.
+- Objetos SSE-KMS exigem **`kms:Decrypt`** na CMK do bucket.
+- Nunca conceda **`s3:*`** genérico nem ações de escrita/exclusão para auditoria somente leitura.
+- **Cloudflare R2:** prefira token de API com escopo **Object Read** no bucket.
+- **MinIO:** política JSON equivalente no bucket ou usuário.
+
+Semântica das ações IAM: [Actions, resources, and condition keys for Amazon S3](https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazons3.html) (documentação AWS; confira no console IAM da sua organização antes do deploy).
+
+Os achados usam a planilha **Filesystem findings**; motivos de varredura parcial aparecem em **Target coverage**. Arquitetura: [TECH_GUIDE.pt_BR.md — Armazenamento de objetos](TECH_GUIDE.pt_BR.md).
+
 Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`, `file_passwords`). Os achados entram na planilha **Filesystem findings**.
 
 ### Microsoft Graph em modo delegado (`type: sharepoint_online`)
 
-Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. Situação: implementado e testado contra um Microsoft Graph **simulado**; a prova real num OneDrive pessoal está pendente ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). **Não** foi validado contra SharePoint Online nem tenant de trabalho.
+Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. **Evidência:** o CI usa um Graph **simulado**; prova do operador em OneDrive **pessoal** em modo **delegado** pelo conector em **2026-11-18** (demo apresentação, sessão `c001d83a80c8_20261118_123726`) em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Bibliotecas **SharePoint Online** e tenants de **trabalho ou escola** seguem **sem validação**.
 
 ```yaml
 

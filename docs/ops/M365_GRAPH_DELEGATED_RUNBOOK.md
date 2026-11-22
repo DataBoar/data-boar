@@ -4,7 +4,7 @@
 
 **Issues:** [#2260](https://github.com/DataBoar/data-boar/issues/2260) (Phase 0, real proof) and [#2261](https://github.com/DataBoar/data-boar/issues/2261) (the `sharepoint_online` reader). Epic [#2206](https://github.com/DataBoar/data-boar/issues/2206).
 
-**Status:** Phase 0 is **pending**. The reader is implemented and tested **only against a simulated Microsoft Graph**. Nothing in this repository proves yet that it reads a real OneDrive.
+**Status:** Phase 0 **personal OneDrive** proof through the connector on **2026-11-18** is in [m365_graph_onedrive_delegated_2260_2026-11-18.md](evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). CI still uses a simulated Graph. SharePoint Online and work tenants are **not** validated.
 
 **What Phase 0 can prove, and what it cannot.** Phase 0 runs the reader against the **operator's personal OneDrive**, in one synthetic folder, with a human signing in by device code. It proves a **personal OneDrive only**. It does **not** prove SharePoint Online, a work or school tenant, conditional access policies of a tenant, app-only (unattended) access or real throttling. None of those may be claimed from Phase 0.
 

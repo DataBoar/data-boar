@@ -4,6 +4,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased
 
+- **Object storage (S3-class, Enterprise, #2306):** read-only `object_storage` targets with drivers `s3` (AWS) and `s3_compatible` (HTTPS `endpoint_url`), in-tree SigV4 signing, env-only credentials, per-target limits with partial-coverage reporting, and filesystem-equivalent findings. Not in this drop: per-scan limit override (#2313), object versions, or anonymous access.
+
 - **Operator docs (scan JSON, SQL intra-target, hybrid claim, integrity hub):** `POST /scan` and `/start` require `Content-Type: application/json` (HTTP 415) and reject `Sec-Fetch-Site: cross-site` (HTTP 403). USAGE/TECH_GUIDE/TROUBLESHOOTING_CONNECTIVITY describe the shipped SQLAlchemy per-table pool (#1322) and its serial cases (ARL, `inter_query_delay_ms`, Snowflake). Open-core licensing copy matches enforced hybrid `dbmldsa_sig`. INTEGRITY_HUB separates packaged `integrity_manifest.json` from optional `release-manifest.json`.
 
 - **Version line 1.8.1 (#2240):** `pyproject.toml` and About say **1.8.1** — the presentation version of 2026-11-16. Roadmap milestones renumbered (v1.8.1–v1.8.4 became v1.8.2–v1.8.5). Container base images re-pinned to current `python:3.14-slim` and distroless digests and the free-threaded CPython to 3.14.10, so the grype gate (`--fail-on high --only-fixed`) can pass. Not a release: no tag, GitHub Release or Docker Hub publish.

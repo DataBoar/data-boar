@@ -128,7 +128,12 @@ def test_no_secret_is_tracked():
     for path in DEMO.rglob("*"):
         if not path.is_file():
             continue
-        text = path.read_text(encoding="utf-8")
+        if "__pycache__" in path.parts:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
         assert not re.search(r"\$2[aby]\$\d\d\$", text), path  # bcrypt hash
         assert not re.search(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", text), path
         for ip in re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", text):

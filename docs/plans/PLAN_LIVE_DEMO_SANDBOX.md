@@ -109,6 +109,12 @@ proposal not yet verified.
 9. Per-prospect ephemeral pods (#2280): design — **done**
    (`docs/desenho/2280.1.md`); phase A (commands, unit, reaper, Ansible, acceptance)
    and phase B (upload) — **open**.
+10. **[H]** **Presentation** instance: operator `sharepoint_online` pilot on personal
+    OneDrive — **evidence recorded** 2026-11-18
+    ([m365_graph_onedrive_delegated_2260_2026-11-18.md](../ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md));
+    read-only **`object_storage`** (e.g. SeaweedFS or S3-compatible on the demo host)
+    after epic **#2306** merges — **not wired on `apresentacao` yet**; local operator
+    proof already exists ([object_storage_seaweedfs_2306_5_2026-11-20.md](../ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md)).
 
 ## Acceptance criteria (v0)
 

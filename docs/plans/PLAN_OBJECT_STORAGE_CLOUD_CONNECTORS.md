@@ -1,6 +1,8 @@
 # Plan: Object storage connectors (S3-class, Azure Blob, GCS)
 
-**Status:** Deferred
+<!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob and GCS later as drivers; Enterprise tier. -->
+
+**Status:** In progress (epic `epic/s3-object-storage-reader`, slices 2306.1–2306.5; Phase 1 read connector on branch, epic PR pending)
 **Date:** 2026-03-26
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -27,12 +29,12 @@ Enterprises increasingly store “data soup” in **cloud object storage**: **Am
 
 | #   | To-do                                                                                                                                                                                                                                                                                        | Status    |
 | -   | -----                                                                                                                                                                                                                                                                                        | ------    |
-| 1.1 | **Config schema:** `type: object_storage`, `driver: s3`, `bucket`, optional `prefix`, `region`, `endpoint_url` (for MinIO/R2), auth via **env** / **profile** / explicit keys only when documented as discouraged; align with `pass_from_env` patterns.                                      | ⬜ Pending |
-| 1.2 | **Connector module:** `connectors/s3_object_storage_connector.py` (or `object_storage_connector.py` with driver dispatch): list objects (paginated), filter by extension / size cap, download to temp or stream, delegate to shared “scan file bytes/path” helpers used by share connectors. | ⬜ Pending |
-| 1.3 | **Register** in `core/connector_registry.py`; engine wiring; optional-import guard + `[cloud]` extra.                                                                                                                                                                                        | ⬜ Pending |
-| 1.4 | **Limits:** `max_objects`, `max_download_bytes`, per-object timeout, respect global connector timeouts; **no** full-bucket unbounded scan by default.                                                                                                                                        | ⬜ Pending |
-| 1.5 | **Tests:** `moto` or MinIO container in CI (or heavy tests marked optional); unit tests for listing + one synthetic object path.                                                                                                                                                             | ⬜ Pending |
-| 1.6 | **Docs:** `USAGE` / `TECH_GUIDE` / operator samples (EN + pt-BR); IAM policy example (least privilege); security note on **never** using overly broad `s3:*` for audit use.                                                                                                                  | ⬜ Pending |
+| 1.1 | **Config schema:** `type: object_storage`, drivers `s3` / `s3_compatible`, `bucket`, optional `prefix`, `region`, `endpoint_url` (required on `s3_compatible`), auth **only** via `auth.*_from_env` ([#1977](https://github.com/DataBoar/data-boar/issues/1977)); no AWS credential chain or inline keys. | ✅ Epic #2306 |
+| 1.2 | **Connector module:** `connectors/s3_object_storage_connector.py` (or `object_storage_connector.py` with driver dispatch): list objects (paginated), filter by extension / size cap, download to temp or stream, delegate to shared “scan file bytes/path” helpers used by share connectors. | ✅ `object_storage_connector.py` |
+| 1.3 | **Register** in `core/connector_registry.py`; engine wiring; optional-import guard + `[cloud]` extra.                                                                                                                                                                                        | ✅ No `[cloud]` extra (SigV4 in-tree) |
+| 1.4 | **Limits:** `max_objects`, `max_download_bytes`, per-object timeout, respect global connector timeouts; **no** full-bucket unbounded scan by default.                                                                                                                                        | ✅ Epic #2306 |
+| 1.5 | **Tests:** `moto` or MinIO container in CI (or heavy tests marked optional); unit tests for listing + one synthetic object path.                                                                                                                                                             | ✅ Simulated S3 + SeaweedFS evidence (#2312) |
+| 1.6 | **Docs:** `USAGE` / `TECH_GUIDE` / operator samples (EN + pt-BR); IAM policy example (least privilege); security note on **never** using overly broad `s3:*` for audit use.                                                                                                                  | ✅ Epic #2311 + README pitch (#2306) on branch; epic PR pending |
 
 ### Phase 2 — **S3-compatible and Azure Blob**
 
@@ -51,7 +53,7 @@ Enterprises increasingly store “data soup” in **cloud object storage**: **Am
 
 ## Security and compliance notes
 
-- **Credentials:** Prefer **instance/profile/ workload identity** over long-lived keys; document rotation and `api_key_from_env`-style patterns for any secret-bearing config.
+- **Credentials:** **Env-only** credential names on the target (`auth.*_from_env`); no instance profile, no IMDS chain, no shared credentials file. Document rotation in operator runbooks; customer injects keys at runtime.
 - **Data processing:** Same product rule as today—**metadata only** in findings; avoid logging object body content.
 - **LGPD/GDPR:** Scanning a bucket may process **personal data** in the customer’s estate; operator docs should state **lawful basis / contract** and **DPA** expectations are the customer’s responsibility.
 - **Public buckets:** Optional future flag to **warn** if bucket policy suggests public read (SDK-dependent); not a replacement for CSPM tools.
@@ -60,10 +62,10 @@ Enterprises increasingly store “data soup” in **cloud object storage**: **Am
 
 ## Pitch / README
 
-When **Phase 1** ships, add **S3-class object storage** to the “data soup” list in **README.md** / **README.pt_BR.md** and trim this plan’s “not started” wording in [PLANS_TODO.md](PLANS_TODO.md).
+**S3-class object storage** is in the README “data soup” paragraph on epic branch (**#2306**); after local **SeaweedFS 4.54** evidence ([#2312](https://github.com/DataBoar/data-boar/issues/2312)), README polish may cite that proof while **Amazon S3 / R2 / MinIO appliance** stay “not tested against the real service”. Trim “not implemented” rows in [PLANS_TODO.md](PLANS_TODO.md) when the epic PR merges.
 
 ---
 
 ## Last updated
 
-2026-03-25 — Plan created; implementation deferred to a dedicated feature slice.
+2026-11-21 — Phase 1 implementation and 2306.4 documentation in progress on `epic/s3-object-storage-reader`.

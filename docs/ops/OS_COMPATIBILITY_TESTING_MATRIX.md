@@ -131,6 +131,19 @@ Tracked harness: **[`deploy/compat-matrix-config-ref/`](../../deploy/compat-matr
 
 **Recommendation:** If you install something Solaris-like, prefer a **current illumos** ISO (**OpenIndiana** etc.) in a **VM** on **Proxmox** or spare metal — **after** Tier 1–3 Linux coverage. Keep **OpenSolaris-era** bits **lab-only** and **air-gapped** if possible.
 
+### Tier 4.5: Legacy host platforms (Linux s390x, AIX, HP-UX, z/OS) — [#2183](https://github.com/DataBoar/data-boar/issues/2183)
+
+Host vs target boundary, in three classes: **1** host validatable in a VM; **2** host only with vendor hardware or license; **3** target only (Data Soup ingredient, ingestion through [#1666](https://github.com/DataBoar/data-boar/issues/1666)). Status from third-party reports and metadata: **none tested locally**. Detail and evidence: [PLAN_LEGACY_HOST_PLATFORMS.md](../plans/PLAN_LEGACY_HOST_PLATFORMS.md).
+
+| Platform | Class | Status |
+| --- | --- | --- |
+| **Linux s390x (IBM Z / LinuxONE)** | candidate for 1 | `qemu-system-s390x` and official s390x images exist; QEMU recipe **pending, not validated** (big-endian: useful to catch endianness assumptions in native wheels and the Rust extension) |
+| **AIX (POWER)** | candidate for 2 | reports say QEMU `pseries` does not boot AIX 7.3; licensed media; Python 3.12+ not verified |
+| **HP-UX (PA-RISC / Itanium)** | candidate for 2 or 3 | mixed QEMU PA-RISC reports (11.11), failures on 11.23/11.31, no Itanium source; licensed media |
+| **z/OS** | 3 (target) | not a host; data reaches a supported host through #1666 |
+
+Evidence, not a support conclusion: no legacy platform is declared supported as a host.
+
 ---
 
 ## 3. Testing checklist per distro

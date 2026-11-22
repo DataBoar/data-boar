@@ -100,7 +100,9 @@ _CONNECTOR_TIER_FEATURES: dict[str, str] = {
     "redis": "connector_redis",
     # Cloud connectors (Pro)
     "snowflake": "connector_snowflake",
+    # object_storage targets resolve by driver name, never by URL (#2306, DEC-15/16).
     "s3": "connector_s3_object_storage",
+    "s3_compatible": "connector_s3_compatible",
     "azure_blob": "connector_azure_blob",
     "gcs": "connector_gcs",
     # Managed corporate infrastructure (Pro)
@@ -134,6 +136,11 @@ def tier_feature_for_target(target: dict[str, Any]) -> str | None:
         return _CONNECTOR_TIER_FEATURES[t]
     if t == "database":
         driver = (target.get("driver") or "").split("+")[0].strip().lower()
+        return _CONNECTOR_TIER_FEATURES.get(driver)
+    if t == "object_storage":
+        # #2306 (DEC-15): the tier comes from the driver name only; endpoint_url and
+        # hosts are never read here.
+        driver = str(target.get("driver") or "").strip().lower()
         return _CONNECTOR_TIER_FEATURES.get(driver)
     return None
 
@@ -218,6 +225,8 @@ def connector_for_target(target: dict[str, Any]) -> tuple[Type[Any], list[str]] 
         return _try_get_connector(t)
     if t in ("powerbi", "dataverse", "powerapps"):
         return _try_get_connector(t)
+    if t == "object_storage":
+        return _try_get_connector("object_storage")
     if t == "hubspot":
         return _try_get_connector("hubspot")
     if t == "database":
