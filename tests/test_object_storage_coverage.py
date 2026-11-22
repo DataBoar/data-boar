@@ -392,7 +392,11 @@ def test_D2306_71_bloco_malformado_ou_bool_nao_vira_cobertura() -> None:
 
     rows = _coverage_rows(
         [
-            {"target_name": "bad-json", "source_type": "object_storage", "raw_details": "{"},
+            {
+                "target_name": "bad-json",
+                "source_type": "object_storage",
+                "raw_details": "{",
+            },
             {
                 "target_name": "unknown-coverage",
                 "source_type": "object_storage",

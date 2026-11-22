@@ -248,7 +248,9 @@ def test_oauth2_env_credential_rejects_disallowed_prefix_for_each_reference_form
 def test_env_name_from_interpolation_strips_and_ignores_non_strings() -> None:
     """#2304 helper: ${ ENV } yields the inner name; non-strings and literals yield empty."""
     assert _env_name_from_interpolation("${ GITHUB_TOKEN }") == "GITHUB_TOKEN"
-    assert _env_name_from_interpolation("  ${API_CLIENT_SECRET}  ") == "API_CLIENT_SECRET"
+    assert (
+        _env_name_from_interpolation("  ${API_CLIENT_SECRET}  ") == "API_CLIENT_SECRET"
+    )
     assert _env_name_from_interpolation("${}") == ""
     assert _env_name_from_interpolation("not-interpolated") == ""
     assert _env_name_from_interpolation({"client_secret": "${API_CLIENT_SECRET}"}) == ""
