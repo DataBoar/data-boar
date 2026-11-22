@@ -248,6 +248,56 @@ Strategic umbrella: #2342
 Initial contract/spec issues: #2343, #2344, #2346  
 Plan materialization and index synchronization: #2347
 
+
+## Weighted Competitive Scorecard — Internal Decision Aid Only
+
+A weighted scorecard was proposed to force explicit discussion about the problem Data Boar intends to solve rather than raw feature count. Its criteria and weights are a useful candidate evaluation framework, but the ratings are not evidence-backed measurements.
+
+| Criterion | Weight | Data Boar | BigID | OneTrust | Thales DSPM | RiskOps/GRC |
+|---|---:|---:|---:|---:|---:|---:|
+| Discovery | 15 | 5 | 5 | 3 | 5 | 1 |
+| Data Source Breadth | 10 | 4 | 5 | 3 | 4 | 1 |
+| Exposure & Permissions | 15 | 4 | 3 | 1 | 5 | 2 |
+| Risk Context | 10 | 3 | 3 | 4 | 4 | 5 |
+| Evidence & Auditability | 15 | 5 | 2 | 2 | 2 | 2 |
+| Governance | 10 | 2 | 4 | 5 | 3 | 5 |
+| Operational Simplicity | 10 | 5 | 2 | 2 | 2 | 2 |
+| Offline / Air-Gapped | 5 | 5 | 2 | 1 | 2 | 3 |
+| Coverage Transparency | 5 | 5 | 1 | 1 | 2 | 1 |
+| Cost / Complexity Efficiency | 5 | 5 | 1 | 1 | 1 | 2 |
+| **Weighted points (max 500)** | **100** | **425** | **310** | **245** | **335** | **235** |
+| **Normalized score (max 5)** |  | **4.25** | **3.10** | **2.45** | **3.35** | **2.35** |
+
+**Arithmetic note:** weighted points are the sum of weight × rating; normalized score is weighted points divided by 100. These calculations correct the totals in the supplied draft.
+
+**Interpretation and restrictions:**
+- The arithmetic is reproducible; the ratings are not validated. Correct calculation does not make unsupported inputs factual.
+- The Data Boar column mixes current capabilities and roadmap aspirations; it is not a measured 1.9 product score.
+- Competitor ratings have not been established through current, edition-specific documentation or hands-on evaluation.
+- Criteria and weights may remain as a discussion framework. Scores and ranking are internal hypotheses—not a market benchmark, procurement guide, investor claim or external marketing artifact.
+- Before external use, define evidence requirements per criterion, normalize deployment/edition scope, collect comparable primary sources, and score shipped behavior separately from roadmap intent.
+- The strategic question is not “who has the most features?” but “who solves the target customer's evidence-backed data-exposure problem with the least operational burden?” This remains a hypothesis to validate with customers.
+
+## Expanded MVP Proposal — Candidate Decomposition, Not 1.9 Definition of Done
+
+A broader proposal decomposes the long-term capability into six workstreams:
+
+1. **Identity Inventory Foundation** — source-aware identities and membership evidence.
+2. **Access Inventory Foundation** — source-aware resources, grants and permission semantics.
+3. **Exposure Profile / Score** — deterministic, reproducible and calibrated prioritization.
+4. **Exposure Graph experience** — navigate identity → group → permission → resource → data, with relationship provenance.
+5. **Risk Aggregation** — reduce finding volume into evidence-linked review candidates without losing source findings.
+6. **Blast Radius** — estimate potential reachability only over validated, bounded relationships.
+
+This is a useful program map, not six committed 1.9 epics. Workstreams 1–3 are the narrow initial contract/specification candidates. Workstream 4 is a later UI/product capability: the logical graph model can exist without a graph browser. Workstreams 5–6 depend on validated identity/access semantics, explicit unknowns, cycle-safe bounded traversal, ground-truth fixtures and reproducible evaluation.
+
+The expanded proposal also suggested M365/OneDrive/SharePoint/Object Storage ACLs, HTML reporting and JSON export as mandatory Definition of Done. These are not accepted as blanket release commitments:
+- Connector support must be scoped per source and capability; SharePoint/OneDrive and object storage do not share universal permission semantics.
+- A connector enters the evaluated population only for metadata it can actually observe with documented scopes and limitations.
+- HTML and JSON outputs should reuse existing report/export paths; add work only after verifying a concrete gap.
+- A graph UI, Top 20 exposure ranking, risk aggregation and blast-radius counts require separate product and evidence gates.
+- Acceptance language must say “observed principals/relationships under supported source semantics,” not universal “who can access” or a count of unique humans.
+
 ## Strategic Doctrine Set
 
 This document is the umbrella vision. The following companion documents define the product doctrines behind its pillars; they are strategic references, not independent delivery plans or release commitments:
