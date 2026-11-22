@@ -4,6 +4,8 @@
 
 Ponto de entrada para **cenários concretos de produto** (discovery, hand-off de remediação, evidência de compliance). Cada arquivo funciona sozinho; leia em sequência para a história completa **escanear → remediar → provar**.
 
+**Mapa de domínios funcionais:** [FUNCTIONAL_DOMAINS.pt_BR.md](../FUNCTIONAL_DOMAINS.pt_BR.md) define os domínios canônicos FD-01…FD-08 e os cruza com os storyboards setoriais. Use-o para distinguir responsabilidades do produto, verticais e taxonomias GRC externas.
+
 Os **storyboards de workshop** (narrativas por setor para pré-vendas) continuam em [README.md](README.md) ([EN](README.md)).
 
 **Decks executivos** (stakeholder, DPO, CISO): [pitch/INDEX.pt_BR.md](../pitch/INDEX.pt_BR.md) ([EN](../pitch/INDEX.md)).

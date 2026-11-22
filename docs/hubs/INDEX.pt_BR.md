@@ -55,6 +55,7 @@
 | README docs | `docs/README.md` | Tabelas EN/pt-BR |
 | Guia de audiências | `docs/AUDIENCE_GUIDE.md` | Quem lê o quê |
 | MAP | `docs/MAP.md` | Navegação por preocupação |
+| **Domínios funcionais** | `docs/FUNCTIONAL_DOMAINS.md` | Taxonomia FD-01…FD-08; cruzamento de verticais e guardrails |
 | Use cases | `docs/use-cases/USE_CASES_HUB.md` | Cenários de produto |
 | Pitch | `docs/pitch/INDEX.md` | Decks executivos (stakeholder, DPO, CISO, CDO, CIO, PMO, CFO, CCO) |
 | Hub educacional | `docs/hubs/EDUCATIONAL_HUB.md` | Onboarding, primer de IA anti-hype, caminho dos primers de framework |
