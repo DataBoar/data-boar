@@ -1409,7 +1409,7 @@ Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recu
 
 ### Microsoft Graph em modo delegado (`type: sharepoint_online`)
 
-Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. Situação: implementado e testado contra um Microsoft Graph **simulado**; a prova real num OneDrive pessoal está pendente ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). **Não** foi validado contra SharePoint Online nem tenant de trabalho.
+Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. **Evidência:** o CI usa um Graph **simulado**; prova do operador em OneDrive **pessoal** em modo **delegado** pelo conector em **2026-11-18** (demo apresentação, sessão `c001d83a80c8_20261118_123726`) em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Bibliotecas **SharePoint Online** e tenants de **trabalho ou escola** seguem **sem validação**.
 
 ```yaml
 

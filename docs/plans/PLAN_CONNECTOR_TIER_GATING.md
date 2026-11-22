@@ -16,7 +16,7 @@
 ## Context
 
 The `FEATURE_TIER_MAP` (`core/licensing/tier_features.py`) tiered some cloud
-connectors (Snowflake/SAP/S3/Azure/GCS = Pro), but the implemented corporate
+connectors (Snowflake/SAP = Pro; S3 and S3-compatible object storage = Enterprise per #2306; Azure/GCS Pro-reserved), but the implemented corporate
 connectors stayed OUT of the map — de facto free in open-core: PowerBI,
 SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle. Worse, the
 connector registry did not call `require_feature` at instantiation, so there

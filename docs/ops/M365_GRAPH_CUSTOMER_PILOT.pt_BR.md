@@ -2,7 +2,7 @@
 
 **English:** [M365_GRAPH_CUSTOMER_PILOT.md](M365_GRAPH_CUSTOMER_PILOT.md)
 
-**Situação:** o leitor `sharepoint_online` (modo delegado) foi testado **só contra um Microsoft Graph simulado**. A prova com conta real cobre um **OneDrive pessoal** ([#2260](https://github.com/DataBoar/data-boar/issues/2260)) e **ainda não rodou**. Ele **não** foi validado em tenant de trabalho ou escola nem contra SharePoint Online. Um piloto no cliente é, portanto, uma **avaliação**: registre o que acontecer e não afirme nada além disso. Contexto e referências da Microsoft: [TECH_GUIDE.pt_BR.md, "Microsoft 365 via Graph"](../TECH_GUIDE.pt_BR.md#microsoft-365-via-graph).
+**Situação:** testes automatizados usam Graph **simulado**. A prova em **OneDrive pessoal** pelo conector em **2026-11-18** está em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Tenants de **trabalho ou escola** e bibliotecas **SharePoint Online** **ainda não** foram validados. Um piloto no cliente continua sendo **avaliação**: registre o que acontecer e não afirme nada além disso. Contexto e referências da Microsoft: [TECH_GUIDE.pt_BR.md, "Microsoft 365 via Graph"](../TECH_GUIDE.pt_BR.md#microsoft-365-via-graph).
 
 Use placeholders em chamados e anotações: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`. Nunca cole identificadores reais, tokens ou códigos numa issue do Data Boar.
 

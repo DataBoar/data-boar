@@ -18,7 +18,7 @@ def _discover_xlsx_writer_sources() -> set[str]:
     found: set[str] = set()
     for path in REPO_ROOT.rglob("*.py"):
         rel = path.relative_to(REPO_ROOT)
-        if rel.parts and rel.parts[0] in {"tests", ".venv", ".git"}:
+        if rel.parts and rel.parts[0] in {"tests", ".venv", ".git", ".claude"}:
             continue
         if b"to_excel(" in path.read_bytes():
             found.add(rel.as_posix())

@@ -2,7 +2,7 @@
 
 **Português (Brasil):** [M365_GRAPH_CUSTOMER_PILOT.pt_BR.md](M365_GRAPH_CUSTOMER_PILOT.pt_BR.md)
 
-**Status:** the `sharepoint_online` reader (delegated mode) is tested **only against a simulated Microsoft Graph**. Its real-account proof covers a **personal OneDrive** ([#2260](https://github.com/DataBoar/data-boar/issues/2260)) and **has not run yet**. It has **not** been validated in a work or school tenant or against SharePoint Online. A customer pilot is therefore an **evaluation**: record what happens, and claim nothing beyond it. Background and Microsoft references: [TECH_GUIDE.md, "Microsoft 365 via Graph"](../TECH_GUIDE.md#microsoft-365-via-graph).
+**Status:** automated tests use a **simulated** Microsoft Graph. Operator proof against a **personal OneDrive** through the connector on **2026-11-18** is in [m365_graph_onedrive_delegated_2260_2026-11-18.md](evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). **Work or school** tenants and **SharePoint Online** site libraries are still **not** validated. A customer pilot remains an **evaluation**: record what happens, and claim nothing beyond it. Background and Microsoft references: [TECH_GUIDE.md, "Microsoft 365 via Graph"](../TECH_GUIDE.md#microsoft-365-via-graph).
 
 Use placeholders in tickets and notes: `<APP_CLIENT_ID>`, `<TENANT_ID>`, `user@example.com`. Never paste real identifiers, tokens or codes into a Data Boar issue.
 

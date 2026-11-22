@@ -32,6 +32,11 @@ paths = [
   # rule itself is not weakened.
   '''docs/ops/OPERATOR_NOTIFICATION_CHANNELS\.md''',
   '''tests/data/licensing_hybrid/.*\.jwt''',
+  # FP: AWS SigV4 published documentation example secret (assembled at runtime in tests;
+  # not a live credential). Historical epic commits #2306 flagged generic-api-key.
+  '''tests/s3_fake\.py''',
+  '''tests/test_object_storage_acceptance\.py''',
+  '''tests/test_s3_sigv4\.py''',
 ]
 
 # ── Governança: NÃO EXISTE CO-AUTORIA (fail-closed, defense-in-depth) ──

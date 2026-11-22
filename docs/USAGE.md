@@ -1259,7 +1259,7 @@ All share types use the same `file_scan` settings (extensions, recursive, scan_s
 
 ### Microsoft Graph, delegated mode (`type: sharepoint_online`)
 
-Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. Status: implemented and tested against a **simulated** Microsoft Graph; real proof against a personal OneDrive is pending ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). It has **not** been validated against SharePoint Online or a work tenant.
+Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. **Evidence:** CI and local tests use a **simulated** Graph; operator proof against a **personal** OneDrive in **delegated** mode through this connector on **2026-11-18** (presentation demo, session `c001d83a80c8_20261118_123726`) is in [m365_graph_onedrive_delegated_2260_2026-11-18.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). SharePoint Online site libraries and **work or school** tenants remain **not validated**.
 
 ```yaml
 
