@@ -50,7 +50,7 @@ Uma vertical é composição de domínios funcionais, não uma nova arquitetura.
 | ONGs e registros humanitários | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07 | [ONG](use-cases/NGO_MIGRANT_WELCOME_AND_HUMANITARIAN_FILES.pt_BR.md) |
 | EdTech, LMS e menores | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07 | [EdTech](use-cases/EDTECH_LMS_EXPORTS_AND_MINORS.pt_BR.md) |
 | Backup e parque de proteção de dados | FD-01, FD-03, FD-04, FD-05, FD-08 | [Backup](use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.pt_BR.md) |
-| Prestadores que processam dados confiados por clientes | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07, FD-08 | [Entrusted Client Data Governance](use-cases/USE_CASE_ENTRUSTED_CLIENT_DATA_GOVERNANCE.pt_BR.md), rastreado pela [#2321](https://github.com/DataBoar/data-boar/issues/2321) |
+| Prestadores que processam dados confiados por clientes | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07, FD-08 | Entrusted Client Data Governance (use case proposto), rastreado pela [#2321](https://github.com/DataBoar/data-boar/issues/2321) |
 
 Biometria é categoria de dado sensível/preocupação transversal, não vertical: [use case de biometria](use-cases/USE_CASE_BIOMETRIC_DATA_PROTECTION.pt_BR.md). Scan → remediate → prove e findings tokenizados são fluxos horizontais aplicáveis a várias verticais: [scan and remediate](use-cases/USE_CASE_SCAN_AND_REMEDIATE.pt_BR.md), [findings tokenizados](use-cases/USE_CASE_TOKENIZED_FINDINGS.pt_BR.md).
 
