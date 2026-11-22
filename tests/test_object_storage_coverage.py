@@ -19,6 +19,7 @@ import pytest
 from openpyxl import load_workbook
 
 from core.database import failure_hint
+from report.generator import _coverage_int, _coverage_rows, _readable_bytes
 from tests.object_storage_dev_harness import (
     COVERAGE_KEYS,
     MIB,
@@ -375,6 +376,57 @@ def test_D2306_73_linha_sem_bloco_fica_fora_da_cobertura(tmp_path: Path) -> None
     names = {str(v) for r in inventory for v in r.values() if v is not None}
     assert "db-alvo" in names
     assert TARGET_NAME in names
+
+
+def test_D2306_71_bloco_malformado_ou_bool_nao_vira_cobertura() -> None:
+    """Malformed inventory JSON, unknown coverage, and bool-as-int counts stay out.
+
+    True is a subclass of int in Python; counting it as 1 would invent objects
+    that were never listed. Invalid JSON must not abort the rest of the sheet.
+    """
+    assert _coverage_int({"objects_not_scanned": True}, "objects_not_scanned") == 0
+    assert _coverage_int({"objects_not_scanned": 4}, "objects_not_scanned") == 4
+    assert _readable_bytes(0) == "0 B"
+    assert _readable_bytes(1023) == "1023 B"
+    assert _readable_bytes(1024) == "1.0 KiB"
+
+    rows = _coverage_rows(
+        [
+            {
+                "target_name": "bad-json",
+                "source_type": "object_storage",
+                "raw_details": "{",
+            },
+            {
+                "target_name": "unknown-coverage",
+                "source_type": "object_storage",
+                "raw_details": json.dumps({"executive": {"coverage": "skipped"}}),
+            },
+            {
+                "target_name": "bool-counts",
+                "source_type": "object_storage",
+                "raw_details": json.dumps(
+                    {
+                        "executive": {
+                            "coverage": "partial",
+                            "objects_not_scanned": True,
+                            "bytes_not_scanned": False,
+                            "objects_listed": 3,
+                            "objects_scanned": 2,
+                            "listing_complete": True,
+                            "not_scanned_by_reason": {"too_large": 0, "unsafe_key": 2},
+                        }
+                    }
+                ),
+            },
+        ],
+        set(),
+    )
+    assert [r["Target"] for r in rows] == ["bool-counts"]
+    assert rows[0]["Objects not scanned"] == 0
+    assert rows[0]["Bytes not scanned"] == 0
+    assert rows[0]["Bytes not scanned (readable)"] == "0 B"
+    assert rows[0]["Not scanned by reason"] == "unsafe_key=2"
 
 
 # ----------------------------------------------------------------------------

@@ -433,6 +433,41 @@ def test_D2306_11_signed_headers_exatos_com_e_sem_sessao() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "extra_headers",
+    [
+        {"Host": "evil.example"},
+        {"authorization": "AWS4-HMAC-SHA256 Credential=forged"},
+        {"X-Amz-Date": "20130524T000000Z"},
+        {"x-amz-content-sha256": "0" * 64},
+        {"range": "bytes=0-9", "RANGE": "bytes=0-99"},
+        {"": "bytes=0-9"},
+        {"x-amz-meta-owner": "operator"},
+    ],
+)
+def test_D2306_11_extra_headers_reservados_ou_duplicados_sao_recusados(
+    extra_headers: dict[str, str],
+) -> None:
+    """Reserved, x-amz-*, empty, or duplicate extra header names must not be signed.
+
+    A colliding extra header would otherwise override Host / Authorization / X-Amz-Date
+    or inject an unsigned-looking x-amz-* name into SignedHeaders.
+    """
+    creds = new_credentials(with_token=True)
+    with pytest.raises(ValueError, match="extra header name is not accepted") as info:
+        _sign(creds=creds, extra_headers=extra_headers)
+    text = "".join(traceback.format_exception(info.value))
+    assert creds.secret_access_key not in text
+    assert creds.secret_access_key not in str(info.value)
+
+
+def test_D2306_11_extra_header_com_controle_no_valor_e_recusado() -> None:
+    creds = new_credentials(with_token=False)
+    # Newlines are collapsed by SigV4 header canonicalization; DEL is not.
+    with pytest.raises(ValueError, match="extra header value is invalid"):
+        _sign(creds=creds, extra_headers={"range": "bytes=0-9\x7f"})
+
+
 def test_D2306_12_hash_do_corpo_e_o_do_corpo_vazio() -> None:
     for creds in (new_credentials(with_token=False), new_credentials()):
         _q, headers = _sign(creds=creds)
