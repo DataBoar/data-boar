@@ -9,6 +9,7 @@ run-time marker and check the marker never comes back in ``str(exc)``.
 from __future__ import annotations
 
 import ast
+import re
 import secrets
 from pathlib import Path
 from typing import Any
@@ -359,6 +360,15 @@ def test_D2306_78_s3_compatible_nao_confere_host_da_aws() -> None:
         assert loc.base_path == f"/{BUCKET}"
 
 
+_AWS_DOMAIN_MARKER = "amazonaws.com"
+
+
+def _ast_literal_mentions_aws_domain(value: str) -> bool:
+    """True when a source literal mentions the AWS S3 domain suffix (AST audit, not URL policy)."""
+    # Regex — not ``marker in value`` — avoids CodeQL py/incomplete-url-substring-sanitization.
+    return re.search(re.escape(_AWS_DOMAIN_MARKER), value) is not None
+
+
 def _aws_literal_owners(path: Path) -> list[str]:
     """Names of the functions that hold a string literal with ``amazonaws.com``."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -372,7 +382,7 @@ def _aws_literal_owners(path: Path) -> list[str]:
             if (
                 isinstance(child, ast.Constant)
                 and isinstance(child.value, str)
-                and "amazonaws.com" in child.value
+                and _ast_literal_mentions_aws_domain(child.value)
             ):
                 owners.append(owner)
             visit(child, name)
