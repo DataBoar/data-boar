@@ -3,15 +3,15 @@
 <!-- plans-hub-summary: Evidence-first data exposure intelligence: discover data, understand observed access relationships, prioritize explainable exposure, and prove coverage. -->
 <!-- plans-hub-related: PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md, PLAN_MULTIFRAMEWORK_OVERLAY.md -->
 
-**Status:** Proposed strategic plan; staged and evidence-gated  
-**Date:** 2026-11-22  
+**Status:** Proposed strategic plan; staged and evidence-gated
+**Date:** 2026-11-22
 **Strategic umbrella:** [#2342](https://github.com/DataBoar/data-boar/issues/2342)
 
 ## Product thesis
 
 > Data Boar helps organizations discover where their data exists, understand who may be able to reach it, measure observable exposure, and produce auditable evidence of coverage and risk.
 
-**Positioning:** Data Exposure Intelligence  
+**Positioning:** Data Exposure Intelligence
 **Progression:** **DISCOVER → UNDERSTAND → PRIORITIZE → PROVE**
 
 | Question | Capability | Evidence boundary |

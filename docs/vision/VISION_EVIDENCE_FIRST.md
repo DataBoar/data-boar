@@ -1,8 +1,8 @@
 # Vision: Evidence First
 
-**Status:** Strategic doctrine — non-binding product direction  
-**Horizon:** Foundational invariant across all Data Boar capabilities  
-**Parent vision:** [Data Exposure Intelligence](VISION_DATA_EXPOSURE_INTELLIGENCE.md)  
+**Status:** Strategic doctrine — non-binding product direction
+**Horizon:** Foundational invariant across all Data Boar capabilities
+**Parent vision:** [Data Exposure Intelligence](VISION_DATA_EXPOSURE_INTELLIGENCE.md)
 **Related work:** #1169, #1525, #1527, #2273, #2342, ADR-0017
 
 ## Purpose

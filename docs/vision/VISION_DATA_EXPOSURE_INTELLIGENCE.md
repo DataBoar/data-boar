@@ -1,7 +1,7 @@
 # Vision: Data Exposure Intelligence
 
-**Status:** Visionary — strategic direction, not a committed delivery plan  
-**Horizon:** 12–36 months; post-Data Soup foundation  
+**Status:** Visionary — strategic direction, not a committed delivery plan
+**Horizon:** 12–36 months; post-Data Soup foundation
 **Related:** #2342 · #2343 · #2344 · #2346 · #2347
 
 ## Executive Summary
@@ -18,7 +18,7 @@ This evolution is called **Data Exposure Intelligence**.
 
 The objective is not to become a full DSPM, GRC or workflow platform. It is to connect discovery, exposure analysis, risk prioritization and evidence in a single observable model.
 
-**DISCOVER → UNDERSTAND → PRIORITIZE → PROVE**
+## DISCOVER → UNDERSTAND → PRIORITIZE → PROVE
 
 This vision describes a direction and capability hypotheses. It does not assert that every capability below is currently implemented or committed to a release.
 
@@ -244,10 +244,9 @@ The combination of those answers forms the foundation of Data Exposure Intellige
 
 This vision is deliberately broader than a release plan. The staged, dependency-aware 1.9 plan belongs in `docs/plans/PLAN_1_9_DATA_EXPOSURE_INTELLIGENCE.md`; execution status remains in `PLANS_TODO.md` and milestones. This vision does not create calendar commitments or override existing issues.
 
-Strategic umbrella: #2342  
-Initial contract/spec issues: #2343, #2344, #2346  
+Strategic umbrella: #2342
+Initial contract/spec issues: #2343, #2344, #2346
 Plan materialization and index synchronization: #2347
-
 
 ## Weighted Competitive Scorecard — Internal Decision Aid Only
 

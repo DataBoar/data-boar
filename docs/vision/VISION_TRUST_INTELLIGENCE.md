@@ -1,8 +1,8 @@
 # Vision: Trust Intelligence
 
-**Status:** Strategic doctrine — non-binding product direction  
-**Horizon:** Emerges after evidence, coverage and source semantics are mature  
-**Parent vision:** [Data Exposure Intelligence](VISION_DATA_EXPOSURE_INTELLIGENCE.md)  
+**Status:** Strategic doctrine — non-binding product direction
+**Horizon:** Emerges after evidence, coverage and source semantics are mature
+**Parent vision:** [Data Exposure Intelligence](VISION_DATA_EXPOSURE_INTELLIGENCE.md)
 **Related work:** #1169, #1525, #1527, #2342, #2343, #2344, #2346, ADR-0017
 
 ## Purpose
@@ -113,4 +113,4 @@ A design violates this vision if it:
 - hides stale, conflicting or partial observations;
 - makes a compliance or certification claim from technical inventory alone.
 
-**Trust is not asserted by Data Boar. It is made inspectable.**
+## Trust is not asserted by Data Boar. It is made inspectable.

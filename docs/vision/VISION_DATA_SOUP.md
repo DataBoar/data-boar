@@ -1,8 +1,8 @@
 # Vision: Data Soup
 
-**Status:** Strategic doctrine — non-binding product direction  
-**Horizon:** Foundational capability; evolves with connector and evidence contracts  
-**Parent vision:** [Data Exposure Intelligence](VISION_DATA_EXPOSURE_INTELLIGENCE.md)  
+**Status:** Strategic doctrine — non-binding product direction
+**Horizon:** Foundational capability; evolves with connector and evidence contracts
+**Parent vision:** [Data Exposure Intelligence](VISION_DATA_EXPOSURE_INTELLIGENCE.md)
 **Related work:** #1667, #1169, #1527, #2273, #2326–#2341
 
 ## Purpose
