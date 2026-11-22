@@ -4,6 +4,8 @@
 
 Entry point for **concrete product scenarios** (discovery, remediation hand-off, compliance evidence). Each file stands alone; read in sequence for the full **scan → remediate → prove** story.
 
+**Functional-domain map:** [FUNCTIONAL_DOMAINS.md](../FUNCTIONAL_DOMAINS.md) defines the canonical FD-01…FD-08 product domains and maps them to sector storyboards. Use it to distinguish product responsibilities from verticals and external GRC taxonomies.
+
 **Workshop storyboards** (sector narratives for sales engineering) remain in [README.md](README.md) ([pt-BR](README.pt_BR.md)).
 
 **Executive pitch decks** (stakeholder, DPO, CISO): [pitch/INDEX.md](../pitch/INDEX.md) ([pt-BR](../pitch/INDEX.pt_BR.md)).
