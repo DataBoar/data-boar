@@ -23,6 +23,7 @@ Do **not** start from scattered snippets: use one tracked sample and edit paths/
 - **SQL databases**: PostgreSQL, MySQL, MariaDB, SQLite, Microsoft SQL Server, Oracle (via SQLAlchemy drivers).
 - **Power BI (optional)**: Discover workspaces, datasets, and tables via Power BI REST API; sample with DAX. Azure AD OAuth2 (client credentials). Findings in **Database findings** sheet; inventory metadata in **Data source inventory**.
 - **Power Apps / Dataverse (optional)**: Discover entities and attributes via Dataverse Web API; sample rows. Azure AD OAuth2 (client credentials). Findings in **Database findings** sheet; inventory metadata in **Data source inventory**.
+- **Object storage (Enterprise, optional)**: `type: object_storage` with drivers `s3` or `s3_compatible`; in-tree SigV4 (no `boto3` extra). See [Object storage](#object-storage-s3-class) and [USAGE.md](USAGE.md).
 - **Remote shares (optional)**: SharePoint on-prem, WebDAV, SMB/CIFS, NFS — by FQDN or IP with credentials in config; install `.[shares]`.
 - **Microsoft Graph, delegated mode (`sharepoint_online`, Enterprise)**: one folder of the signed-in user's OneDrive, device code sign-in from a terminal; tested against a simulated Graph, real proof pending (see the table below).
 - **NoSQL (optional)**: MongoDB, Redis — install optional deps: `uv pip install -e ".[nosql]"`.
@@ -683,6 +684,21 @@ All share types use the same **file_scan** settings (extensions, recursive, scan
 When you enable `file_scan.use_content_type: true`, the share connectors use the same helper as the filesystem connector. **Simple cloaking** here means the **filename extension** does not match the **real** container (e.g. PDF bytes behind a `.txt` or **non-text** extension such as `.mp3`). Extension-only tools route wrong; magic bytes still expose `%PDF-...` or a rich-media signature, so PDFs are treated as PDF for extraction, and **image/audio/video** with misleading extensions are remapped via the shared magic-byte table. **`scan_rich_media_metadata`** / **`scan_image_ocr`** apply to SMB, WebDAV, and SharePoint the same way (and inside **scan_compressed** archives when those members match). This remains **opt-in**; with the flag disabled, scanning stays extension-based for type choice (aside from explicit rich-media extensions when those flags add them to the effective extension set).
 
 For a **single run** without editing the saved config, use CLI **`--content-type-check`**, or **`POST /scan`** / **`POST /start`** with **`content_type_check: true`**, or the dashboard checkbox next to **Start scan** (same semantics as **`--scan-compressed`** / **`scan_compressed`** for archives).
+
+## Object storage (S3-class)
+
+<a id="object-storage-s3-class"></a>
+
+Read-only **ListObjectsV2-style listing** and object **GET** for one bucket, then the same **file_scan** pipeline as shares (extensions, compressed archives, SQLite-as-DB, optional rich media). **Enterprise** tier (`connector_s3_object_storage` and `connector_s3_compatible` in licensing). Implementation: `connectors/object_storage_connector.py` (common layer) + driver registry in `connectors/object_storage_driver.py`; built-in drivers `s3` and `s3_compatible` in `connectors/object_storage_s3.py` with `s3_addressing.py` / `s3_sigv4.py` (**no** optional `.[cloud]` / `botocore`).
+
+| Driver | Destination | Credentials | Notes |
+| ------ | ------------- | ----------- | ----- |
+| **s3** | AWS virtual-hosted S3 endpoint for `bucket` + `region` | `auth.*_from_env` only (see [#1977](https://github.com/DataBoar/data-boar/issues/1977)) | No `endpoint_url` / `addressing_style` on this driver |
+| **s3_compatible** | `endpoint_url` (HTTPS, single host) | Same env pattern | `addressing_style` `path` (default) or `virtual`; `allow_private_networks` for lab endpoints |
+
+**Network contract:** one pinned HTTPS peer per target; DNS validated via shared `url_guard`; **redirects are never followed**. Failures and inventory use fixed phrases (no server body text in findings). **Limits:** `max_objects`, `max_download_bytes`, `max_object_bytes`, connect/read timeouts; each may be `unlimited` explicitly (audited). Partial scans record **Target coverage** reasons in the Excel report (`report/generator.py`).
+
+**Status.** Acceptance and driver tests run against **`tests/s3_fake.py`** (simulated S3). Operator proof against **SeaweedFS 4.54** (Podman, TLS) is recorded in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). MinIO / R2 are API-compatible by design; vendor appliance proof is operator-owned. Design: `docs/desenho/2306.md`. YAML examples: [USAGE.md](USAGE.md).
 
 **Strong crypto / controls validation (`scan.validate_crypto`, `--validate-crypto`):** Opt-in flag (off by default). When enabled via config, CLI, dashboard checkbox, or API body **`validate_crypto: true`**, the engine enables strong-crypto validation for that run (CLI / API / dashboard override config). When off or absent, that path is skipped — no behaviour change. **Phase 2 + Phase 3:** connectors honor transport crypto options and probe after connect; SQL/Mongo/Redis also run Phase 3 name-pattern inference (count-by-category into **`inferred_controls_summary`** — heuristic only, human review required). Persist in **`crypto_controls_audit`**; Excel sheet **Crypto & controls** (allowlisted details only — no secrets, tokens, URLs, or raw identifier lists). See [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 

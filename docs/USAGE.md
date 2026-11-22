@@ -1138,6 +1138,43 @@ Install optional deps: `uv pip install -e ".[shares]"`.
     path: "/mnt/nfs_data"   # local mount point
 ```
 
+## Object storage (Amazon S3 and S3-compatible APIs)
+
+Read-only **list + GET** against a **single bucket**, then the same file pipeline as share connectors (extensions, compressed archives, optional SQLite-as-DB). **Enterprise** tier. Built-in drivers: `s3` (AWS) and `s3_compatible` (requires `endpoint_url` for MinIO, Cloudflare R2, SeaweedFS S3 gateway, etc.). Request signing is in-tree SigV4 (**no** `boto3` / `botocore` / `[cloud]` extra).
+
+```yaml
+
+- name: "compat-lab-bucket"
+  type: object_storage
+  driver: s3_compatible
+  bucket: scan-target
+  region: us-east-1
+  endpoint_url: https://s3.example.com
+  prefix: corpus/
+  addressing_style: path       # path | virtual; many compat endpoints need path
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+    # session_token_from_env: DATA_BOAR_S3_SESSION_TOKEN   # optional STS / temp creds
+  allow_private_networks: true # lab / RFC1918 / loopback only; off on public AWS
+  connect_timeout_seconds: 10
+  read_timeout_seconds: 60
+  max_objects: 10000
+  max_download_bytes: 1073741824
+  max_object_bytes: 104857600
+  report_object_names: false
+```
+
+For **AWS only**, use `driver: s3` (virtual-hosted; do not set `endpoint_url` or `addressing_style` on that driver).
+
+- **Credentials:** values live only in the environment via `auth.*_from_env` names (no inline keys). Env var names follow the project prefix rules ([#1977](https://github.com/DataBoar/data-boar/issues/1977)).
+- **Network:** one HTTPS destination host per target; redirects are never followed; DNS is validated and the peer is pinned.
+- **Limits:** each cap may be set to `unlimited` explicitly (audited in the report). Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). MinIO and R2 are API-compatible by design but are **not** claimed tested against vendor appliances without your own runbook.
+- **IAM (AWS):** least privilege — `s3:ListBucket` on the bucket (with prefix condition) and `s3:GetObject` on `arn:aws:s3:::bucket/prefix/*`. Avoid blanket `s3:*`.
+
+Findings use the **Filesystem findings** sheet; partial-scan reasons appear under **Target coverage**. Design reference: `docs/desenho/2306.md`.
+
 All share types use the same `file_scan` settings (extensions, recursive, scan_sqlite_as_db, `sample_limit`, `file_sample_max_chars`, file_passwords). Findings appear in the **Filesystem findings** sheet.
 
 ### Microsoft Graph, delegated mode (`type: sharepoint_online`)

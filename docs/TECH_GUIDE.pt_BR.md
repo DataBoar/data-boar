@@ -23,6 +23,7 @@ Não comece a partir de vários trechos soltos: use **uma** amostra versionada e
 - **Bancos SQL**: PostgreSQL, MySQL, MariaDB, SQLite, Microsoft SQL Server, Oracle (via drivers SQLAlchemy).
 - **Power BI (opcional)**: Descubra workspaces, datasets e tabelas via Power BI REST API; amostragem com DAX. OAuth2 do Azure AD (credenciais de cliente). Achados na planilha **Database findings**; inventário na aba **Data source inventory**.
 - **Power Apps / Dataverse (opcional)**: Descubra entidades e atributos via Dataverse Web API; amostragem de linhas. OAuth2 do Azure AD (credenciais de cliente). Achados na planilha **Database findings**; inventário na aba **Data source inventory**.
+- **Armazenamento de objetos (Enterprise, opcional)**: `type: object_storage` com drivers `s3` ou `s3_compatible`; SigV4 no produto (sem extra `boto3`). Ver [Armazenamento de objetos](#armazenamento-de-objetos-classe-s3) e [USAGE.pt_BR.md](USAGE.pt_BR.md).
 - **Compartilhamentos remotos (opcional)**: SharePoint on-prem, WebDAV, SMB/CIFS, NFS — por FQDN ou IP com credenciais na config; instale `.[shares]`.
 - **Microsoft Graph em modo delegado (`sharepoint_online`, Enterprise)**: uma pasta do OneDrive do usuário que entrou, entrada por device code num terminal; testado contra um Graph simulado, prova real pendente (ver a tabela abaixo).
 - **NoSQL (opcional)**: MongoDB, Redis — instale dependências opcionais: `uv pip install -e ".[nosql]"`.
@@ -683,6 +684,21 @@ Todos os tipos de share usam as mesmas configurações **file_scan** (extensions
 Com `file_scan.use_content_type: true`, os conectores de **compartilhamento** usam o mesmo helper que o filesystem. **Disfarce simples** aqui é quando a **extensão do nome** não bate com o **formato real** (ex.: bytes de PDF atrás de `.txt` ou de extensão **não textual** como `.mp3`). Quem só segue a extensão erra; os *magic bytes* ainda mostram `%PDF-...` ou assinatura de mídia rica — daí PDFs seguem o fluxo de PDF na extração e **imagem/áudio/vídeo** com extensão enganosa são remapeados pela mesma tabela. `scan_rich_media_metadata` / `scan_image_ocr` valem para SMB, WebDAV e SharePoint (e dentro de arquivos compactados quando o membro interno for elegível). Continua **opt-in**; com o flag desligado, a escolha de tipo segue a extensão (salvo inclusão explícita de extensões rich media quando esses flags ampliam o conjunto).
 
 Para **uma única execução** sem alterar o config gravado: CLI **`--content-type-check`**, ou **`POST /scan`** / **`POST /start`** com **`content_type_check: true`**, ou a caixa no dashboard (mesma ideia que **`--scan-compressed`** / **`scan_compressed`** para arquivos compactados).
+
+## Armazenamento de objetos (classe S3)
+
+<a id="armazenamento-de-objetos-classe-s3"></a>
+
+Leitura somente (**listagem** no estilo ListObjectsV2 + **GET** de objeto) em **um bucket**, depois o mesmo pipeline **`file_scan`** dos shares (extensões, compactados, SQLite como banco, mídia rica opcional). Tier **Enterprise** (`connector_s3_object_storage` e `connector_s3_compatible` na licença). Implementação: `connectors/object_storage_connector.py` (camada comum) + registro em `connectors/object_storage_driver.py`; drivers embutidos `s3` e `s3_compatible` em `connectors/object_storage_s3.py` com `s3_addressing.py` / `s3_sigv4.py` (**sem** extra `.[cloud]` / `botocore`).
+
+| Driver | Destino | Credenciais | Notas |
+| ------ | ------- | ----------- | ----- |
+| **s3** | Endpoint AWS virtual-hosted para `bucket` + `region` | Só `auth.*_from_env` (ver [#1977](https://github.com/DataBoar/data-boar/issues/1977)) | Sem `endpoint_url` / `addressing_style` neste driver |
+| **s3_compatible** | `endpoint_url` (HTTPS, um host) | Mesmo padrão de env | `addressing_style` `path` (padrão) ou `virtual`; `allow_private_networks` para lab |
+
+**Contrato de rede:** um peer HTTPS fixado por alvo; DNS validado via `url_guard` compartilhado; **redirects nunca são seguidos**. Falhas e inventário usam frases fixas (sem texto do corpo do servidor nos achados). **Limites:** `max_objects`, `max_download_bytes`, `max_object_bytes`, timeouts de conexão/leitura; cada um pode ser `unlimited` de forma explícita (auditado). Varreduras parciais registram motivos em **Target coverage** no Excel (`report/generator.py`).
+
+**Situação.** Testes de aceitação e de driver usam **`tests/s3_fake.py`** (S3 simulado). Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). MinIO / R2 são compatíveis por desenho; prova no appliance do fornecedor fica com o operador. Desenho: `docs/desenho/2306.md`. Exemplos YAML: [USAGE.pt_BR.md](USAGE.pt_BR.md).
 
 **Validação de criptografia forte / controles (`scan.validate_crypto`, `--validate-crypto`):** Flag opt-in (desligada por padrão). Quando ativa via config, CLI, caixa no dashboard ou corpo da API **`validate_crypto: true`**, o motor liga a validação de criptografia forte nessa execução (CLI / API / dashboard sobrescrevem o config). Quando off ou ausente, esse caminho é ignorado — sem mudança de comportamento. **Fase 2 + Fase 3:** conectores honram opções de transporte e fazem probe; SQL/Mongo/Redis também aplicam inferência Fase 3 por padrão de nome (contagem por categoria em **`inferred_controls_summary`** — heurística; exige revisão humana). Grava **`crypto_controls_audit`**; planilha Excel **Crypto & controls** (detalhes allowlisted — sem segredos, tokens, URLs ou listas de identificadores). Ver [USAGE.pt_BR.md](USAGE.pt_BR.md) e [USAGE.md](USAGE.md) (*Strong crypto / controls*).
 

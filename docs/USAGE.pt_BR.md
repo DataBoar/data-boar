@@ -1288,6 +1288,43 @@ Instale os extras opcionais: `uv pip install -e ".[shares]"`.
     path: "/mnt/nfs_data"   # ponto de montagem local
 ```
 
+## Armazenamento de objetos (Amazon S3 e APIs compatíveis)
+
+Leitura somente (**listagem + GET**) em **um único bucket**, depois o mesmo pipeline de arquivos dos conectores de compartilhamento (extensões, arquivos compactados, SQLite opcional como banco). Tier **Enterprise**. Drivers embutidos: `s3` (AWS) e `s3_compatible` (exige `endpoint_url` para MinIO, Cloudflare R2, gateway S3 do SeaweedFS, etc.). Assinatura SigV4 no próprio produto (**sem** `boto3` / `botocore` / extra `[cloud]`).
+
+```yaml
+
+- name: "compat-lab-bucket"
+  type: object_storage
+  driver: s3_compatible
+  bucket: scan-target
+  region: us-east-1
+  endpoint_url: https://s3.example.com
+  prefix: corpus/
+  addressing_style: path       # path | virtual; muitos endpoints compatíveis pedem path
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+    # session_token_from_env: DATA_BOAR_S3_SESSION_TOKEN   # STS / credencial temporária (opcional)
+  allow_private_networks: true # laboratório / RFC1918 / loopback; desligue na AWS pública
+  connect_timeout_seconds: 10
+  read_timeout_seconds: 60
+  max_objects: 10000
+  max_download_bytes: 1073741824
+  max_object_bytes: 104857600
+  report_object_names: false
+```
+
+Para **só AWS**, use `driver: s3` (virtual-hosted; não defina `endpoint_url` nem `addressing_style` nesse driver).
+
+- **Credenciais:** valores só no ambiente, via nomes `auth.*_from_env` (sem chaves inline). Os nomes das variáveis seguem as regras de prefixo do projeto ([#1977](https://github.com/DataBoar/data-boar/issues/1977)).
+- **Rede:** um host HTTPS de destino por alvo; redirects nunca são seguidos; DNS validado e peer fixado (pin).
+- **Limites:** cada teto pode ser `unlimited` de forma explícita (auditado no relatório). Ajuste pontual de limite por varredura **não** entra nesta entrega ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). MinIO e R2 são compatíveis por desenho, mas **não** são declarados testados contra o appliance do fornecedor sem o seu runbook.
+- **IAM (AWS):** menor privilégio — `s3:ListBucket` no bucket (com condição de prefixo) e `s3:GetObject` em `arn:aws:s3:::bucket/prefix/*`. Evite `s3:*` genérico.
+
+Os achados usam a planilha **Filesystem findings**; motivos de varredura parcial aparecem em **Target coverage**. Referência de desenho: `docs/desenho/2306.md`.
+
 Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recursividade, `scan_sqlite_as_db`, `sample_limit`, `file_sample_max_chars`, `file_passwords`). Os achados entram na planilha **Filesystem findings**.
 
 ### Microsoft Graph em modo delegado (`type: sharepoint_online`)

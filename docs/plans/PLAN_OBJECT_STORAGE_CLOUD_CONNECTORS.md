@@ -1,6 +1,6 @@
 # Plan: Object storage connectors (S3-class, Azure Blob, GCS)
 
-**Status:** Deferred
+**Status:** In progress (epic `epic/s3-object-storage-reader`, slices 2306.1–2306.5)
 **Date:** 2026-03-26
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -27,12 +27,12 @@ Enterprises increasingly store “data soup” in **cloud object storage**: **Am
 
 | #   | To-do                                                                                                                                                                                                                                                                                        | Status    |
 | -   | -----                                                                                                                                                                                                                                                                                        | ------    |
-| 1.1 | **Config schema:** `type: object_storage`, `driver: s3`, `bucket`, optional `prefix`, `region`, `endpoint_url` (for MinIO/R2), auth via **env** / **profile** / explicit keys only when documented as discouraged; align with `pass_from_env` patterns.                                      | ⬜ Pending |
-| 1.2 | **Connector module:** `connectors/s3_object_storage_connector.py` (or `object_storage_connector.py` with driver dispatch): list objects (paginated), filter by extension / size cap, download to temp or stream, delegate to shared “scan file bytes/path” helpers used by share connectors. | ⬜ Pending |
-| 1.3 | **Register** in `core/connector_registry.py`; engine wiring; optional-import guard + `[cloud]` extra.                                                                                                                                                                                        | ⬜ Pending |
-| 1.4 | **Limits:** `max_objects`, `max_download_bytes`, per-object timeout, respect global connector timeouts; **no** full-bucket unbounded scan by default.                                                                                                                                        | ⬜ Pending |
-| 1.5 | **Tests:** `moto` or MinIO container in CI (or heavy tests marked optional); unit tests for listing + one synthetic object path.                                                                                                                                                             | ⬜ Pending |
-| 1.6 | **Docs:** `USAGE` / `TECH_GUIDE` / operator samples (EN + pt-BR); IAM policy example (least privilege); security note on **never** using overly broad `s3:*` for audit use.                                                                                                                  | ⬜ Pending |
+| 1.1 | **Config schema:** `type: object_storage`, `driver: s3`, `bucket`, optional `prefix`, `region`, `endpoint_url` (for MinIO/R2), auth via **env** / **profile** / explicit keys only when documented as discouraged; align with `pass_from_env` patterns.                                      | ✅ Epic #2306 |
+| 1.2 | **Connector module:** `connectors/s3_object_storage_connector.py` (or `object_storage_connector.py` with driver dispatch): list objects (paginated), filter by extension / size cap, download to temp or stream, delegate to shared “scan file bytes/path” helpers used by share connectors. | ✅ `object_storage_connector.py` |
+| 1.3 | **Register** in `core/connector_registry.py`; engine wiring; optional-import guard + `[cloud]` extra.                                                                                                                                                                                        | ✅ No `[cloud]` extra (SigV4 in-tree) |
+| 1.4 | **Limits:** `max_objects`, `max_download_bytes`, per-object timeout, respect global connector timeouts; **no** full-bucket unbounded scan by default.                                                                                                                                        | ✅ Epic #2306 |
+| 1.5 | **Tests:** `moto` or MinIO container in CI (or heavy tests marked optional); unit tests for listing + one synthetic object path.                                                                                                                                                             | ✅ Simulated S3 + SeaweedFS evidence (#2312) |
+| 1.6 | **Docs:** `USAGE` / `TECH_GUIDE` / operator samples (EN + pt-BR); IAM policy example (least privilege); security note on **never** using overly broad `s3:*` for audit use.                                                                                                                  | 🔄 In progress (USAGE + TECH_GUIDE on epic branch; CHANGELOG / README pitch pending) |
 
 ### Phase 2 — **S3-compatible and Azure Blob**
 
