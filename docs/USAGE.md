@@ -1167,13 +1167,93 @@ Read-only **list + GET** against a **single bucket**, then the same file pipelin
 
 For **AWS only**, use `driver: s3` (virtual-hosted; do not set `endpoint_url` or `addressing_style` on that driver).
 
-- **Credentials:** values live only in the environment via `auth.*_from_env` names (no inline keys). Env var names follow the project prefix rules ([#1977](https://github.com/DataBoar/data-boar/issues/1977)).
-- **Network:** one HTTPS destination host per target; redirects are never followed; DNS is validated and the peer is pinned.
-- **Limits:** each cap may be set to `unlimited` explicitly (audited in the report). Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
-- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). MinIO and R2 are API-compatible by design but are **not** claimed tested against vendor appliances without your own runbook.
-- **IAM (AWS):** least privilege — `s3:ListBucket` on the bucket (with prefix condition) and `s3:GetObject` on `arn:aws:s3:::bucket/prefix/*`. Avoid blanket `s3:*`.
+The `object_storage` type uses **one driver per provider**; shipped drivers are `s3` and `s3_compatible`.
 
-Findings use the **Filesystem findings** sheet; partial-scan reasons appear under **Target coverage**. Design reference: `docs/desenho/2306.md`.
+### Example — AWS S3 (not tested against the real AWS service)
+
+```yaml
+
+- name: "aws-audit-prefix"
+  type: object_storage
+  driver: s3
+  bucket: customer-audit-bucket
+  region: sa-east-1
+  prefix: lgpd-corpus/
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+```
+
+**Not tested against the real Amazon S3 service** in this repository's published evidence. Validate in your account before production.
+
+### Example — MinIO / generic compatible endpoint (not tested against vendor appliances)
+
+Use `driver: s3_compatible` and `endpoint_url` (often `addressing_style: path`). Same credential pattern as the YAML above.
+
+**Not tested against real MinIO or other vendor appliances** unless you run your own proof. Local operator evidence used **SeaweedFS 4.54** (S3-compatible API), not MinIO.
+
+### Example — Cloudflare R2 (not tested against the real R2 service)
+
+```yaml
+
+- name: "r2-read-prefix"
+  type: object_storage
+  driver: s3_compatible
+  bucket: audit-bucket
+  region: auto
+  endpoint_url: https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+  prefix: exports/
+  addressing_style: path
+  auth:
+    access_key_id_from_env: DATA_BOAR_S3_ACCESS_KEY_ID
+    secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
+```
+
+Replace `<ACCOUNT_ID>` with your Cloudflare account id. **Not tested against the real Cloudflare R2 service** in published evidence.
+
+- **Credentials:** values live only in the environment via `auth.*_from_env` names (no inline keys, no AWS credential chain, no shared credentials file, no instance metadata, no anonymous access). Env var names follow the project prefix rules ([#1977](https://github.com/DataBoar/data-boar/issues/1977)). Optional `session_token_from_env` supports short-lived STS-style keys when you inject them at runtime.
+- **Transport:** `https` only; TLS certificate verification is always on. `allow_private_networks: true` applies **only** when you set a lab-style `endpoint_url` on `s3_compatible` (RFC1918, loopback, or other private targets your policy allows).
+- **Limits (defaults are suggestions):** `max_objects`, `max_download_bytes`, and `max_object_bytes` may each be a positive integer or `unlimited`. When a cap is hit, listing or download stops, the scan records **partial coverage** (counts and bytes not scanned), and the Excel **Target coverage** sheet explains why. Raising limits increases list traffic, temporary disk use, and runtime — tune per target. Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Object keys:** segments containing `.` or `..` are skipped and reported as `unsafe_key`. Object versions and anonymous buckets are **not** supported.
+- **Partial coverage vs “no findings”:** **Target coverage** can show `PARTIAL` even when the findings sheet is empty — that is not a clean bill of health. By default, **unscanned object names** appear only as **counts** in coverage output; set `report_object_names: true` on the target when you need names in the coverage sheet (findings always carry the object path for hits).
+- **LGPD / GDPR:** scanning a customer bucket processes **their** personal data. Lawful basis, purpose limitation, retention, and DPA terms stay with the **customer**; Data Boar performs technical read and classification only.
+- **Evidence posture:** reports describe what was read under your config — **evidence for triage, not a legal conclusion** and not protection against regulatory fines.
+- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3 and Cloudflare R2 remain **not tested against the real cloud service** in that evidence.
+
+### IAM — least privilege (AWS)
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListOnlyThePrefix",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::<bucket>",
+      "Condition": { "StringLike": { "s3:prefix": ["<prefix>*"] } }
+    },
+    {
+      "Sid": "ReadOnlyThePrefix",
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::<bucket>/<prefix>*"
+    }
+  ]
+}
+```
+
+Notes:
+
+- Without a `prefix` on the target, omit the `Condition` block and use `arn:aws:s3:::<bucket>/*` for `GetObject`.
+- SSE-KMS objects need **`kms:Decrypt`** on the CMK used by the bucket.
+- Never grant blanket **`s3:*`** or any write/delete action for audit-only use.
+- **Cloudflare R2:** prefer an API token scoped to **Object Read** on the bucket.
+- **MinIO:** attach an equivalent JSON policy on the bucket or user.
+
+IAM action semantics: [Actions, resources, and condition keys for Amazon S3](https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazons3.html) (AWS documentation; verify against your org's IAM console before deploy).
+
+Findings use the **Filesystem findings** sheet; partial-scan reasons appear under **Target coverage**. Architecture: [TECH_GUIDE.md — Object storage](TECH_GUIDE.md).
 
 All share types use the same `file_scan` settings (extensions, recursive, scan_sqlite_as_db, `sample_limit`, `file_sample_max_chars`, file_passwords). Findings appear in the **Filesystem findings** sheet.
 
