@@ -10,6 +10,7 @@ from connectors.rest_connector import (
     RESTConnector,
     _assert_rest_credential_hosts_allowlisted,
     _build_auth,
+    _env_name_from_interpolation,
     _host_from_url,
 )
 
@@ -242,6 +243,16 @@ def test_oauth2_env_credential_rejects_disallowed_prefix_for_each_reference_form
                 _build_auth(client, target)
             mock_post.assert_not_called()
     assert "Authorization" not in client.headers
+
+
+def test_env_name_from_interpolation_strips_and_ignores_non_strings() -> None:
+    """#2304 helper: ${ ENV } yields the inner name; non-strings and literals yield empty."""
+    assert _env_name_from_interpolation("${ GITHUB_TOKEN }") == "GITHUB_TOKEN"
+    assert _env_name_from_interpolation("  ${API_CLIENT_SECRET}  ") == "API_CLIENT_SECRET"
+    assert _env_name_from_interpolation("${}") == ""
+    assert _env_name_from_interpolation("not-interpolated") == ""
+    assert _env_name_from_interpolation({"client_secret": "${API_CLIENT_SECRET}"}) == ""
+    assert _env_name_from_interpolation(None) == ""
 
 
 def test_allowed_hosts_string_is_equivalent_to_a_one_item_list() -> None:
