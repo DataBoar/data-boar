@@ -50,7 +50,7 @@ A vertical is a composition of functional domains, not a new architecture. This 
 | NGOs & humanitarian records | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07 | [NGO](use-cases/NGO_MIGRANT_WELCOME_AND_HUMANITARIAN_FILES.md) |
 | EdTech, LMS & minors | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07 | [EdTech](use-cases/EDTECH_LMS_EXPORTS_AND_MINORS.md) |
 | Backup & data-protection estate | FD-01, FD-03, FD-04, FD-05, FD-08 | [Backup](use-cases/BACKUP_AND_DATA_PROTECTION_ESTATE_CRITICALITY.md) |
-| Providers processing entrusted client data | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07, FD-08 | [Entrusted Client Data Governance](use-cases/USE_CASE_ENTRUSTED_CLIENT_DATA_GOVERNANCE.md), tracked by [#2321](https://github.com/DataBoar/data-boar/issues/2321) |
+| Providers processing entrusted client data | FD-01, FD-02, FD-03, FD-04, FD-05, FD-07, FD-08 | Entrusted Client Data Governance (proposed use case), tracked by [#2321](https://github.com/DataBoar/data-boar/issues/2321) |
 
 Biometrics is a sensitive-data category/cross-cutting concern, not an industry vertical: [biometric data use case](use-cases/USE_CASE_BIOMETRIC_DATA_PROTECTION.md). Scan → remediate → prove and tokenized findings are horizontal workflows applicable across verticals: [scan and remediate](use-cases/USE_CASE_SCAN_AND_REMEDIATE.md), [tokenized findings](use-cases/USE_CASE_TOKENIZED_FINDINGS.md).
 
