@@ -2,7 +2,7 @@
 
 <!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob and GCS later as drivers; Enterprise tier. -->
 
-**Status:** In progress (epic `epic/s3-object-storage-reader`, slices 2306.1–2306.5; Phase 1 read connector on branch, epic PR pending)
+**Status:** In progress (Phase 1, S3 and S3-compatible read connector, merged on `main` by PR [#2350](https://github.com/DataBoar/data-boar/pull/2350) on 2026-11-22; Phase 2, Azure Blob, in design: [#2307](https://github.com/DataBoar/data-boar/issues/2307); GCS not started)
 **Date:** 2026-03-26
 **Authors:** Fabio Leitao
 **Priority:** H2
