@@ -20,12 +20,13 @@ Contradictions between A-7 and A-21/A-22 and the rest of the design are noted on
 
 from __future__ import annotations
 
+import importlib
 import logging
 import re
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, Literal, NamedTuple
 
 import httpx
 import jwt
@@ -200,7 +201,7 @@ def make_fake(monkeypatch: pytest.MonkeyPatch, creds: Creds):
         objects: dict[str, bytes] | None = None,
         *,
         host: str = AWS_HOST,
-        addressing: str = "virtual",
+        addressing: Literal["virtual", "path"] = "virtual",
         region: str = REGION,
         ip: str = GOOD_IP,
         **kw: Any,
@@ -209,7 +210,7 @@ def make_fake(monkeypatch: pytest.MonkeyPatch, creds: Creds):
             BUCKET,
             corpus() if objects is None else objects,
             host,
-            addressing,  # type: ignore[arg-type]
+            addressing,
             region,
             access_key_id=creds.access_key_id,
             session_token=creds.session_token,
@@ -443,12 +444,9 @@ def test_A2306_8_nome_de_variavel_sem_prefixo_e_recusado(monkeypatch):
             "secret_access_key_from_env": ENV_SK,
         }
     )
-    err = None
-    try:
+    with pytest.raises(ValueError) as excinfo:
         normalize_config(_config_with(target))
-    except Exception as exc:  # noqa: BLE001 - the assertion below fixes the type
-        err = exc
-    assert isinstance(err, ValueError)
+    assert isinstance(excinfo.value, ValueError)
 
 
 def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypatch):
@@ -459,14 +457,11 @@ def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypat
     monkeypatch.setenv(ENV_AK, "SYNTHAK" + "0" * 16)
     monkeypatch.setenv(ENV_SK, "SYNTHSK" + "0" * 32)
     target = make_target(secret_access_key=marker)
-    err = None
-    try:
+    with pytest.raises(ValueError) as excinfo:
         normalize_config(_config_with(target))
-    except Exception as exc:  # noqa: BLE001 - the assertions below fix the type
-        err = exc
-    assert isinstance(err, ValueError)
-    assert "secret_access_key" in str(err)
-    assert marker not in str(err)
+    assert isinstance(excinfo.value, ValueError)
+    assert "secret_access_key" in str(excinfo.value)
+    assert marker not in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -690,11 +685,12 @@ DRIVER_TIER_KEYS = {
 
 def _gate_error(cfg: dict[str, Any], reset, driver: str) -> Exception | None:
     from core.connector_registry import require_connector_allowed
+    from core.licensing.errors import FeatureTierBlockedError
 
     reset()
     try:
         require_connector_allowed(cfg, {"type": "object_storage", "driver": driver})
-    except Exception as exc:  # noqa: BLE001 - callers assert the type
+    except FeatureTierBlockedError as exc:
         return exc
     return None
 
@@ -728,7 +724,7 @@ def test_A2306_17_tier_enterprise_fail_closed(tmp_path, clean_license_guard):
 
 def test_A2306_18_registro_resolve_o_conector_novo():
     """A2306-18 (connector_for_target devolve ObjectStorageConnector, nos dois drivers)."""
-    import core.engine  # noqa: F401 - the engine imports the connector modules (registration)
+    importlib.import_module("core.engine")
     from core.connector_registry import connector_for_target
 
     for driver in DRIVER_TIER_KEYS:
@@ -1167,7 +1163,7 @@ def test_selfcheck_botoes_de_listagem_defeituosa():
     fake.encoding_type = None
     assert "EncodingType" not in _get(fake, c, q).text
     fake.malformed_xml = True
-    with pytest.raises(Exception):  # noqa: B017,PT011 - any parser error is the point
+    with pytest.raises(DefusedET.ParseError):
         DefusedET.fromstring(_get(fake, c, q).content)
     fake.malformed_xml = False
     fake.doctype_entity = True
