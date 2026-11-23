@@ -853,6 +853,35 @@ def test_A2306_24_limite_desligado_por_alvo_com_unlimited(make_fake, tmp_path):
     assert report_info_value(wb, "Coverage") == []
 
 
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="2306 pending: A2306-27")
+def test_A2306_27_lista_sem_teto_de_pages_na_aceitacao(make_fake, tmp_path):
+    """A2306-27 (R7-1): with empty_pages_forever() and max_objects 10,
+    the target ends (exactly 16 ListObjectsV2), there is a protocol_error failure,
+    and Target coverage shows PARTIAL, Listing complete = no, and the incomplete-listing note.
+    This test is xfail pending the R7-1 fix (2306.8)."""
+    fake = make_fake()
+    fake.empty_pages_forever()
+    out, wb = run_with_report(fake, make_target(max_objects=10), tmp_path)
+
+    # The fake safety cap is 2000, but the rule stops at 16.
+    lists = list_requests(fake)
+    assert len(lists) == 16, f"expected 16 listings, got {len(lists)}"
+
+    # There should be a protocol_error failure with the rule text.
+    assert "protocol_error" in out.db.reasons()
+    assert out.db.details("protocol_error") == [
+        "listing returned 16 empty pages in a row; listing stopped before the end of the prefix"
+    ]
+
+    # Target coverage: PARTIAL, Listing complete = no, with incomplete-listing note.
+    row = coverage_row(wb)
+    assert row["Coverage"] == "PARTIAL"
+    assert row["Listing complete"] == "no"
+    note = str(row["Note"])
+    assert "Listing stopped before the end" in note
+    assert "number of unlisted objects is unknown" in note
+
+
 # ----------------------------------------------------------------------------
 # Self-checks of the simulator and of the toy backend (NOT pending)
 # ----------------------------------------------------------------------------
