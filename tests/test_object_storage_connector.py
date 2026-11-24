@@ -1537,6 +1537,7 @@ def test_D2306_94_teto_absoluto_de_pages_com_monkeypatch(
     assert executive(out.db)["listing_complete"] is False
     assert executive(out.db)["coverage"] == "partial"
     assert executive(out.db)["objects_scanned"] == 5
+    assert executive(out.db)["status"] == "limited"
     assert "limit_reached" in out.db.reasons()
     # The design formats the number from the constant.
     assert out.db.details("limit_reached") == [
