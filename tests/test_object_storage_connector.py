@@ -407,6 +407,46 @@ def test_D2306_35_slowdown_espera_e_segue(
     assert "throttled" not in out.db.reasons()
 
 
+_MALFORMED_DECIMAL_HEADER = "1" + "0" * 4999
+_UNICODE_DIGIT_HEADER = "\u00b2"
+
+
+def _patch_httpx_latin1_header_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Wire-format header values may be non-ASCII; FakeS3 builds ``httpx.Response`` in-process."""
+    import httpx._models as models
+
+    original = models._normalize_header_value
+
+    def _normalize_header_value(value: str | bytes, encoding: str | None) -> bytes:
+        if isinstance(value, bytes):
+            return original(value, encoding)
+        enc = encoding or "ascii"
+        try:
+            return value.encode(enc)
+        except UnicodeEncodeError:
+            return value.encode("latin-1")
+
+    monkeypatch.setattr(models, "_normalize_header_value", _normalize_header_value)
+
+
+@pytest.mark.parametrize(
+    "retry_after", [_MALFORMED_DECIMAL_HEADER, _UNICODE_DIGIT_HEADER]
+)
+def test_D2306_R4_retry_after_nao_numerico_ignorado(
+    h: Harness, monkeypatch: pytest.MonkeyPatch, retry_after: str
+) -> None:
+    """R4: Retry-After values that isdigit() accepts but int() cannot parse must not
+    abort the whole target (failed:error); listing and downloads proceed."""
+    if retry_after == _UNICODE_DIGIT_HEADER:
+        _patch_httpx_latin1_header_values(monkeypatch)
+    fake = h.s3()
+    fake.throttle(1, retry_after=retry_after)
+    out = h.run(fake.transport, s3_target())
+
+    assert "error" not in out.db.reasons()
+    assert paths(out.db) == EXPECTED_PATHS
+
+
 def test_D2306_36_5xx_esgotado_na_listagem_da_unreachable(h: Harness) -> None:
     """D2306-36: 500 four times on the listing -> unreachable, sleep [1, 2, 4] and no
     GetObject."""
@@ -1203,6 +1243,24 @@ def test_D2306_86_chave_valida_sem_tamanho_baixa_com_teto(h: Harness) -> None:
     summary = skipped_detail(out.db)
     assert "too_large=2" in summary
     assert "size_mismatch=0" in summary
+
+
+@pytest.mark.parametrize(
+    "content_length", [_MALFORMED_DECIMAL_HEADER, _UNICODE_DIGIT_HEADER]
+)
+def test_D2306_R4_content_length_nao_numerico_ignorado(
+    h: Harness, monkeypatch: pytest.MonkeyPatch, content_length: str
+) -> None:
+    """R4: Content-Length values that isdigit() accepts but int() cannot parse must not
+    abort the whole target; other objects still download."""
+    if content_length == _UNICODE_DIGIT_HEADER:
+        _patch_httpx_latin1_header_values(monkeypatch)
+    fake = h.s3({"corpus/a.txt": CPF_TXT, "corpus/ok.txt": PLAIN_TXT})
+    fake.content_length("corpus/a.txt", content_length)
+    out = h.run(fake.transport, s3_target())
+
+    assert "error" not in out.db.reasons()
+    assert "corpus/ok.txt" in fake.fetched
 
 
 def test_D2306_86_sem_tamanho_passar_do_saldo_e_over_budget(h: Harness) -> None:
