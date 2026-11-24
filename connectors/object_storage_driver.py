@@ -200,7 +200,7 @@ COMMON_FORBIDDEN_INLINE_KEYS = frozenset(
 )
 
 # Provider names planned but not delivered yet (section 0).
-NOT_AVAILABLE_YET = frozenset({"azure_blob", "gcs"})
+NOT_AVAILABLE_YET = frozenset({"gcs"})
 
 
 def _builtin_s3() -> StorageDriver:
@@ -215,9 +215,16 @@ def _builtin_s3_compatible() -> StorageDriver:
     return S3Driver("s3_compatible")
 
 
+def _builtin_azure_blob() -> StorageDriver:
+    from connectors.object_storage_azure import AzureBlobDriver
+
+    return AzureBlobDriver()
+
+
 _REGISTRY: dict[str, Callable[[], StorageDriver]] = {
     "s3": _builtin_s3,
     "s3_compatible": _builtin_s3_compatible,
+    "azure_blob": _builtin_azure_blob,
 }
 
 
