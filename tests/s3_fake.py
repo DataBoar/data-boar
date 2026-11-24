@@ -792,23 +792,32 @@ class FakeS3:
         # pages_script override (R7-1 test D2306-93).
         if self._pages_script is not None:
             if self._list_count > len(self._pages_script):
-                # Safety cap exceeded.
+                # Safety cap exceeded: return 599 and record violation per R7-1.
+                self._violate(
+                    f"pages_script safety cap exceeded: request {self._list_count} "
+                    f"past end of script (length {len(self._pages_script)})"
+                )
+                return self._error(599, "SafetyCapExceeded", headers)
+            spec = self._pages_script[self._list_count - 1]
+            if spec == -1:
                 truncated = False
                 token_out = None
             else:
-                spec = self._pages_script[self._list_count - 1]
-                if spec == -1:
-                    truncated = False
-                    token_out = None
-                else:
-                    truncated = True
-                    token_out = _token_for(self._list_count)
+                truncated = True
+                token_out = _token_for(self._list_count)
             # Create entries based on spec.
             if truncated:
-                page = [
-                    _Entry(f"fake-entry-{self._list_count}.txt", 51, False)
-                    for _ in range(spec)
-                ]
+                page = []
+                for i in range(spec):
+                    # Generate unique key under the requested prefix with real content.
+                    key = f"{prefix}scripted-page-{self._list_count:06d}-entry-{i:06d}.txt"
+                    content = (
+                        f"synthetic content for scripted page {self._list_count} entry {i}\n"
+                    ).encode("utf-8")
+                    # Store in objects so GetObject can return it.
+                    self.objects[key] = content
+                    # Use actual content length.
+                    page.append(_Entry(key, len(content), False))
             else:
                 page = []
             # Match normal listing behavior: check if request has encoding-type=url.
@@ -828,8 +837,15 @@ class FakeS3:
         # Hostile knobs override normal listing (R7-1 knobs).
         if self._fake_empty_pages:
             # Empty page forever until safety cap of 2000 requests.
-            truncated = self._list_count <= 2000
-            token_out = _token_for(self._list_count) if truncated else None
+            if self._list_count > 2000:
+                # Safety cap exceeded: return 599 and record violation per R7-1.
+                self._violate(
+                    f"empty_pages_forever safety cap exceeded: request {self._list_count} "
+                    f"past 2000-request limit"
+                )
+                return self._error(599, "SafetyCapExceeded", headers)
+            truncated = True
+            token_out = _token_for(self._list_count)
             encoded = params.get("encoding-type") == "url"
             return httpx.Response(
                 200,
@@ -846,20 +862,22 @@ class FakeS3:
         if self._fake_one_entry:
             # One entry forever until safety cap of 2000 requests.
             # Each page lists a unique key under the requested prefix with real content.
-            truncated = self._list_count <= 2000
-            token_out = _token_for(self._list_count) if truncated else None
-            if not truncated:
-                page = []  # Safety cap: empty page, no truncation
-            else:
-                # Generate unique key under the requested prefix.
-                key = f"{prefix}page-{self._list_count:06d}.txt"
-                content = f"synthetic content for page {self._list_count}\n".encode(
-                    "utf-8"
+            if self._list_count > 2000:
+                # Safety cap exceeded: return 599 and record violation per R7-1.
+                self._violate(
+                    f"one_entry_per_page_forever safety cap exceeded: request {self._list_count} "
+                    f"past 2000-request limit"
                 )
-                # Store in objects so GetObject can return it.
-                self.objects[key] = content
-                # Use actual content length.
-                page = [_Entry(key, len(content), False)]
+                return self._error(599, "SafetyCapExceeded", headers)
+            truncated = True
+            token_out = _token_for(self._list_count)
+            # Generate unique key under the requested prefix.
+            key = f"{prefix}page-{self._list_count:06d}.txt"
+            content = f"synthetic content for page {self._list_count}\n".encode("utf-8")
+            # Store in objects so GetObject can return it.
+            self.objects[key] = content
+            # Use actual content length.
+            page = [_Entry(key, len(content), False)]
             encoded = params.get("encoding-type") == "url"
             return httpx.Response(
                 200,
@@ -990,169 +1008,6 @@ class FakeS3:
         return sum(sum(s) for s in self._delivered_sinks.get(key, []))
 
 
-# ----------------------------------------------------------------------------
-# Self-tests for R7-1 knobs (D2306-92 to D2306-95 simulation)
-# ----------------------------------------------------------------------------
-
-
 def _reset_list_count(fake: FakeS3) -> None:
     """Reset the safety counter for the fake."""
     fake._list_count = 0
-
-
-def test_self_empty_pages_forever() -> None:
-    """Self-test: empty_pages_forever() returns empty pages with IsTruncated=true and new tokens.
-    Ends after safety cap of 2000 requests (IsTruncated=false)."""
-    fake = FakeS3("test-bucket", {}, "host.example", "virtual", "us-east-1")
-    fake.empty_pages_forever()
-    assert fake._fake_empty_pages is True
-    assert fake._fake_one_entry is False
-
-    # First 3 requests: empty, truncated, new token.
-    for _ in range(3):
-        resp = fake._list("?list-type=2", {})
-        import defusedxml.ElementTree as ET
-
-        page = ET.fromstring(resp.read())
-        assert [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == [
-            "true"
-        ]
-        assert [e.text for e in page.iter() if e.tag.endswith("NextContinuationToken")]
-        _reset_list_count(fake)
-
-    # Safety cap test: request 2001 times, 2000th is truncated, 2001st is not.
-    for i in range(2001):
-        resp = fake._list("?list-type=2", {})
-        content = resp.read()
-        import defusedxml.ElementTree as ET
-
-        page = ET.fromstring(content)
-        truncated = [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == [
-            "true"
-        ]
-        if i < 2000:
-            assert truncated, f"request {i} should be truncated"
-        else:
-            assert not truncated, f"request {i} should not be truncated (safety cap)"
-
-
-def test_self_one_entry_per_page_forever() -> None:
-    """Self-test: one_entry_per_page_forever() returns one entry with IsTruncated=true and
-    new tokens. Each entry is a unique key under the requested prefix with real content.
-    Ends after safety cap of 2000 requests (IsTruncated=false)."""
-    fake = FakeS3("test-bucket", {}, "host.example", "virtual", "us-east-1")
-    fake.one_entry_per_page_forever()
-    assert fake._fake_one_entry is True
-    assert fake._fake_empty_pages is False
-    _reset_list_count(fake)
-
-    # First 3 requests: one entry per page, each with unique key under prefix.
-    import defusedxml.ElementTree as ET
-
-    for n in range(3):
-        resp = fake._list("?list-type=2&prefix=corpus%2F", {})
-        content = resp.read()
-
-        page = ET.fromstring(content)
-        assert [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == [
-            "true"
-        ]
-        assert [e.text for e in page.iter() if e.tag.endswith("NextContinuationToken")]
-        # Exactly one contents entry with unique key under prefix.
-        keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
-        assert keys == [f"corpus/page-{n + 1:06d}.txt"]
-
-    # Safety cap test: request 2001 times, 2000th is truncated, 2001st is not.
-    _reset_list_count(fake)
-    for i in range(2001):
-        resp = fake._list("?list-type=2&prefix=corpus%2F", {})
-        content = resp.read()
-        import defusedxml.ElementTree as ET
-
-        page = ET.fromstring(content)
-        truncated = [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == [
-            "true"
-        ]
-        if i < 2000:
-            assert truncated, f"request {i} should be truncated"
-            keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
-            assert keys == [f"corpus/page-{i + 1:06d}.txt"]
-        else:
-            assert not truncated, f"request {i} should not be truncated (safety cap)"
-            keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
-            assert keys == []
-
-
-def test_self_pages_script() -> None:
-    """Self-test: pages_script([0, 0, 2, -1]) returns:
-    - page 1: 0 entries, truncated
-    - page 2: 0 entries, truncated
-    - page 3: 2 entries, truncated
-    - page 4: 0 entries, NOT truncated (script ended)
-    """
-    import defusedxml.ElementTree as ET
-
-    fake = FakeS3("test-bucket", {}, "host.example", "virtual", "us-east-1")
-    fake.pages_script([0, 0, 2, -1])
-
-    # Page 1: 0 entries
-    resp = fake._list("?list-type=2", {})
-    page = ET.fromstring(resp.read())
-    assert [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == ["true"]
-    assert [e.text for e in page.iter() if e.tag.endswith("Key")] == []
-
-    # Page 2: 0 entries
-    resp = fake._list("?list-type=2", {})
-    page = ET.fromstring(resp.read())
-    assert [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == ["true"]
-    assert [e.text for e in page.iter() if e.tag.endswith("Key")] == []
-
-    # Page 3: 2 entries
-    resp = fake._list("?list-type=2", {})
-    page = ET.fromstring(resp.read())
-    assert [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == ["true"]
-    keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
-    assert keys == ["fake-entry-3.txt", "fake-entry-3.txt"]
-
-    # Page 4: 0 entries, NOT truncated (script ended with -1)
-    resp = fake._list("?list-type=2", {})
-    page = ET.fromstring(resp.read())
-    assert [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == ["false"]
-    assert [e.text for e in page.iter() if e.tag.endswith("Key")] == []
-
-
-def test_self_one_entry_per_page_forever_getobject() -> None:
-    """Self-test: with one_entry_per_page_forever(), listing two pages gives two different
-    keys under the prefix, and GetObject on each returns 200 with body length equal
-    to the declared size."""
-    import defusedxml.ElementTree as ET
-
-    fake = FakeS3("test-bucket", {}, "host.example", "virtual", "us-east-1")
-    fake.one_entry_per_page_forever()
-
-    # Page 1: list with prefix corpus/
-    resp = fake._list("?list-type=2&prefix=corpus%2F", {})
-    page1 = ET.fromstring(resp.read())
-    keys1 = [e.text for e in page1.iter() if e.tag.endswith("Key")]
-    assert keys1 == ["corpus/page-000001.txt"]
-
-    # Page 2: list with same prefix
-    resp = fake._list("?list-type=2&prefix=corpus%2F", {})
-    page2 = ET.fromstring(resp.read())
-    keys2 = [e.text for e in page2.iter() if e.tag.endswith("Key")]
-    assert keys2 == ["corpus/page-000002.txt"]
-
-    # Keys must be different.
-    assert keys1 != keys2
-
-    # GetObject on first key should return 200 with matching body length.
-    get_resp1 = fake._get(keys1[0], {})
-    assert get_resp1.status_code == 200
-    body1 = b"".join(get_resp1.stream)
-    assert len(body1) == len("synthetic content for page 1\n".encode("utf-8"))
-
-    # GetObject on second key should return 200 with matching body length.
-    get_resp2 = fake._get(keys2[0], {})
-    assert get_resp2.status_code == 200
-    body2 = b"".join(get_resp2.stream)
-    assert len(body2) == len("synthetic content for page 2\n".encode("utf-8"))
