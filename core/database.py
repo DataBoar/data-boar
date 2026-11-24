@@ -316,6 +316,12 @@ def failure_hint(reason: str) -> str:
             "evaluated — this is not a clean result. Check dialect-specific sampling notes, credentials, "
             "and the detailed message; fix the target or sampling plan before re-running."
         )
+    if r == "image_probe_error":
+        return (
+            "Image/BLOB probe failed for this column (SQL dialect, permissions or connectivity). "
+            "Text detection still ran, but image presence was not evaluated: not a clean result "
+            "for images. Check the detailed message and the dialect notes."
+        )
     if r == "encrypted_no_password":
         return (
             "File or archive member is encrypted and no password was configured. This is not a clean "

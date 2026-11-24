@@ -93,6 +93,24 @@ _HARD_MAX_SAMPLE = 10_000
 # Threshold for metadata-driven behaviour (TABLESAMPLE on PostgreSQL, label hints).
 _LARGE_TABLE_ROW_HINT = 1_000_000
 
+PREFIX_PROBE_DIALECTS: frozenset[str] = frozenset(
+    {
+        "sqlite",
+        "postgresql",
+        "postgres",
+        "mysql",
+        "mariadb",
+        "mssql",
+        "microsoft sql server",
+        "oracle",
+    }
+)
+DEFAULT_PREFIX_PROBE_BYTES = 64
+
+
+def supports_prefix_probe(dialect: str) -> bool:
+    return (dialect or "").lower() in PREFIX_PROBE_DIALECTS
+
 
 def resolve_sql_sample_limit(config_limit: int) -> int:
     """
@@ -498,6 +516,139 @@ def _plan_postgres_like_column_sample(
     )
 
 
+def _clamp_prefix_bytes(prefix_bytes: int) -> int:
+    return max(1, min(int(prefix_bytes), DEFAULT_PREFIX_PROBE_BYTES))
+
+
+def _plan_prefix_sqlite(
+    safe_col: str, safe_table: str, lim: int, prefix_bytes: int
+) -> ColumnSamplePlan:
+    pb = _clamp_prefix_bytes(prefix_bytes)
+    q = text(
+        _tag_sql(
+            f'SELECT substr("{safe_col}", 1, {pb}) FROM "{safe_table}" '  # nosec B608
+            f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
+        )
+    )
+    return ColumnSamplePlan(
+        query=q,
+        strategy_label="prefix_probe_sqlite",
+        human_strategy="SUBSTR prefix (SQLite)",
+    )
+
+
+def _plan_prefix_postgresql(
+    safe_col: str,
+    safe_schema: str,
+    safe_table: str,
+    schema: str | None,
+    lim: int,
+    prefix_bytes: int,
+) -> ColumnSamplePlan:
+    pb = _clamp_prefix_bytes(prefix_bytes)
+    t = _ansi_quoted_table(safe_schema, safe_table, schema)
+    q = text(
+        _tag_sql(
+            f'SELECT substring("{safe_col}" from 1 for {pb}) FROM {t} '  # nosec B608
+            f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
+        )
+    )
+    return ColumnSamplePlan(
+        query=q,
+        strategy_label="prefix_probe_postgresql",
+        human_strategy="SUBSTRING prefix (PostgreSQL)",
+    )
+
+
+def _plan_prefix_mysql(
+    safe_col: str,
+    safe_schema: str,
+    safe_table: str,
+    schema: str | None,
+    lim: int,
+    prefix_bytes: int,
+    statement_timeout_ms: int | None,
+) -> ColumnSamplePlan:
+    pb = _clamp_prefix_bytes(prefix_bytes)
+    t = _mysql_table_ref(safe_schema, safe_table, schema)
+
+    def _bk(s: str) -> str:
+        return s.replace("`", "``")
+
+    cc = _bk(safe_col)
+    hint = ""
+    if statement_timeout_ms and statement_timeout_ms > 0:
+        hint = f"/*+ MAX_EXECUTION_TIME({int(statement_timeout_ms)}) */ "
+    q = text(
+        _tag_sql(
+            f"SELECT {hint}SUBSTRING(`{cc}`, 1, {pb}) FROM {t} "  # nosec B608
+            f"WHERE `{cc}` IS NOT NULL LIMIT {lim}"
+        )
+    )
+    return ColumnSamplePlan(
+        query=q,
+        strategy_label="prefix_probe_mysql",
+        human_strategy="SUBSTRING prefix (MySQL)",
+    )
+
+
+def _plan_prefix_mssql(
+    safe_col: str,
+    safe_schema: str,
+    safe_table: str,
+    schema: str | None,
+    lim: int,
+    prefix_bytes: int,
+) -> ColumnSamplePlan:
+    pb = _clamp_prefix_bytes(prefix_bytes)
+    t = _ansi_quoted_table(safe_schema, safe_table, schema)
+    q = text(
+        _tag_sql(
+            f'SELECT TOP ({lim}) SUBSTRING("{safe_col}", 1, {pb}) FROM {t} WITH (NOLOCK) '  # nosec B608
+            f'WHERE "{safe_col}" IS NOT NULL'
+        )
+    )
+    return ColumnSamplePlan(
+        query=q,
+        strategy_label="prefix_probe_mssql",
+        human_strategy="SUBSTRING prefix (SQL Server)",
+    )
+
+
+def _plan_prefix_oracle(
+    col: Any,
+    schema_name: Any,
+    table_name: Any,
+    schema: str | None,
+    lim: int,
+    prefix_bytes: int,
+    *,
+    oracle_lob: bool,
+) -> ColumnSamplePlan:
+    pb = _clamp_prefix_bytes(prefix_bytes)
+    t = _oracle_table_ref(schema_name, table_name, schema)
+    col_sql = oracle_sql_identifier(col)
+    if oracle_lob:
+        expr = f"DBMS_LOB.SUBSTR({col_sql}, {pb}, 1)"
+        label = "prefix_probe_oracle_lob"
+        human = "LOB SUBSTR prefix (Oracle)"
+    else:
+        expr = col_sql
+        label = "prefix_probe_oracle_raw"
+        human = "RAW prefix (Oracle)"
+    q = text(
+        _tag_sql(
+            f"SELECT * FROM (SELECT {expr} FROM {t} "  # nosec B608
+            f"WHERE {col_sql} IS NOT NULL) WHERE ROWNUM <= :lim"
+        )
+    ).bindparams(lim=lim)
+    return ColumnSamplePlan(
+        query=q,
+        strategy_label=label,
+        human_strategy=human,
+    )
+
+
 def _plan_default_column_sample(
     dialect: str,
     safe_col: str,
@@ -636,6 +787,58 @@ class SamplingManager:
         return _plan_default_column_sample(
             d, safe_col, safe_schema, safe_table, schema, lim, large, audit_notes
         )
+
+    @staticmethod
+    def build_column_prefix_sample(
+        dialect: str,
+        *,
+        safe_col: str,
+        safe_table: str,
+        safe_schema: str,
+        schema: str | None,
+        limit: int,
+        prefix_bytes: int = DEFAULT_PREFIX_PROBE_BYTES,
+        oracle_lob: bool = True,
+        statement_timeout_ms: int | None = None,
+        raw_col: Any | None = None,
+        raw_table: Any | None = None,
+        raw_schema: Any | None = None,
+    ) -> ColumnSamplePlan:
+        d = (dialect or "").lower()
+        if not supports_prefix_probe(d):
+            raise ValueError(f"prefix probe not supported for dialect {d!r}")
+        lim = _clamp_limit(limit)
+        if d == "sqlite":
+            return _plan_prefix_sqlite(safe_col, safe_table, lim, prefix_bytes)
+        if d in ("mysql", "mariadb"):
+            return _plan_prefix_mysql(
+                safe_col,
+                safe_schema,
+                safe_table,
+                schema,
+                lim,
+                prefix_bytes,
+                statement_timeout_ms,
+            )
+        if d == "oracle":
+            return _plan_prefix_oracle(
+                raw_col if raw_col is not None else safe_col,
+                raw_schema if raw_schema is not None else safe_schema,
+                raw_table if raw_table is not None else safe_table,
+                schema,
+                lim,
+                prefix_bytes,
+                oracle_lob=oracle_lob,
+            )
+        if d in ("mssql", "microsoft sql server"):
+            return _plan_prefix_mssql(
+                safe_col, safe_schema, safe_table, schema, lim, prefix_bytes
+            )
+        if d in ("postgresql", "postgres"):
+            return _plan_prefix_postgresql(
+                safe_col, safe_schema, safe_table, schema, lim, prefix_bytes
+            )
+        raise ValueError(f"prefix probe not supported for dialect {d!r}")
 
 
 class SqlColumnSampleQueryBuilder:

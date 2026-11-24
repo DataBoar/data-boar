@@ -83,6 +83,8 @@ def cases() -> list[Case]:
                 ("db", "lab_customers.contact_email", "EMAIL"),
                 ("db", "lab_guardians.cpf", "LGPD_CPF"),
                 ("db", "lab_guardians.email", "EMAIL"),
+                ("db", "lab_image_blob.foto_documento", "IMAGE_BLOB_IN_COLUMN"),
+                ("db", "lab_image_blob.foto_b64", "IMAGE_BASE64_IN_COLUMN"),
             ],
         ),
         Case(

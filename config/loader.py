@@ -2017,6 +2017,13 @@ def _normalize_config_body(
             detection_cfg.get("persist_low_id_like_for_review", False)
         ),
     }
+    from core.image_blob import normalize_image_blob_config
+
+    det_merged = out.get("detection") or {}
+    out["detection"] = {
+        **det_merged,
+        "image_blob": normalize_image_blob_config(detection_cfg.get("image_blob")),
+    }
 
     # Rate limiting / safety
     rate_cfg = data.get("rate_limit") or {}

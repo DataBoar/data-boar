@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import QueuePool
 
 from connectors.sample_value_dedup import (
+    SAMPLE_VALUE_JOIN_SEPARATOR,
     join_distinct_sample,
     resolve_fetch_row_budget,
 )
@@ -25,6 +26,18 @@ from connectors.sql_sampling import (
     SamplingManager,
     TableSamplingMetadata,
     resolve_sql_sample_limit,
+    supports_prefix_probe,
+)
+from core.image_blob import (
+    PROBE_PREFIX_BYTES,
+    cell_to_bytes,
+    column_name_suggests_image,
+    column_type_family,
+    column_type_token,
+    decode_base64_prefix,
+    image_finding_fields,
+    normalize_image_blob_config,
+    sniff_image_kind,
 )
 from core.connector_registry import register
 from core.crypto_audit import (
@@ -122,6 +135,7 @@ _SNOWFLAKE_SKIP_SCHEMAS: frozenset[str] = frozenset(
 
 # scan_failures reason for column sampling errors (#1140; taxonomy shared with #828).
 SCAN_FAILURE_REASON_SAMPLING_ERROR = "sampling_error"
+SCAN_FAILURE_REASON_IMAGE_PROBE_ERROR = "image_probe_error"
 
 
 class ColumnSampleError(RuntimeError):
@@ -729,6 +743,9 @@ class SQLConnector:
             0.0, float(self.config.get("inter_query_delay_ms", 0) or 0) / 1000.0
         )
         self._scan_progress = target_config.get("_scan_progress")
+        self._image_blob = normalize_image_blob_config(
+            self.detection_config.get("image_blob")
+        )
 
     def connect(self) -> None:
         ensure_sql_driver_available(self.config.get("driver"))
@@ -842,6 +859,18 @@ class SQLConnector:
             sample = self.sample(schema, table, cname)
         except ColumnSampleError:
             return
+        if self._image_blob.get("enabled"):
+            self._probe_image_column(
+                target_name,
+                server_ip,
+                engine_name,
+                schema,
+                table,
+                cname,
+                ctype,
+                sample,
+                audit_log_name=audit_log_name,
+            )
         res = self.scanner.scan_column(cname, sample, connector_data_type=ctype)
         res = augment_low_id_like_for_persist(res, cname, self.detection_config)
         if (
@@ -896,6 +925,184 @@ class SQLConnector:
             sink.log_finding(*log_args)
         else:
             _emit_log_finding(*log_args)
+
+    def _save_image_presence_finding(
+        self,
+        *,
+        target_name: str,
+        server_ip: str,
+        engine_name: str,
+        schema: str,
+        table: str,
+        cname: str,
+        ctype: str,
+        kinds: set[str],
+        base64: bool,
+        audit_log_name: str | None,
+    ) -> None:
+        fields = image_finding_fields(
+            kinds,
+            base64=base64,
+            name_hint=column_name_suggests_image(cname),
+        )
+        self._out().save_finding(
+            source_type="database",
+            target_name=target_name,
+            server_ip=server_ip,
+            engine_details=engine_name,
+            schema_name=schema,
+            table_name=table,
+            column_name=cname,
+            data_type=ctype,
+            ml_confidence=0,
+            **fields,
+        )
+        log_args = (
+            "database",
+            audit_log_name or target_name,
+            f"{schema}.{table}.{cname}",
+            fields["sensitivity_level"],
+            fields["pattern_detected"],
+        )
+        sink = getattr(self._tls, "sink", None)
+        if sink is not None:
+            sink.log_finding(*log_args)
+        else:
+            _emit_log_finding(*log_args)
+
+    def _probe_image_column(
+        self,
+        target_name: str,
+        server_ip: str,
+        engine_name: str,
+        schema: str,
+        table: str,
+        cname: str,
+        ctype: str,
+        sample: str,
+        *,
+        audit_log_name: str | None = None,
+    ) -> None:
+        cfg = self._image_blob
+        family = column_type_family(ctype)
+        kinds: set[str] = set()
+        if family == "text":
+            for part in sample.split(SAMPLE_VALUE_JOIN_SEPARATOR):
+                blob = decode_base64_prefix(
+                    part, min_chars=int(cfg["base64_min_chars"])
+                )
+                if blob is None:
+                    continue
+                kind = sniff_image_kind(blob)
+                if kind is not None:
+                    kinds.add(kind)
+        elif family == "binary":
+            dialect = self.engine.dialect.name if self.engine else ""
+            if not supports_prefix_probe(dialect):
+                return
+            if self._inter_query_delay_s > 0:
+                time.sleep(self._inter_query_delay_s)
+            try:
+                prefixes = self._sample_column_prefixes(
+                    schema,
+                    table,
+                    cname,
+                    ctype,
+                    limit=int(cfg["sampling_rows"]),
+                )
+            except Exception as exc:
+                details = "image_probe " + format_column_sample_failure_details(
+                    schema=schema or "",
+                    table=table,
+                    column_name=cname,
+                    dialect=dialect,
+                    exc=exc,
+                )
+                self._out().save_failure(
+                    target_name,
+                    SCAN_FAILURE_REASON_IMAGE_PROBE_ERROR,
+                    details,
+                )
+                try:
+                    from utils.logger import get_logger
+
+                    get_logger().warning(
+                        "image_probe_failed schema=%s table=%s col=%s dialect=%s err=%s",
+                        schema or "",
+                        table,
+                        cname,
+                        dialect,
+                        str(exc)[:200],
+                    )
+                except Exception:
+                    pass
+                return
+            for blob in prefixes:
+                kind = sniff_image_kind(blob)
+                if kind is not None:
+                    kinds.add(kind)
+        else:
+            return
+        if not kinds:
+            return
+        base64 = family == "text"
+        self._save_image_presence_finding(
+            target_name=target_name,
+            server_ip=server_ip,
+            engine_name=engine_name,
+            schema=schema,
+            table=table,
+            cname=cname,
+            ctype=ctype,
+            kinds=kinds,
+            base64=base64,
+            audit_log_name=audit_log_name,
+        )
+
+    def _sample_column_prefixes(
+        self,
+        schema: str,
+        table: str,
+        column_name: str,
+        ctype: str,
+        *,
+        limit: int,
+    ) -> list[bytes]:
+        use_limit = resolve_sql_sample_limit(limit)
+        dialect = self.engine.dialect.name if self.engine else ""
+        safe_col = column_name.replace('"', '""')
+        safe_table = table.replace('"', '""')
+        safe_schema = (schema or "").replace('"', '""')
+        to = self._sample_statement_timeout_ms
+        oracle_raw = {"raw_col": column_name, "raw_table": table}
+        if schema:
+            oracle_raw["raw_schema"] = schema
+        plan = SamplingManager.build_column_prefix_sample(
+            dialect,
+            safe_col=safe_col,
+            safe_table=safe_table,
+            safe_schema=safe_schema,
+            schema=schema,
+            limit=use_limit,
+            prefix_bytes=PROBE_PREFIX_BYTES,
+            oracle_lob=column_type_token(ctype) == "BLOB",
+            statement_timeout_ms=to,
+            **(oracle_raw if (dialect or "").lower() == "oracle" else {}),
+        )
+        with self.engine.connect() as conn, conn.begin():
+            if dialect in ("postgresql", "postgres") and to:
+                conn.execute(
+                    text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
+                )
+            rows = conn.execute(plan.query).fetchall()
+        out: list[bytes] = []
+        for row in rows:
+            if not row:
+                continue
+            blob = cell_to_bytes(row[0])
+            if blob is not None:
+                out.append(blob)
+        return out
 
     def sample(
         self, schema: str, table: str, column_name: str, limit: int | None = None
