@@ -230,6 +230,18 @@ def test_failure_hint_timeout_includes_config_guidance():
     assert "connect" in hint.lower() or "read" in hint.lower()
 
 
+_IMAGE_PROBE_HINT = (
+    "Image/BLOB probe failed for this column (SQL dialect, permissions or connectivity). "
+    "Text detection still ran, but image presence was not evaluated: not a clean result "
+    "for images. Check the detailed message and the dialect notes."
+)
+
+
+def test_D2362_27_failure_hint_image_probe_error():
+    assert failure_hint("image_probe_error") == _IMAGE_PROBE_HINT
+    assert failure_hint("IMAGE_PROBE_ERROR") == _IMAGE_PROBE_HINT
+
+
 def test_failure_hint_other_reasons():
     """failure_hint returns sensible hints for unreachable, auth_failed, permission_denied."""
     assert (

@@ -3,6 +3,7 @@
 from sqlalchemy.sql.elements import quoted_name
 
 from connectors.sql_sampling import (
+    PREFIX_PROBE_DIALECTS,
     SamplingManager,
     SqlColumnSampleQueryBuilder,
     TableSamplingMetadata,
@@ -10,7 +11,16 @@ from connectors.sql_sampling import (
     oracle_sql_identifier,
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
+    supports_prefix_probe,
 )
+
+_COMPLIANCE_PREFIX = "-- Data Boar Compliance Scan\n"
+
+
+def _sql_body(plan) -> str:
+    s = str(plan.query)
+    assert s.startswith(_COMPLIANCE_PREFIX)
+    return s[len(_COMPLIANCE_PREFIX) :]
 
 
 def test_resolve_sql_sample_limit_uses_config_when_env_unset():
@@ -305,3 +315,174 @@ def test_column_sample_sql_for_cursor_oracle_literal_rownum():
     assert '"s"' not in sql
     assert label == "non_null_rownum_oracle"
     assert human == "ROWNUM inner filter (Oracle)"
+
+
+def test_d2362_10_prefix_probe_dialects_frozen():
+    # D2362-10: dialects with prefix probe support
+    assert "postgresql" in PREFIX_PROBE_DIALECTS
+    assert "mysql" in PREFIX_PROBE_DIALECTS
+    assert supports_prefix_probe("PostgreSQL")
+    assert supports_prefix_probe("mysql")
+    assert not supports_prefix_probe("snowflake")
+    assert not supports_prefix_probe("duckdb")
+
+
+def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
+    # D2362-11: prefix sampling SQL shape (body without compliance tag)
+    p_sqlite = SamplingManager.build_column_prefix_sample(
+        "sqlite",
+        safe_col="col_blob",
+        safe_table="t_img",
+        safe_schema="",
+        schema=None,
+        limit=5,
+        prefix_bytes=64,
+    )
+    assert p_sqlite.strategy_label == "prefix_probe_sqlite"
+    body = _sql_body(p_sqlite)
+    assert 'substr("col_blob", 1, 64)' in body
+    assert "IS NOT NULL" in body
+    assert "LIMIT 5" in body
+
+    p_pg = SamplingManager.build_column_prefix_sample(
+        "postgresql",
+        safe_col="c",
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub",
+        limit=5,
+        prefix_bytes=64,
+    )
+    assert p_pg.strategy_label == "prefix_probe_postgresql"
+    body_pg = _sql_body(p_pg)
+    assert 'substring("c" from 1 for 64)' in body_pg
+    assert '"pub"."t"' in body_pg
+
+    p_my = SamplingManager.build_column_prefix_sample(
+        "mysql",
+        safe_col="c",
+        safe_table="t",
+        safe_schema="db",
+        schema="db",
+        limit=5,
+        prefix_bytes=64,
+    )
+    body_my = _sql_body(p_my)
+    assert "SUBSTRING(`c`, 1, 64)" in body_my
+    assert "`db`.`t`" in body_my
+
+
+def test_d2362_11_quoted_identifiers_match_column_sample():
+    # D2362-11: prefix SQL cites identifiers the same way as build_column_sample
+    tricky = 'a"b'
+    p_pref = SamplingManager.build_column_prefix_sample(
+        "sqlite",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="",
+        schema=None,
+        limit=5,
+    )
+    p_full = SamplingManager.build_column_sample(
+        "sqlite",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="",
+        schema=None,
+        limit=5,
+    )
+    where_pref = _sql_body(p_pref).split(" WHERE ", 1)[1]
+    where_full = _sql_body(p_full).split(" WHERE ", 1)[1]
+    assert where_pref == where_full
+
+    p_pg = SamplingManager.build_column_prefix_sample(
+        "postgresql",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub",
+        limit=5,
+    )
+    full_pg = SamplingManager.build_column_sample(
+        "postgresql",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub",
+        limit=5,
+    )
+    assert f'"{tricky}"' in _sql_body(p_pg)
+    assert f'"{tricky}"' in str(full_pg.query)
+
+
+def test_d2362_12_duckdb_not_supported():
+    import pytest
+
+    # D2362-12
+    assert supports_prefix_probe("duckdb") is False
+    with pytest.raises(ValueError, match="prefix probe not supported"):
+        SamplingManager.build_column_prefix_sample(
+            "duckdb",
+            safe_col="c",
+            safe_table="t",
+            safe_schema="",
+            schema=None,
+            limit=5,
+        )
+
+
+def test_d2362_12_prefix_probe_mssql_oracle():
+    # D2362-12: MSSQL SUBSTRING + TOP; Oracle ROWNUM binds
+    p_ms = SamplingManager.build_column_prefix_sample(
+        "mssql",
+        safe_col="c",
+        safe_table="t",
+        safe_schema="dbo",
+        schema="dbo",
+        limit=5,
+        prefix_bytes=64,
+    )
+    body_ms = _sql_body(p_ms)
+    assert "SELECT TOP (5) SUBSTRING" in body_ms
+    assert "WITH (NOLOCK)" in body_ms
+    assert ", 64)" in body_ms
+
+    p_ora = SamplingManager.build_column_prefix_sample(
+        "oracle",
+        safe_col="BLOBCOL",
+        safe_table="T",
+        safe_schema="S",
+        schema="S",
+        limit=5,
+        prefix_bytes=64,
+    )
+    body_ora = _sql_body(p_ora)
+    assert "ROWNUM <= :lim" in body_ora
+    compiled = p_ora.query.compile()
+    assert compiled.params.get("lim") == 5
+
+
+def test_d2362_12b_oracle_lob_and_raw_labels():
+    p_lob = SamplingManager.build_column_prefix_sample(
+        "oracle",
+        safe_col="BLOBCOL",
+        safe_table="T",
+        safe_schema="S",
+        schema="S",
+        limit=5,
+        prefix_bytes=64,
+        oracle_lob=True,
+    )
+    assert p_lob.strategy_label == "prefix_probe_oracle_lob"
+    assert "DBMS_LOB.SUBSTR" in _sql_body(p_lob)
+    p_raw = SamplingManager.build_column_prefix_sample(
+        "oracle",
+        safe_col="RAWCOL",
+        safe_table="T",
+        safe_schema="S",
+        schema="S",
+        limit=5,
+        oracle_lob=False,
+    )
+    assert p_raw.strategy_label == "prefix_probe_oracle_raw"
+    assert "DBMS_LOB.SUBSTR" not in _sql_body(p_raw)

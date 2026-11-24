@@ -1368,7 +1368,7 @@ Substitua `<ACCOUNT_ID>` pelo id da conta Cloudflare. **Não testado contra o Cl
 - **Cobertura parcial vs “sem achados”:** **Target coverage** pode mostrar `PARTIAL` com a planilha de achados vazia — isso **não** é atestado de higiene. Por padrão, **nomes de objetos não varridos** aparecem só como **contagens**; use `report_object_names: true` no alvo se precisar dos nomes na cobertura (achados sempre carregam o caminho do objeto quando há hit).
 - **LGPD / GDPR:** varrer um bucket do cliente processa **dados pessoais dele**. Base legal, finalidade, retenção e DPA continuam com o **cliente**; o Data Boar faz leitura e classificação técnicas.
 - **Postura de evidência:** os relatórios descrevem o que foi lido sob a sua config — **evidência para triagem, não conclusão jurídica** e sem proteção contra multa regulatória.
-- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 e Cloudflare R2 seguem **não testados contra o serviço de nuvem real** nessa evidência.
+- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 foi testado contra o serviço AWS real em **2026-11-24** com dados sintéticos e usuário IAM somente leitura (veja exemplo acima). Cloudflare R2 segue **não testado contra o serviço de nuvem real** nessa evidência.
 
 ### IAM — menor privilégio (AWS)
 
