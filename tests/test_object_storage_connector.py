@@ -1451,7 +1451,7 @@ def test_D2306_92_lista_sem_teto_de_pages_vai_em_loop_sem_knob(
     """D2306-92 (R7-1): with empty_pages_forever() and max_objects 10 or unlimited,
     the listing returns 16 empty pages; a failure protocol_error with the rule text is recorded;
     listing_complete is false and coverage is partial.
-    RED: fails because _MAX_EMPTY_PAGES_IN_A_ROW is not 16 (AssertionError)."""
+    The connector must NOT sleep in this path (no retry, no backoff)."""
     fake = h.s3()
     fake.empty_pages_forever()
     out = h.run(fake.transport, s3_target(max_objects=max_objects))
@@ -1463,6 +1463,8 @@ def test_D2306_92_lista_sem_teto_de_pages_vai_em_loop_sem_knob(
     ]
     assert executive(out.db)["listing_complete"] is False
     assert executive(out.db)["coverage"] == "partial"
+    # The connector never sleeps in this path (no retry, no backoff).
+    assert out.clock.sleeps == []
 
 
 def test_D2306_93_lista_com_15_vazias_e_2_entradas_no_fim(h: Harness) -> None:
@@ -1472,25 +1474,50 @@ def test_D2306_93_lista_com_15_vazias_e_2_entradas_no_fim(h: Harness) -> None:
 
     With pages_script([0]*15 + [2, -1]): 15 empty pages, then 2 entries (truncated), then end.
     The empty-page count resets after a page with entries.
+    The pages_script now yields unique downloadable keys under the requested prefix,
+    so the entries are accepted and scanned (not out_of_prefix).
     This test should PASS today and after the fix (it guards against a ceiling that is too eager).
     """
     fake = h.s3()
-    # Script: 15 empty pages, then 2 entries (truncated), then end.
+    # Script: 15 empty pages, then 2 entries (truncated), then end (0 entries, not truncated).
     script = [0] * 15 + [2, -1]
     fake.pages_script(script)
     out = h.run(fake.transport, s3_target(max_objects="unlimited"))
 
-    # 15 empty + 1 with entries + 1 end = 17 requests.
-    # Entries from pages_script don't have the right prefix, so they're out_of_prefix.
+    # 15 empty + 1 with 2 entries + 1 end = 17 list requests.
     assert ops(fake, "ListObjectsV2") == 17
-    # No failure should be recorded for empty pages (the rule resets count on having entries).
-    # Note: skipped items appear in failures, so we check reasons() instead.
+    # No failure for empty pages (counter resets on page with entries).
     assert "protocol_error" not in out.db.reasons()
     assert "limit_reached" not in out.db.reasons()
-    assert out.db.reasons() == ["skipped"]  # out_of_prefix=2
+    # No failures at all: the 2 entries are under the prefix and scanned.
+    assert out.db.reasons() == []
     assert executive(out.db)["listing_complete"] is True
-    # Coverage is partial because pages_script entries are out_of_prefix (not in corpus/).
-    assert executive(out.db)["coverage"] == "partial"
+    assert executive(out.db)["coverage"] == "complete"
+    assert executive(out.db)["objects_scanned"] == 2
+    assert executive(out.db)["objects_listed"] == 2
+    assert executive(out.db)["objects_not_scanned"] == 0
+
+
+def test_D2306_93_variante_contador_zera(h: Harness) -> None:
+    """D2306-93 variant: 15 empty, 1 with entry, 15 empty, 1 with entry and end -> complete.
+    The empty-page counter resets when a page has at least one entry.
+    Script: [0]*15 + [1] + [0]*15 + [1, -1] = 33 list requests, 2 objects scanned, complete.
+    """
+    fake = h.s3()
+    script = [0] * 15 + [1] + [0] * 15 + [1, -1]
+    fake.pages_script(script)
+    out = h.run(fake.transport, s3_target(max_objects="unlimited"))
+
+    # 15 + 1 + 15 + 1 + 1 = 33 list requests.
+    assert ops(fake, "ListObjectsV2") == 33
+    assert "protocol_error" not in out.db.reasons()
+    assert "limit_reached" not in out.db.reasons()
+    assert out.db.reasons() == []
+    assert executive(out.db)["listing_complete"] is True
+    assert executive(out.db)["coverage"] == "complete"
+    assert executive(out.db)["objects_scanned"] == 2
+    assert executive(out.db)["objects_listed"] == 2
+    assert executive(out.db)["objects_not_scanned"] == 0
 
 
 def test_D2306_94_teto_absoluto_de_pages_com_monkeypatch(
@@ -1517,10 +1544,11 @@ def test_D2306_94_teto_absoluto_de_pages_com_monkeypatch(
     ]
 
 
-def test_D2306_95_constantes_das_regras_e_failure_hint() -> None:
+def test_D2306_95_constantes_das_regras_e_failure_hint(h: Harness) -> None:
     """D2306-95: targets with max_pages: 3 and max_empty_pages: 2 keys get the same result
-    as test_D2306_92; core.database failure_hint("limit_reached") contains the text about
-    built-in ceiling not being disabled."""
+    as test_D2306_92 (16 list requests, same protocol_error detail); core.database
+    failure_hint("limit_reached") contains the text about built-in ceiling not being disabled.
+    These config keys are NOT accepted by the connector (no config key can disable the ceilings)."""
     mod = connector_module()
     # Check constants exist with correct values.
     assert getattr(mod, "_MAX_EMPTY_PAGES_IN_A_ROW", None) == 16
@@ -1532,3 +1560,18 @@ def test_D2306_95_constantes_das_regras_e_failure_hint() -> None:
     hint = failure_hint("limit_reached")
     assert "The built-in listing page ceiling cannot be disabled" in hint
     assert "split the target by prefix" in hint
+
+    # A target with max_pages: 3 and max_empty_pages: 2 (ignored keys) gets the SAME
+    # result as D2306-92: 16 list requests, protocol_error with the rule text.
+    fake = h.s3()
+    fake.empty_pages_forever()
+    target = s3_target(max_objects="unlimited", max_pages=3, max_empty_pages=2)
+    out = h.run(fake.transport, target)
+
+    assert ops(fake, "ListObjectsV2") == 16
+    assert out.db.details("protocol_error") == [
+        "listing returned 16 empty pages in a row; listing stopped before the end of the prefix"
+    ]
+    assert executive(out.db)["listing_complete"] is False
+    assert executive(out.db)["coverage"] == "partial"
+    assert out.clock.sleeps == []
