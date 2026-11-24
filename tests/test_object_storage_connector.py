@@ -1498,7 +1498,6 @@ def test_D2306_91_erro_da_extracao_e_por_objeto(
 
 # ----------------------------------------------------------------------------
 # D2306-92 to D2306-95: listing without a page ceiling (R7-1)
-# These are RED tests: they fail with AssertionError because the rules are not yet implemented.
 # ----------------------------------------------------------------------------
 
 
@@ -1585,7 +1584,7 @@ def test_D2306_94_teto_absoluto_de_pages_com_monkeypatch(
     max_objects unlimited, exactly 5 list requests, limit_reached with rule text,
     listing_complete false, coverage partial, 5 objects scanned."""
     mod = connector_module()
-    monkeypatch.setattr(mod, "_LISTING_MAX_PAGES", 5, raising=False)
+    monkeypatch.setattr(mod, "_LISTING_MAX_PAGES", 5)
 
     fake = h.s3()
     fake.one_entry_per_page_forever()

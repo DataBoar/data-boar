@@ -439,12 +439,13 @@ class FakeS3:
         self._redirect: dict[str, Any] | None = None
         self._extra_entries = 0
         self._raw_listing: bytes | None = None
-        self._redirect: dict[str, Any] | None = None
         # Knobs for listing without page ceiling (R7-1, D2306-92 to D2306-95).
         self._fake_empty_pages: bool = False
         self._fake_one_entry: bool = False
         self._pages_script: list[int] | None = None
-        self._list_count: int = 0  # Safety cap: resets after 2000 requests.
+        self._list_count: int = (
+            0  # Monotonic list counter; hostile knobs error at 2000+.
+        )
         self.transport = httpx.MockTransport(self._handle)
 
     # -- identity ----------------------------------------------------------
@@ -543,7 +544,7 @@ class FakeS3:
         self._fake_one_entry = False
 
     def one_entry_per_page_forever(self) -> None:
-        """Knob for R7-2: every ListObjectsV2 returns exactly one entry with a new token.
+        """Knob for R7-1: every ListObjectsV2 returns exactly one entry with a new token.
         Safety cap: after 2000 requests, IsTruncated=false is returned."""
         self._fake_one_entry = True
         self._fake_empty_pages = False

@@ -444,9 +444,8 @@ def test_A2306_8_nome_de_variavel_sem_prefixo_e_recusado(monkeypatch):
             "secret_access_key_from_env": ENV_SK,
         }
     )
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match=r"access_key_id_from_env"):
         normalize_config(_config_with(target))
-    assert isinstance(excinfo.value, ValueError)
 
 
 def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypatch):
@@ -457,10 +456,8 @@ def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypat
     monkeypatch.setenv(ENV_AK, "SYNTHAK" + "0" * 16)
     monkeypatch.setenv(ENV_SK, "SYNTHSK" + "0" * 32)
     target = make_target(secret_access_key=marker)
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match=r"secret_access_key") as excinfo:
         normalize_config(_config_with(target))
-    assert isinstance(excinfo.value, ValueError)
-    assert "secret_access_key" in str(excinfo.value)
     assert marker not in str(excinfo.value)
 
 
@@ -845,8 +842,7 @@ def test_A2306_24_limite_desligado_por_alvo_com_unlimited(make_fake, tmp_path):
 def test_A2306_27_lista_sem_teto_de_pages_na_aceitacao(make_fake, tmp_path):
     """A2306-27 (R7-1): with empty_pages_forever() and max_objects 10,
     the target ends (exactly 16 ListObjectsV2), there is a protocol_error failure,
-    and Target coverage shows PARTIAL, Listing complete = no, and the incomplete-listing note.
-    This test is xfail pending the R7-1 fix (2306.8)."""
+    and Target coverage shows PARTIAL, Listing complete = no, and the incomplete-listing note."""
     fake = make_fake()
     fake.empty_pages_forever()
     out, wb = run_with_report(fake, make_target(max_objects=10), tmp_path)
