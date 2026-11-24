@@ -1169,7 +1169,7 @@ For **AWS only**, use `driver: s3` (virtual-hosted; do not set `endpoint_url` or
 
 The `object_storage` type uses **one driver per provider**; shipped drivers are `s3` and `s3_compatible`.
 
-### Example — AWS S3 (not tested against the real AWS service)
+### Example — AWS S3 (tested against the real AWS service with synthetic data)
 
 ```yaml
 
@@ -1184,7 +1184,7 @@ The `object_storage` type uses **one driver per provider**; shipped drivers are 
     secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
 ```
 
-**Not tested against the real Amazon S3 service** in this repository's published evidence. Validate in your account before production.
+**Tested against the real Amazon S3 service on 2026-11-24** with synthetic data only, using a read-only IAM user whose policy allows `s3:ListBucket` restricted to the target prefix and `s3:GetObject` on `<prefix>*`; with such a policy the target **must** set `prefix:` (without it AWS answers AccessDenied, which comes from the policy, not from the driver). See the least-privilege policy example in this section (around line 1232). Validate in your account before production.
 
 ### Example — MinIO / generic compatible endpoint (not tested against vendor appliances)
 
@@ -1213,7 +1213,7 @@ Replace `<ACCOUNT_ID>` with your Cloudflare account id. **Not tested against the
 
 - **Credentials:** values live only in the environment via `auth.*_from_env` names (no inline keys, no AWS credential chain, no shared credentials file, no instance metadata, no anonymous access). Env var names follow the project prefix rules ([#1977](https://github.com/DataBoar/data-boar/issues/1977)). Optional `session_token_from_env` supports short-lived STS-style keys when you inject them at runtime.
 - **Transport:** `https` only; TLS certificate verification is always on. `allow_private_networks: true` applies **only** when you set a lab-style `endpoint_url` on `s3_compatible` (RFC1918, loopback, or other private targets your policy allows).
-- **Limits (defaults are suggestions):** `max_objects`, `max_download_bytes`, and `max_object_bytes` may each be a positive integer or `unlimited`. When a cap is hit, listing or download stops, the scan records **partial coverage** (counts and bytes not scanned), and the Excel **Target coverage** sheet explains why. Raising limits increases list traffic, temporary disk use, and runtime — tune per target. Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Limits (defaults are suggestions):** `max_objects`, `max_download_bytes`, and `max_object_bytes` may each be a positive integer or `unlimited`. When a cap is hit, listing or download stops, the scan records **partial coverage** (counts and bytes not scanned), and the Excel **Target coverage** sheet explains why. Raising limits increases list traffic, temporary disk use, and runtime — tune per target. Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)). Setting `unlimited` does not disable the built-in listing page ceiling (the connector still stops listing at its internal maximum of pages and records `limit_reached`).
 - **Object keys:** segments containing `.` or `..` are skipped and reported as `unsafe_key`. Object versions and anonymous buckets are **not** supported.
 - **Partial coverage vs “no findings”:** **Target coverage** can show `PARTIAL` even when the findings sheet is empty — that is not a clean bill of health. By default, **unscanned object names** appear only as **counts** in coverage output; set `report_object_names: true` on the target when you need names in the coverage sheet (findings always carry the object path for hits).
 - **LGPD / GDPR:** scanning a customer bucket processes **their** personal data. Lawful basis, purpose limitation, retention, and DPA terms stay with the **customer**; Data Boar performs technical read and classification only.

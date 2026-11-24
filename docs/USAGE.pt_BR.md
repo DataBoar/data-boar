@@ -1319,7 +1319,7 @@ Para **só AWS**, use `driver: s3` (virtual-hosted; não defina `endpoint_url` n
 
 O tipo `object_storage` usa **um driver por provedor**; os drivers entregues são `s3` e `s3_compatible`.
 
-### Exemplo — Amazon S3 (não testado contra o serviço AWS real)
+### Exemplo — Amazon S3 (testado contra o serviço AWS real com dados sintéticos)
 
 ```yaml
 
@@ -1334,7 +1334,7 @@ O tipo `object_storage` usa **um driver por provedor**; os drivers entregues sã
     secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
 ```
 
-**Não testado contra o Amazon S3 real** na evidência publicada neste repositório. Valide na sua conta antes de produção.
+**Testado contra o Amazon S3 real em 2026-11-24** apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
 
 ### Exemplo — MinIO / endpoint compatível genérico (não testado contra appliances de fornecedor)
 
@@ -1363,7 +1363,7 @@ Substitua `<ACCOUNT_ID>` pelo id da conta Cloudflare. **Não testado contra o Cl
 
 - **Credenciais:** valores só no ambiente, via nomes `auth.*_from_env` (sem chaves inline, sem cadeia de credenciais da AWS, sem arquivo de perfil compartilhado, sem metadados de instância, sem acesso anônimo). Os nomes das variáveis seguem as regras de prefixo do projeto ([#1977](https://github.com/DataBoar/data-boar/issues/1977)). `session_token_from_env` opcional para chaves temporárias no estilo STS.
 - **Transporte:** só `https`; verificação de certificado TLS sempre ativa. `allow_private_networks: true` vale **somente** com `endpoint_url` de laboratório em `s3_compatible` (RFC1918, loopback ou outros destinos privados permitidos pela sua política).
-- **Limites (padrões são sugestões):** `max_objects`, `max_download_bytes` e `max_object_bytes` podem ser inteiro positivo ou `unlimited`. Ao atingir um teto, a listagem ou o download para, a varredura registra **cobertura parcial** (contagens e bytes não varridos) e a planilha **Target coverage** no Excel explica o motivo. Subir limites aumenta tráfego de listagem, disco temporário e tempo de execução. Ajuste pontual de limite por varredura **não** entra nesta entrega ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Limites (padrões são sugestões):** `max_objects`, `max_download_bytes` e `max_object_bytes` podem ser inteiro positivo ou `unlimited`. Ao atingir um teto, a listagem ou o download para, a varredura registra **cobertura parcial** (contagens e bytes não varridos) e a planilha **Target coverage** no Excel explica o motivo. Subir limites aumenta tráfego de listagem, disco temporário e tempo de execução. Ajuste pontual de limite por varredura **não** entra nesta entrega ([#2313](https://github.com/DataBoar/data-boar/issues/2313)). Definir `unlimited` não desativa o teto interno de páginas de listagem (o conector ainda para de listar no seu máximo interno de páginas e registra `limit_reached`).
 - **Chaves de objeto:** segmentos com `.` ou `..` são ignorados e reportados como `unsafe_key`. Versões de objeto e buckets anônimos **não** são suportados.
 - **Cobertura parcial vs “sem achados”:** **Target coverage** pode mostrar `PARTIAL` com a planilha de achados vazia — isso **não** é atestado de higiene. Por padrão, **nomes de objetos não varridos** aparecem só como **contagens**; use `report_object_names: true` no alvo se precisar dos nomes na cobertura (achados sempre carregam o caminho do objeto quando há hit).
 - **LGPD / GDPR:** varrer um bucket do cliente processa **dados pessoais dele**. Base legal, finalidade, retenção e DPA continuam com o **cliente**; o Data Boar faz leitura e classificação técnicas.
