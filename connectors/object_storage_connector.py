@@ -793,8 +793,7 @@ class ObjectStorageConnector:
 
             # (f) absolute ceiling of pages -> limit_reached
             if pages_requested >= _LISTING_MAX_PAGES:
-                self._failure(
-                    "limit_reached",
+                self._limit_failures.append(
                     f"built-in listing page ceiling reached ({_LISTING_MAX_PAGES} pages); "
                     "listing stopped before the end of the prefix",
                 )
