@@ -36,7 +36,9 @@ Enterprises increasingly store “data soup” in **cloud object storage**: **Am
 | 1.5 | **Tests:** `moto` or MinIO container in CI (or heavy tests marked optional); unit tests for listing + one synthetic object path.                                                                                                                                                             | ✅ Simulated S3 + SeaweedFS evidence (#2312) |
 | 1.6 | **Docs:** `USAGE` / `TECH_GUIDE` / operator samples (EN + pt-BR); IAM policy example (least privilege); security note on **never** using overly broad `s3:*` for audit use.                                                                                                                  | ✅ Epic #2311 + README pitch (#2306) on branch; epic PR pending |
 
-### Phase 2 — **S3-compatible and Azure Blob**
+### Phase 2 — **Azure Blob**
+
+S3-compatible was delivered in Phase 1 (#2306, PR #2350).
 
 | #   | To-do                                                                                                                   | Status    |
 | -   | -----                                                                                                                   | ------    |

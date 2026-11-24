@@ -5,7 +5,7 @@
 | Campo | Valor |
 | ----- | ----- |
 | SeaweedFS | `30GB 4.54` |
-| Imagem / digest | `chrislusf/seaweedfs:latest` / `sha256:4b42c212543a…` |
+| Imagem / digest | `chrislusf/seaweedfs@sha256:4b42c212543a0acd4c0e675215ecdcaf62a186ef98def76c7e12701871222d15` — a reproducao usa a imagem pelo digest |
 | Podman | 5.4.2 · Debian 13 (kernel `7.2.12+deb13-amd64`) |
 | Aceitação | 48 passed em `tests/test_object_storage_acceptance.py` |
 
