@@ -525,6 +525,23 @@ def test_D2306_82_entrada_sem_size_valido_vira_chave_none(size: str | None) -> N
     ]
 
 
+def test_D2306_82_size_com_muitos_digitos_vira_chave_none() -> None:
+    """Size with 5000 digits should be treated as malformed (int() would overflow),
+    not raise ValueError. The entry should become ObjectEntry(None, None)."""
+    size_5000 = "1" + "0" * 4999  # 5000 digits
+    body = _listing(
+        _item("corpus/ok-1.txt", "4")
+        + _item("corpus/a.txt", size_5000)
+        + _item("corpus/ok-2.txt", "0")
+    )
+    page = S3Driver().parse_list(body)
+    assert page.entries == [
+        ObjectEntry("corpus/ok-1.txt", 4),
+        ObjectEntry(None, None),
+        ObjectEntry("corpus/ok-2.txt", 0),
+    ]
+
+
 @pytest.mark.parametrize(
     "raw_key", ["corpus/%FF.txt", "corpus/%C3.txt", "corpus/%ZZ%E9.txt"]
 )
