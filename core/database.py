@@ -251,7 +251,9 @@ _OBJECT_STORAGE_HINTS: dict[str, str] = {
     ),
     "limit_reached": (
         "Raise or disable the limit for this target in config (max_objects, "
-        "max_download_bytes, max_object_bytes); see USAGE.md. Coverage is partial until then."
+        "max_download_bytes, max_object_bytes); see USAGE.md. Coverage is partial until then. "
+        "The built-in listing page ceiling cannot be disabled; if it was reached, "
+        "split the target by prefix."
     ),
     "too_large": (
         "An object was larger than max_object_bytes and was not scanned. Raise "

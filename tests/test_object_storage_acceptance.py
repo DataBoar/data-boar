@@ -853,7 +853,6 @@ def test_A2306_24_limite_desligado_por_alvo_com_unlimited(make_fake, tmp_path):
     assert report_info_value(wb, "Coverage") == []
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason="2306 pending: A2306-27")
 def test_A2306_27_lista_sem_teto_de_pages_na_aceitacao(make_fake, tmp_path):
     """A2306-27 (R7-1): with empty_pages_forever() and max_objects 10,
     the target ends (exactly 16 ListObjectsV2), there is a protocol_error failure,
