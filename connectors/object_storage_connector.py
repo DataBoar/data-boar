@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -274,9 +275,12 @@ def _readable_int(value: Any) -> bool:
 
 def _retry_after(headers: httpx.Headers) -> int | None:
     raw = headers.get("retry-after")
-    if raw is None or not raw.strip().isdigit():
+    if raw is None:
         return None
-    return min(int(raw.strip()), _RETRY_AFTER_MAX)
+    stripped = raw.strip()
+    if not re.fullmatch(r"[0-9]{1,20}", stripped):
+        return None
+    return min(int(stripped), _RETRY_AFTER_MAX)
 
 
 def _key_ext(key: str) -> str:
@@ -999,10 +1003,12 @@ class ObjectStorageConnector:
     ) -> None:
         ceiling = self._ceiling(entry)
         declared = response.headers.get("content-length")
-        if declared is not None and declared.strip().isdigit():
-            length = int(declared.strip())
-            if ceiling is not None and length > ceiling:
-                raise self._overflow(entry, length)
+        if declared is not None:
+            stripped = declared.strip()
+            if re.fullmatch(r"[0-9]{1,20}", stripped):
+                length = int(stripped)
+                if ceiling is not None and length > ceiling:
+                    raise self._overflow(entry, length)
         read = 0
         fd = os.open(local, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
