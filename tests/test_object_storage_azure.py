@@ -223,3 +223,117 @@ def test_classify_error_table() -> None:
 
     got = driver.classify_error(400, {}, b"", during="get")
     assert got.reason == "protocol_error"
+
+
+# --- INCREMENT 1: validation tests (should FAIL today) ---
+
+_ALLOWED_SUFFIXES = frozenset(
+    {
+        "core.windows.net",
+        "core.usgovcloudapi.net",
+        "core.chinacloudapi.cn",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    "bad_account",
+    [
+        "SYNTHETICSA",  # uppercase
+        "sa",  # too short (<3)
+        "s" * 25,  # too long (>24)
+        "syn/sa",  # contains "/"
+        "syn@sa",  # contains "@"
+        "syn.sa",  # contains "."
+        "syn:sa",  # contains ":"
+        "syn sa",  # contains whitespace
+        "syn-sa",  # contains "-" (not in ^[a-z0-9]{3,24}$)
+        "syn_sa",  # contains "_" (not in ^[a-z0-9]{3,24}$)
+    ],
+)
+def test_settings_rejects_invalid_account_name(bad_account: str) -> None:
+    """settings() must reject account_name not matching ^[a-z0-9]{3,24}$."""
+    driver = AzureBlobDriver()
+    with pytest.raises(DriverConfigError):
+        driver.settings(_cfg(account_name=bad_account))
+
+
+@pytest.mark.parametrize(
+    "bad_suffix",
+    [
+        "evil.example",  # not in allowed list
+        "core.windows.net/x",  # path traversal attempt
+        "core.windows.net@evil",  # credential injection attempt
+        "core.windows.net:443",  # port injection attempt
+        "blob.core.windows.net",  # not in allowed list (full host)
+        "core.windows.net.",  # trailing dot
+        "core.windows.net..",  # double dot
+        "",  # empty
+    ],
+)
+def test_settings_rejects_invalid_endpoint_suffix(bad_suffix: str) -> None:
+    """settings() must reject endpoint_suffix outside the closed allowlist."""
+    driver = AzureBlobDriver()
+    with pytest.raises(DriverConfigError):
+        driver.settings(_cfg(endpoint_suffix=bad_suffix))
+
+
+@pytest.mark.parametrize(
+    "bad_account",
+    [
+        "SYNTHETICSA",
+        "sa",
+        "s" * 25,
+        "syn/sa",
+        "syn@sa",
+        "syn.sa",
+        "syn:sa",
+        "syn sa",
+        "syn-sa",
+        "syn_sa",
+    ],
+)
+def test_destination_host_rejects_invalid_account_name(bad_account: str) -> None:
+    """destination_host() must reject account_name not matching ^[a-z0-9]{3,24}$ (returns empty string)."""
+    driver = AzureBlobDriver()
+    assert driver.destination_host(_cfg(account_name=bad_account)) == ""
+
+
+@pytest.mark.parametrize(
+    "bad_suffix",
+    [
+        "evil.example",
+        "core.windows.net/x",
+        "core.windows.net@evil",
+        "core.windows.net:443",
+        "blob.core.windows.net",
+        "core.windows.net.",
+        "core.windows.net..",
+        "",
+    ],
+)
+def test_destination_host_rejects_invalid_endpoint_suffix(bad_suffix: str) -> None:
+    """destination_host() must reject endpoint_suffix outside the closed allowlist (returns empty string)."""
+    driver = AzureBlobDriver()
+    assert driver.destination_host(_cfg(endpoint_suffix=bad_suffix)) == ""
+
+
+@pytest.mark.parametrize(
+    "account,suffix",
+    [
+        ("syntheticsa", "core.windows.net"),
+        ("myaccount123", "core.usgovcloudapi.net"),
+        ("storageacc", "core.chinacloudapi.cn"),
+    ],
+)
+def test_valid_account_and_suffix_give_expected_destination(
+    account: str, suffix: str
+) -> None:
+    """Valid account_name and endpoint_suffix give exactly f'https://{account}.blob.{suffix}'."""
+    driver = AzureBlobDriver()
+    cfg = _cfg(account_name=account, endpoint_suffix=suffix)
+    settings = driver.settings(cfg)
+    expected_host = f"{account}.blob.{suffix}"
+    expected_url = f"https://{expected_host}"
+    assert driver.destination(settings) == expected_url
+    assert driver.destination_host(cfg) == expected_host
