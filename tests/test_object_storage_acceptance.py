@@ -733,17 +733,6 @@ def test_A2306_18_registro_resolve_o_conector_novo():
         assert resolved[0].__name__ == "ObjectStorageConnector", driver
 
 
-def test_A2306_19_azure_blob_ainda_nao_existe(make_fake):
-    """A2306-19 (driver azure_blob: config_error 'not available yet', zero requisicoes)."""
-    fake = make_fake()
-    out = scan(fake, make_target(driver="azure_blob"))
-
-    assert "config_error" in out.db.reasons()
-    assert any("not available yet" in d for d in out.db.details("config_error"))
-    assert fake.requests == []
-    assert out.db.findings == []
-
-
 def test_A2306_20_slowdown_com_retry_after_espera_e_segue(make_fake):
     """A2306-20 (503 SlowDown com Retry-After 7 na primeira listagem: sleep [7], mesmos achados)."""
     fake = make_fake()

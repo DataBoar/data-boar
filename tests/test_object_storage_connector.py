@@ -97,9 +97,8 @@ def _list_reqs(fake: Any) -> list[Any]:
 @pytest.mark.parametrize(
     ("driver", "message"),
     [
-        (None, "driver must be one of: s3, s3_compatible"),
-        ("ftp", "driver must be one of: s3, s3_compatible"),
-        ("azure_blob", "driver azure_blob is not available yet"),
+        (None, "driver must be one of: azure_blob, s3, s3_compatible"),
+        ("ftp", "driver must be one of: azure_blob, s3, s3_compatible"),
         ("gcs", "driver gcs is not available yet"),
     ],
 )
@@ -131,7 +130,7 @@ def test_D2306_64_lista_da_mensagem_vem_do_registro(h: Harness) -> None:
     out = h.run(fake.transport, s3_target(driver="x"))
 
     assert out.db.details("config_error") == [
-        "driver must be one of: s3, s3_compatible, toy"
+        "driver must be one of: azure_blob, s3, s3_compatible, toy"
     ]
     assert fake.requests == []
     assert store.requests == []
