@@ -39,6 +39,34 @@ _ERROR_BODY_LIMIT = 64 * 1024
 _SIZE_RE = re.compile(r"[0-9]{1,20}")
 _MALFORMED = "malformed listing response"
 
+# Azure account name rules: ^[a-z0-9]{3,24}$ (lowercase alphanumeric, 3-24 chars)
+_ACCOUNT_NAME_RE = re.compile(r"^[a-z0-9]{3,24}$")
+# Allowed endpoint suffixes for Azure Blob Storage (closed allowlist)
+_ALLOWED_ENDPOINT_SUFFIXES = frozenset(
+    {
+        "core.windows.net",
+        "core.usgovcloudapi.net",
+        "core.chinacloudapi.cn",
+    }
+)
+
+
+def _validate_account_name(account_name: str) -> None:
+    """Validate Azure storage account name per Azure naming rules.
+    Raises DriverConfigError if invalid.
+    """
+    if not _ACCOUNT_NAME_RE.fullmatch(account_name):
+        raise DriverConfigError("invalid account_name for Azure Blob")
+
+
+def _validate_endpoint_suffix(endpoint_suffix: str) -> None:
+    """Validate endpoint_suffix against closed allowlist.
+    Raises DriverConfigError if invalid.
+    """
+    if endpoint_suffix not in _ALLOWED_ENDPOINT_SUFFIXES:
+        raise DriverConfigError("invalid endpoint_suffix for Azure Blob")
+
+
 # Azure Blob error codes vocabulary (section 11 of desenho 2306 extended for Azure)
 _AUTH_CODES = frozenset(
     {
@@ -239,9 +267,15 @@ class AzureBlobDriver:
         container_name = str(cfg["container_name"])
         endpoint_suffix = str(cfg.get("endpoint_suffix", "core.windows.net"))
 
+        # Validate account name (Azure naming rules: ^[a-z0-9]{3,24}$)
+        _validate_account_name(account_name)
+
         # Validate container name (Azure naming rules)
         if not re.match(r"^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$", container_name):
             raise DriverConfigError("invalid container_name for Azure Blob")
+
+        # Validate endpoint_suffix against closed allowlist
+        _validate_endpoint_suffix(endpoint_suffix)
 
         # Determine auth mode from which env-var-name keys the target declares.
         # Actual secret values come from ResolvedCredentials at request time.
@@ -273,6 +307,12 @@ class AzureBlobDriver:
         account = cfg.get("account_name")
         suffix = cfg.get("endpoint_suffix", "core.windows.net")
         if not isinstance(account, str) or not account:
+            return ""
+        # Same validation as settings(): both must see the same host
+        try:
+            _validate_account_name(account)
+            _validate_endpoint_suffix(suffix)
+        except DriverConfigError:
             return ""
         return f"{account}.blob.{suffix}"
 
