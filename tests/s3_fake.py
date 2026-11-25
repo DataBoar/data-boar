@@ -823,17 +823,31 @@ class FakeS3:
         self._list_count += 1
         params = dict(urllib.parse.parse_qsl(raw_query, keep_blank_values=True))
         prefix = params.get("prefix", "")
+        # Safety caps run before continuation enforcement so cap violations stay sole signal.
+        if self._pages_script is not None and self._list_count > len(
+            self._pages_script
+        ):
+            self._violate(
+                f"pages_script safety cap exceeded: request {self._list_count} "
+                f"past end of script (length {len(self._pages_script)})"
+            )
+            return self._error(599, "SafetyCapExceeded", headers)
+        if self._fake_empty_pages and self._list_count > 2000:
+            self._violate(
+                f"empty_pages_forever safety cap exceeded: request {self._list_count} "
+                f"past 2000-request limit"
+            )
+            return self._error(599, "SafetyCapExceeded", headers)
+        if self._fake_one_entry and self._list_count > 2000:
+            self._violate(
+                f"one_entry_per_page_forever safety cap exceeded: request {self._list_count} "
+                f"past 2000-request limit"
+            )
+            return self._error(599, "SafetyCapExceeded", headers)
         if self._hostile_listing_knob():
             self._validate_hostile_continuation(params)
         # pages_script override (R7-1 test D2306-93).
         if self._pages_script is not None:
-            if self._list_count > len(self._pages_script):
-                # Safety cap exceeded: return 599 and record violation per R7-1.
-                self._violate(
-                    f"pages_script safety cap exceeded: request {self._list_count} "
-                    f"past end of script (length {len(self._pages_script)})"
-                )
-                return self._error(599, "SafetyCapExceeded", headers)
             spec = self._pages_script[self._list_count - 1]
             if spec == -1:
                 truncated = False
@@ -873,14 +887,6 @@ class FakeS3:
             )
         # Hostile knobs override normal listing (R7-1 knobs).
         if self._fake_empty_pages:
-            # Empty page forever until safety cap of 2000 requests.
-            if self._list_count > 2000:
-                # Safety cap exceeded: return 599 and record violation per R7-1.
-                self._violate(
-                    f"empty_pages_forever safety cap exceeded: request {self._list_count} "
-                    f"past 2000-request limit"
-                )
-                return self._error(599, "SafetyCapExceeded", headers)
             truncated = True
             token_out = _token_for(self._list_count)
             encoded = params.get("encoding-type") == "url"
@@ -899,14 +905,6 @@ class FakeS3:
             )
         if self._fake_one_entry:
             # One entry forever until safety cap of 2000 requests.
-            # Each page lists a unique key under the requested prefix with real content.
-            if self._list_count > 2000:
-                # Safety cap exceeded: return 599 and record violation per R7-1.
-                self._violate(
-                    f"one_entry_per_page_forever safety cap exceeded: request {self._list_count} "
-                    f"past 2000-request limit"
-                )
-                return self._error(599, "SafetyCapExceeded", headers)
             truncated = True
             token_out = _token_for(self._list_count)
             # Generate unique key under the requested prefix.
