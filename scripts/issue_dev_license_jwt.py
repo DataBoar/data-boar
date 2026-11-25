@@ -9,8 +9,10 @@ default) enterprise-tier tokens, so a leaked QA license expires quickly and
 only runs on the machines it was bound to.
 
 Private keys must never be committed: use a file under docs/private/ or an env var
-set at runtime. See docs/private.example/licensing/README.md and
-docs/ops/QA_LOCAL_LICENSE.md.
+set at runtime. The passphrase of an encrypted key is typed at the terminal
+prompt only (#2239): it is never read from the environment, and a run without
+an interactive terminal fails closed. See docs/private.example/licensing/README.md
+and docs/ops/QA_LOCAL_LICENSE.md.
 """
 
 from __future__ import annotations
@@ -22,7 +24,6 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
-from getpass import getpass
 from pathlib import Path
 
 import jwt
@@ -136,53 +137,6 @@ def _load_private_key_pem() -> str:
     sys.exit(1)
 
 
-def _stdin_is_interactive() -> bool:
-    """True only when a real console is attached (never block under pytest/CI).
-
-    On Windows, ``subprocess.DEVNULL`` as stdin can still make
-    ``sys.stdin.isatty()`` return True; prefer ``os.isatty(fileno)``.
-    """
-    if os.environ.get("CI", "").strip().lower() in {"1", "true", "yes"}:
-        return False
-    try:
-        fd = sys.stdin.fileno()
-    except (AttributeError, OSError, ValueError):
-        return False
-    try:
-        return bool(os.isatty(fd))
-    except OSError:
-        return False
-
-
-def _resolve_key_password(pem: str) -> bytes | None:
-    """Resolve the signing-key passphrase for ``load_pem_private_key`` (#910).
-
-    Backward-compatible: an unencrypted PEM still loads with ``password=None``.
-    For an AES-encrypted PKCS#8 PEM the passphrase is resolved in this order:
-
-    1. ``DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD`` env var (non-interactive
-       path — Maestro / automation set this before calling the issuer).
-    2. Interactive ``getpass`` prompt when stdin is a real TTY (operator issuing a
-       real license at the keyboard).
-    3. Encrypted key with neither env var nor a TTY: exit with an actionable
-       message instead of a raw ``TypeError`` traceback from cryptography.
-    """
-    pw = os.environ.get("DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD", "").strip()
-    if pw:
-        return pw.encode("utf-8")
-    if "ENCRYPTED" in pem:
-        if _stdin_is_interactive():
-            entered = getpass("License signing key passphrase: ").strip()
-            if entered:
-                return entered.encode("utf-8")
-        sys.exit(
-            "Signing key is encrypted: set "
-            "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD or run in a TTY to "
-            "enter the passphrase."
-        )
-    return None
-
-
 def _require_fingerprint_hex(value: str) -> str:
     """Reject at issuance what the runtime guard would reject (#1939)."""
     if not _DBMFP_HEX_RE.fullmatch(value):
@@ -292,7 +246,16 @@ def main() -> None:
     else:
         pem = _load_private_key_pem()
 
-    key = load_pem_private_key(pem.encode("utf-8"), password=_resolve_key_password(pem))
+    from scripts.issuer_key_passphrase import (
+        IssuerPassphraseError,
+        load_issuer_private_key,
+    )
+
+    try:
+        key = load_issuer_private_key(pem, prompt="License signing key passphrase: ")
+    except IssuerPassphraseError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
     now = datetime.now(timezone.utc)
     payload = {
         "sub": args.sub,

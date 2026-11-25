@@ -3,7 +3,9 @@
 
 Operator TTY only for signing. Reuses the existing license issuer Ed25519 key
 (``DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM`` /
-``DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM_FILE``). Never creates a key.
+``DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PEM_FILE``). The passphrase of an
+encrypted key is typed at the terminal prompt only (#2239); without an
+interactive terminal, signing fails closed. Never creates a key.
 Never prints key material. CI may run ``--verify-only`` (public key only).
 """
 
@@ -16,7 +18,6 @@ import sys
 from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
@@ -46,14 +47,19 @@ def _read_issuer_pem() -> str:
 
 
 def _load_ed25519_private() -> Ed25519PrivateKey:
-    pem = _read_issuer_pem()
-    password = os.environ.get(
-        "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD", ""
-    ).strip()
-    key = load_pem_private_key(
-        pem.encode("utf-8"),
-        password=password.encode("utf-8") if password else None,
+    from scripts.issuer_key_passphrase import (
+        IssuerPassphraseError,
+        load_issuer_private_key,
     )
+
+    pem = _read_issuer_pem()
+    try:
+        key = load_issuer_private_key(
+            pem, prompt="Integrity manifest signing key passphrase: "
+        )
+    except IssuerPassphraseError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(2)
     if not isinstance(key, Ed25519PrivateKey):
         print(
             "Issuer key must be Ed25519 (same key as license verify).", file=sys.stderr
