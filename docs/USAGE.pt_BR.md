@@ -115,7 +115,7 @@ uv run python main.py --config config.yaml --hub-report hub.xlsx
 - Só a sessão **concluída** mais recente de cada nó é consolidada; se a mais recente ainda estiver rodando ou tiver falhado, o hub usa a concluída mais recente e avisa na aba Summary.
 - O arquivo tem a aba **Summary** (situação por nó), a aba **Findings** com filtro por nó e a aba **Notes**.
 - Código de saída `0`: todos os nós consolidados; `2`: só alguns nós (ou a licença não permite o recurso); `1`: nada consolidado, e nenhum arquivo é gravado. Use `--hub-overwrite` para substituir um arquivo de saída existente.
-- Os tokens vêm só da variável de ambiente indicada em `api_key_from_env` (o nome deve começar com `DATA_BOAR_`, `REST_API_` ou `API_`; com `DATA_BOAR_CREDENTIAL_STRICT=1` o host do nó também precisa estar em `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`). Um nó que informe um id de sessão com caracteres inesperados é marcado como falho. `https` é obrigatório, exceto em loopback; redirecionamentos nunca são seguidos; URLs e tokens nunca são impressos.
+- Os tokens vêm só da variável de ambiente indicada em `api_key_from_env` (o nome deve começar com `DATA_BOAR_`, `REST_API_` ou `API_`; **o host do nó precisa sempre estar em `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`, não só com `STRICT=1`**). Um nó que informe um id de sessão com caracteres inesperados é marcado como falho. `https` é obrigatório, exceto em loopback; redirecionamentos nunca são seguidos; URLs e tokens nunca são impressos.
 - Caminhos de arquivo e nomes de host são sensíveis mesmo como metadado: o arquivo de saída é criado com modo `0600`; guarde e compartilhe com esse cuidado.
 
 ## Findings sink (Pro/Enterprise)
