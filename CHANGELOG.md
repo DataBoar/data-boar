@@ -4,6 +4,8 @@ Human-readable summary of user-facing changes. **Detailed release notes:** [docs
 
 ## Unreleased
 
+- **SQL image/blob column presence (#2362):** optional `detection.image_blob` adds MEDIUM findings `IMAGE_BLOB_IN_COLUMN` and `IMAGE_BASE64_IN_COLUMN` when a column prefix looks like JPEG, PNG, PDF, or similar formats. The scan uses magic bytes only (no OCR; see **#2363** for content reading). Binary columns get a bounded prefix probe (`sampling_rows`); text columns reuse the existing sample and decode base64 prefixes. No decoded bytes are stored in logs or the audit database. Lab seeds `lab_image_blob` on PostgreSQL, MariaDB, MSSQL, and Oracle XE; demo-local and `scripts/generate_synthetic_image_blob_db.py` support acceptance without containers. Docs: [USAGE.md](docs/USAGE.md) · [USAGE.pt_BR.md](docs/USAGE.pt_BR.md).
+
 - **Object storage (S3-class, Enterprise, #2306):** read-only `object_storage` targets with drivers `s3` (AWS) and `s3_compatible` (HTTPS `endpoint_url`), in-tree SigV4 signing, env-only credentials, per-target limits with partial-coverage reporting, and filesystem-equivalent findings. Not in this drop: per-scan limit override (#2313), object versions, or anonymous access.
 
 - **Operator docs (scan JSON, SQL intra-target, hybrid claim, integrity hub):** `POST /scan` and `/start` require `Content-Type: application/json` (HTTP 415) and reject `Sec-Fetch-Site: cross-site` (HTTP 403). USAGE/TECH_GUIDE/TROUBLESHOOTING_CONNECTIVITY describe the shipped SQLAlchemy per-table pool (#1322) and its serial cases (ARL, `inter_query_delay_ms`, Snowflake). Open-core licensing copy matches enforced hybrid `dbmldsa_sig`. INTEGRITY_HUB separates packaged `integrity_manifest.json` from optional `release-manifest.json`.

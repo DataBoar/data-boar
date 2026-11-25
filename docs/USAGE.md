@@ -681,6 +681,28 @@ detection:
 
 in your config. To **enable alphanumeric CNPJ via overrides only** (for example, on older installs or for experimentation), you can copy the `LGPD_CNPJ_ALNUM` example from `config/regex_overrides.example.yaml` or from [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#yaml-example-regex-overrides) into your own `regex_overrides_file`.
 
+#### Image or document bytes in SQL columns (`detection.image_blob`)
+
+When you enable **`detection.image_blob`**, the SQL connector reports **MEDIUM** findings if a column sample looks like it stores an image or PDF—either in a **binary** column (BLOB, BYTEA, VARBINARY, IMAGE, and similar types) or as **base64** (and data-URI wrappers) in text columns. The scan reads at most a **prefix** of each cell (magic bytes only). It does **not** run OCR and does **not** persist decoded bytes in logs or in the audit database. Full pixel or document reading is tracked separately (**#2363**).
+
+**Default:** `enabled: false` (no extra SQL prefix probes; text sampling unchanged).
+
+```yaml
+detection:
+  image_blob:
+    enabled: false          # set true to probe binary columns and decode base64 prefixes
+    sampling_rows: 5        # 1–50 rows per binary column (prefix probe only)
+    base64_min_chars: 100   # 64–150; minimum visible base64 length in a text sample
+```
+
+**Patterns:** `IMAGE_BLOB_IN_COLUMN` (binary prefix), `IMAGE_BASE64_IN_COLUMN` (decoded prefix from the existing text sample). **`norm_tag`** lists detected kinds (`jpeg`, `png`, `pdf`, …) and states that content was not read.
+
+**Engines:** prefix SQL is implemented for SQLite, PostgreSQL, MySQL/MariaDB, Microsoft SQL Server, and Oracle. The lab smoke stack seeds `lab_image_blob` on PostgreSQL, MariaDB, MSSQL, and Oracle XE (`deploy/lab-smoke-stack/init/*/04_lab_image_blob.sql`). **MySQL** (non-MariaDB) uses the same SQL builder as MariaDB in unit tests but is not part of the default lab compose stack.
+
+**Synthetic SQLite corpus (no container):** `uv run python scripts/generate_synthetic_image_blob_db.py --output /path/to/synth.sqlite --force` then point a `sqlite` target at that file with `detection.image_blob.enabled: true`.
+
+**Demo local:** `deploy/demo-local/config.demo-local.yaml` enables this flag for the bundled PostgreSQL lab target; see `deploy/demo-local/rehearsal.py` keys `lab_image_blob.foto_documento` and `lab_image_blob.foto_b64`.
+
 ### Custom regex patterns (new personal/sensitive values)
 
 To detect **new possibly personal or sensitive values** (e.g. RG, vehicle plate, health plan ID), add custom regex patterns. In the main config set **`regex_overrides_file`** to the path of a YAML or JSON file with a list of `{ name, pattern, norm_tag }`. The detector matches each pattern against the column name and sample text; any match is reported with HIGH sensitivity. Your file adds to or overrides built-in patterns (CPF, CNPJ, email, phone, SSN, credit card, dates). **Format and examples:** [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values) (EN) · [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis) (pt-BR). For **multiple regulations and sample configuration** (built-in: LGPD, GDPR, CCPA, HIPAA, GLBA; extensibility for UK GDPR, PIPEDA, POPIA, APPI, PCI-DSS, or custom), and for assistance with tuning, see [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) ([pt-BR](COMPLIANCE_FRAMEWORKS.pt_BR.md)).
@@ -1259,7 +1281,7 @@ All share types use the same `file_scan` settings (extensions, recursive, scan_s
 
 ### Microsoft Graph, delegated mode (`type: sharepoint_online`)
 
-Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. **Evidence:** CI and local tests use a **simulated** Graph; operator proof against a **personal** OneDrive in **delegated** mode through this connector on **2026-11-18** (presentation demo, session `c001d83a80c8_20261118_123726`) is in [m365_graph_onedrive_delegated_2260_2026-11-18.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). SharePoint Online site libraries and **work or school** tenants remain **not validated**.
+Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. **Evidence:** CI and local tests use a **simulated** Graph; operator proof against a **personal** OneDrive in **delegated** mode through this connector is recorded in [m365_graph_onedrive_delegated_2260_2026-11-18.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). SharePoint Online site libraries and **work or school** tenants remain **not validated**.
 
 ```yaml
 

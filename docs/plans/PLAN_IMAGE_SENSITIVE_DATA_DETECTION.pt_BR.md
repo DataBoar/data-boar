@@ -95,18 +95,20 @@ Posição na fila: H2 (high value, not blocking current release).
 
 **Meta:** o scanner de banco detecta colunas binárias com imagens e as analisa.
 
-- [ ] Heurística de detecção de colunas de imagem:
+**Entregue no #2362 (presença / magic bytes — sem OCR):** `detection.image_blob`, `core/image_blob.py`, probes SQL de prefixo, seeds `04_lab_image_blob.sql`, gerador SQLite sintético, chaves do ensaio demo-local. **Adiado para #2363:** OCR sobre bytes decodificados.
+
+- [x] Heurística de detecção de colunas de imagem (#2362):
   - Tipo: `BLOB`, `BYTEA`, `LONGBLOB`, `MEDIUMBLOB`, `RAW`, `IMAGE`, `VARBINARY`.
   - Nome: `foto`, `imagem`, `photo`, `image`, `thumbnail`, `avatar`, `documento`, `attachment`, `img`, `picture`, `scan`.
-  - Combinação de tipo + nome eleva score de suspeita.
-- [ ] Detecção de base64 em colunas TEXT/VARCHAR:
-  - Regex para detectar strings base64 longas (> 100 chars, charset `[A-Za-z0-9+/=]`).
-  - Tentar decodificar e verificar magic bytes.
-- [ ] Amostragem configurável: `image_blob_sampling_rows: 5` (nunca carregar tabela inteira).
-- [ ] Pipeline: decodificar bytes -> verificar magic bytes -> se imagem, chamar OCR tier 1.
-- [ ] **Privacidade por design:** nunca persistir o conteúdo decodificado da imagem em logs ou relatório. Apenas o finding (path, pattern, categoria).
-- [ ] Suporte inicial: MariaDB, PostgreSQL, Oracle XE (já no synthetic lab).
-- [ ] Testes: containers sintéticos com BLOBs de imagens de CPF/RG fake.
+  - Combinação de tipo + nome refletida em `norm_tag` (`column_name_suggests_image`).
+- [x] Detecção de base64 em colunas TEXT/VARCHAR (#2362):
+  - Base64 longo na amostra de texto existente (`base64_min_chars`, charset `[A-Za-z0-9+/=_-]`).
+  - Decodificar prefixo e verificar magic bytes (sem query SQL extra).
+- [x] Amostragem configurável: `detection.image_blob.sampling_rows` (padrão 5; sem carregar a tabela inteira nos probes binários).
+- [ ] Pipeline: decodificar bytes -> magic bytes -> se imagem, **OCR tier 1** (**#2363** — fora do #2362).
+- [x] **Privacidade por design:** nunca persistir bytes decodificados em logs ou relatório. Apenas o finding.
+- [x] Motores iniciais (#2362): PostgreSQL, MariaDB, MSSQL, Oracle XE (lab smoke); SQLite (gerador + testes). **MySQL** puro: só testes do SQL gerado (lab usa MariaDB).
+- [x] Testes: seeds lab/estáticos + `tests/test_sql_image_blob*.py`; SQLite `scripts/generate_synthetic_image_blob_db.py`.
 
 ### Fase 3 -- Imagens embutidas em documentos (2-3 dias)
 
@@ -198,7 +200,7 @@ Posição na fila: H2 (high value, not blocking current release).
 ## Indicadores de sucesso
 
 - [ ] Scanner detecta CPF em JPEG com Tesseract com F1 > 0.85 no corpus sintético.
-- [ ] BLOB com imagem de RG em MariaDB sintético reportado como finding.
+- [x] BLOB com cabeçalhos sintéticos de imagem/PDF em MariaDB (e demais motores do lab) reportado como `IMAGE_BLOB_IN_COLUMN` / `IMAGE_BASE64_IN_COLUMN` (#2362 — presença, sem OCR no conteúdo do documento).
 - [ ] PDF scaneado (sem texto nativo) com CPF retorna finding.
 - [ ] Arquivo `.mp3` com magic bytes JPEG reportado como `image_cloaked_as: mp3`.
 - [ ] Nenhum conteúdo de imagem persistido em artefatos de relatório.

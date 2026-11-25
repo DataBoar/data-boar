@@ -1000,6 +1000,28 @@ Para o **CNPJ** brasileiro, o detector inclui dois padrões regex embutidos:
 
 Ambos usam o mesmo `norm_tag` (`LGPD Art. 5`). Nesta etapa a detecção é apenas por **compatibilidade de formato** (sem validação de dígito verificador); veja [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#formatos-de-cnpj-brasil-numérico-legado-e-alfanumérico) para detalhes e para saber como estender/substituir padrões via `regex_overrides_file`.
 
+#### Imagem ou documento em colunas SQL (`detection.image_blob`)
+
+Com **`detection.image_blob`** habilitado, o conector SQL registra achados **MEDIUM** quando a amostra de uma coluna parece guardar imagem ou PDF — em coluna **binária** (BLOB, BYTEA, VARBINARY, IMAGE e tipos equivalentes) ou como **base64** (incluindo data URIs) em colunas de texto. A varredura lê no máximo um **prefixo** de cada célula (magic bytes). **Não** executa OCR e **não** grava bytes decodificados em log nem no banco de auditoria. Leitura completa de pixels ou documento fica no escopo **#2363**.
+
+**Padrão:** `enabled: false` (sem probes SQL extras de prefixo; amostragem de texto inalterada).
+
+```yaml
+detection:
+  image_blob:
+    enabled: false          # true para sondar colunas binárias e prefixos base64
+    sampling_rows: 5        # 1–50 linhas por coluna binária (só prefixo)
+    base64_min_chars: 100   # 64–150; tamanho mínimo da sequência base64 na amostra
+```
+
+**Padrões de achado:** `IMAGE_BLOB_IN_COLUMN` (prefixo binário), `IMAGE_BASE64_IN_COLUMN` (prefixo decodificado da amostra de texto já existente). O **`norm_tag`** lista os tipos detectados (`jpeg`, `png`, `pdf`, …) e deixa explícito que o conteúdo não foi lido.
+
+**Motores:** SQL de prefixo para SQLite, PostgreSQL, MySQL/MariaDB, Microsoft SQL Server e Oracle. O lab smoke inclui a tabela `lab_image_blob` em PostgreSQL, MariaDB, MSSQL e Oracle XE (`deploy/lab-smoke-stack/init/*/04_lab_image_blob.sql`). **MySQL** puro compartilha o builder com MariaDB nos testes unitários, mas não entra no compose padrão do lab.
+
+**Corpus SQLite sintético (sem contêiner):** `uv run python scripts/generate_synthetic_image_blob_db.py --output /caminho/synth.sqlite --force` e aponte um alvo `sqlite` a esse arquivo com `detection.image_blob.enabled: true`.
+
+**Demo local:** `deploy/demo-local/config.demo-local.yaml` liga a chave no PostgreSQL do pacote; o ensaio em `deploy/demo-local/rehearsal.py` valida `lab_image_blob.foto_documento` e `lab_image_blob.foto_b64`.
+
 ### Alvos: bancos de dados
 
 Cada alvo é um objeto em `targets` com pelo menos `name` e `type`. Para SQL use `type: database` e o `driver` adequado. O driver precisa bater com o extra opcional: MSSQL padrão é `mssql` ou `mssql+pymssql` com `data-boar[mssql]` (alias `data-boar[mssql-pymssql]`); use `mssql+pyodbc` com `data-boar[mssql-pyodbc]` quando ODBC for necessário. **Carga da varredura:** não há limite rígido de alvos por sessão; listas muito grandes (centenas de bancos ou APIs) aumentam tempo e memória. Prefira um escopo razoável por varredura.
@@ -1368,7 +1390,7 @@ Substitua `<ACCOUNT_ID>` pelo id da conta Cloudflare. **Não testado contra o Cl
 - **Cobertura parcial vs “sem achados”:** **Target coverage** pode mostrar `PARTIAL` com a planilha de achados vazia — isso **não** é atestado de higiene. Por padrão, **nomes de objetos não varridos** aparecem só como **contagens**; use `report_object_names: true` no alvo se precisar dos nomes na cobertura (achados sempre carregam o caminho do objeto quando há hit).
 - **LGPD / GDPR:** varrer um bucket do cliente processa **dados pessoais dele**. Base legal, finalidade, retenção e DPA continuam com o **cliente**; o Data Boar faz leitura e classificação técnicas.
 - **Postura de evidência:** os relatórios descrevem o que foi lido sob a sua config — **evidência para triagem, não conclusão jurídica** e sem proteção contra multa regulatória.
-- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 foi testado contra o serviço AWS real em **2026-11-24** com dados sintéticos e usuário IAM somente leitura (veja exemplo acima). Cloudflare R2 segue **não testado contra o serviço de nuvem real** nessa evidência.
+- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 e Cloudflare R2 são suportados; valide na sua conta antes de produção.
 
 ### IAM — menor privilégio (AWS)
 
@@ -1409,7 +1431,7 @@ Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recu
 
 ### Microsoft Graph em modo delegado (`type: sharepoint_online`)
 
-Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. **Evidência:** o CI usa um Graph **simulado**; prova do operador em OneDrive **pessoal** em modo **delegado** pelo conector em **2026-11-18** (demo apresentação, sessão `c001d83a80c8_20261118_123726`) em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Bibliotecas **SharePoint Online** e tenants de **trabalho ou escola** seguem **sem validação**.
+Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. **Evidência:** o CI usa um Graph **simulado**; prova do operador em OneDrive **pessoal** em modo **delegado** pelo conector está registrada em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Bibliotecas **SharePoint Online** e tenants de **trabalho ou escola** seguem **sem validação**.
 
 ```yaml
 
