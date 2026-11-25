@@ -25,6 +25,7 @@ from connectors.sql_driver_deps import ensure_sql_driver_available
 from connectors.sql_sampling import (
     SamplingManager,
     TableSamplingMetadata,
+    execute_column_sample_plan,
     resolve_sql_sample_limit,
     supports_prefix_probe,
 )
@@ -152,7 +153,8 @@ def format_column_sample_failure_details(
 ) -> str:
     """Stable detail string for scan_failures when SQL column sampling fails."""
     loc = f"{schema}.{table}.{column_name}" if schema else f"{table}.{column_name}"
-    return f"{loc} dialect={dialect}: {type(exc).__name__}: {exc}"
+    # Exception type only: a driver message can carry cell content (#2370).
+    return f"{loc} dialect={dialect}: {type(exc).__name__}"
 
 
 def _get_skip_schemas(dialect: str) -> frozenset[str]:
@@ -1011,6 +1013,8 @@ class SQLConnector:
                     limit=int(cfg["sampling_rows"]),
                 )
             except Exception as exc:
+                # Exception type only: a driver message can carry cell content
+                # (#2370 S10, #1722). Same rule as the log line below.
                 details = "image_probe " + format_column_sample_failure_details(
                     schema=schema or "",
                     table=table,
@@ -1023,19 +1027,18 @@ class SQLConnector:
                     SCAN_FAILURE_REASON_IMAGE_PROBE_ERROR,
                     details,
                 )
-                try:
-                    from utils.logger import get_logger
+                from utils.logger import get_logger
 
-                    get_logger().warning(
-                        "image_probe_failed schema=%s table=%s col=%s dialect=%s err_type=%s",
-                        schema or "",
-                        table,
-                        cname,
-                        dialect,
-                        type(exc).__name__,
-                    )
-                except Exception:
-                    pass
+                # The logging module handles its own handler errors; do not swallow
+                # anything else here (#2370 S9).
+                get_logger().warning(
+                    "image_probe_failed schema=%s table=%s col=%s dialect=%s err_type=%s",
+                    schema or "",
+                    table,
+                    cname,
+                    dialect,
+                    type(exc).__name__,
+                )
                 return
             for blob in prefixes:
                 kind = sniff_image_kind(blob)
@@ -1094,7 +1097,7 @@ class SQLConnector:
                 conn.execute(
                     text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
                 )
-            rows = conn.execute(plan.query).fetchall()
+            rows = execute_column_sample_plan(conn, plan)
         out: list[bytes] = []
         for row in rows:
             if not row:
@@ -1190,7 +1193,7 @@ class SQLConnector:
                                 mt=int(to)
                             )
                         )
-                    rows = conn.execute(plan.query).fetchall()
+                    rows = execute_column_sample_plan(conn, plan)
         except Exception as e:
             target_name = str(self.config.get("name") or "database")
             details = format_column_sample_failure_details(
@@ -1203,19 +1206,16 @@ class SQLConnector:
             self._out().save_failure(
                 target_name, SCAN_FAILURE_REASON_SAMPLING_ERROR, details
             )
-            try:
-                from utils.logger import get_logger
+            from utils.logger import get_logger
 
-                get_logger().warning(
-                    "sample_failed schema=%s table=%s col=%s dialect=%s err=%s",
-                    schema or "",
-                    table,
-                    column_name,
-                    dialect,
-                    str(e)[:200],
-                )
-            except Exception:
-                pass
+            get_logger().warning(
+                "sample_failed schema=%s table=%s col=%s dialect=%s err_type=%s",
+                schema or "",
+                table,
+                column_name,
+                dialect,
+                type(e).__name__,
+            )
             raise ColumnSampleError from e
         return join_distinct_sample((r[0] for r in rows), distinct_cap=use_limit)
 
@@ -1262,7 +1262,7 @@ class SQLConnector:
                     conn.execute(
                         text("SET LOCAL statement_timeout = :mt").bindparams(mt=int(to))
                     )
-                rows = conn.execute(plan.query).fetchall()
+                rows = execute_column_sample_plan(conn, plan)
         except Exception as exc:
             raise RuntimeError("L3 column projection failed") from exc
         out: list[str] = []

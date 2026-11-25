@@ -539,14 +539,15 @@ class FakeS3:
 
     def empty_pages_forever(self) -> None:
         """Knob for R7-1: every ListObjectsV2 returns empty entries, IsTruncated=true,
-        and a new continuation token each time. Safety cap: after 2000 requests,
-        IsTruncated=false is returned (prevents hanging tests)."""
+        and a new continuation token each time. Safety cap: past 2000 requests the
+        listing answers HTTP 599 and records a violation (prevents hanging tests)."""
         self._fake_empty_pages = True
         self._fake_one_entry = False
 
     def one_entry_per_page_forever(self) -> None:
         """Knob for R7-1: every ListObjectsV2 returns exactly one entry with a new token.
-        Safety cap: after 2000 requests, IsTruncated=false is returned."""
+        Safety cap: past 2000 requests the listing answers HTTP 599
+        and records a violation."""
         self._fake_one_entry = True
         self._fake_empty_pages = False
 
@@ -555,7 +556,8 @@ class FakeS3:
 
         Each integer is the number of entries to return. The last entry
         with value -1 means truncated=False (listing complete). Safety cap:
-        if the script runs longer than 2000 requests, it stops.
+        a request past the end of the script answers HTTP 599
+        and records a violation.
 
         Example for D2306-93: pages_script([0, 0, ..., 0, 2, -1]) for 15 empty + 2 entries.
         """

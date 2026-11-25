@@ -36,8 +36,10 @@ Architecture (orchestrator vs fixed strings):
 not introduce ``ORDER BY`` (sorts can force full-table plans). Prefer dialect
 caps (``TOP`` / ``LIMIT`` / ``ROWNUM`` / ``SAMPLE``) and dictionary row hints only.
 
-**DBA attribution:** every emitted statement starts with the line comment
-``-- Data Boar Compliance Scan`` so operators can grep activity views.
+**DBA attribution:** column sampling ``TextClause`` SQL begins with the line
+comment ``-- Data Boar Compliance Scan``. Prefix-probe ``Select`` statements
+embed the same comment immediately after ``SELECT`` (SQLAlchemy ``prefix_with``)
+so DMVs show ``SELECT -- Data Boar Compliance Scan`` at the head of the text.
 
 Doctrinal references (behaviour-preserving comments — do not remove in refactors):
 
@@ -56,10 +58,32 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union
 
-from sqlalchemy import text
+from sqlalchemy import (
+    Column,
+    MetaData,
+    String,
+    Table,
+    bindparam,
+    column,
+    func,
+    select,
+    table,
+    text,
+)
+from sqlalchemy.dialects import mssql as sa_mssql
+from sqlalchemy.dialects import mysql as sa_mysql
+from sqlalchemy.dialects import oracle as sa_oracle
+from sqlalchemy.dialects import postgresql as sa_postgresql
+from sqlalchemy.dialects import sqlite as sa_sqlite
+from sqlalchemy.dialects.mssql import base as mssql_base
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql import literal_column
 from sqlalchemy.sql.elements import TextClause, quoted_name
+from sqlalchemy.sql.functions import GenericFunction
+from sqlalchemy.sql.selectable import Select
+from sqlalchemy.types import LargeBinary
 
 # Leading comment on all generated sampling SQL (pg_stat_activity / DMVs).
 #
@@ -212,11 +236,14 @@ class TableSamplingMetadata:
     estimated_row_count: int | None = None
 
 
+ColumnSampleExecutable = Union[TextClause, Select]
+
+
 @dataclass(frozen=True)
 class ColumnSamplePlan:
-    """Executable sampling intent: SQLAlchemy ``TextClause`` plus audit label."""
+    """Executable sampling intent: SQLAlchemy ``TextClause`` or Core ``Select``."""
 
-    query: TextClause
+    query: ColumnSampleExecutable
     strategy_label: str
     audit_notes: str = ""
     #: Short phrase for operator logs (e.g. ``TABLESAMPLE SYSTEM (PostgreSQL)``).
@@ -520,18 +547,211 @@ def _clamp_prefix_bytes(prefix_bytes: int) -> int:
     return max(1, min(int(prefix_bytes), DEFAULT_PREFIX_PROBE_BYTES))
 
 
+class _OracleUtlRawSubstr(GenericFunction):
+    type = LargeBinary()
+    name = "UTL_RAW.SUBSTR"
+    inherit_cache = True
+
+
+class _OracleDbmsLobSubstr(GenericFunction):
+    type = LargeBinary()
+    name = "DBMS_LOB.SUBSTR"
+    inherit_cache = True
+
+
+class _OracleUtlRawLength(GenericFunction):
+    type = LargeBinary()
+    name = "UTL_RAW.LENGTH"
+    inherit_cache = True
+
+
+def _oracle_substr_sql_arg(clause, compiler, **kw) -> str:
+    bound = getattr(clause, "value", None)
+    if bound is not None and isinstance(bound, (int, float)):
+        return str(int(bound))
+    return compiler.process(clause, **kw)
+
+
+@compiles(_OracleUtlRawSubstr, "oracle")
+def _compile_oracle_utl_raw_substr(element, compiler, **kw):
+    return "%s(%s)" % (
+        element.name,
+        ", ".join(_oracle_substr_sql_arg(c, compiler, **kw) for c in element.clauses),
+    )
+
+
+@compiles(_OracleDbmsLobSubstr, "oracle")
+def _compile_oracle_dbms_lob_substr(element, compiler, **kw):
+    return "%s(%s)" % (
+        element.name,
+        ", ".join(_oracle_substr_sql_arg(c, compiler, **kw) for c in element.clauses),
+    )
+
+
+@compiles(_OracleUtlRawLength, "oracle")
+def _compile_oracle_utl_raw_length(element, compiler, **kw):
+    return "%s(%s)" % (
+        element.name,
+        ", ".join(_oracle_substr_sql_arg(c, compiler, **kw) for c in element.clauses),
+    )
+
+
+class _MssqlAnsiQuotedPreparer(mssql_base.MSIdentifierPreparer):
+    """SQL Server sampling uses ANSI double quotes (``QUOTED_IDENTIFIER`` ON)."""
+
+    def quote(self, ident, force=None):
+        if not isinstance(ident, str):
+            ident = str(ident)
+        return '"' + ident.replace('"', '""') + '"'
+
+
+class _MssqlAnsiQuotedDialect(sa_mssql.dialect):
+    preparer = _MssqlAnsiQuotedPreparer
+
+
+_MSSQL_PREFIX_DIALECT = _MssqlAnsiQuotedDialect()
+
+
+def _quoted_from_safe(safe: str) -> quoted_name:
+    return quoted_name(safe.replace('""', '"'), quote=True)
+
+
+def _mysql_quoted_from_safe(safe: str) -> quoted_name:
+    """MySQL column/table names keep dialect-escaped ``safe_*`` (ANSI-style doubling)."""
+    return quoted_name(safe, quote=True)
+
+
+def _oracle_quoted_from_catalog(name: Any) -> quoted_name:
+    rendered = oracle_sql_identifier(name)
+    if rendered.startswith('"'):
+        inner = rendered[1:-1].replace('""', '"')
+        return quoted_name(inner, quote=True)
+    return quoted_name(rendered, quote=False)
+
+
+def _sqlalchemy_sampling_dialect(dialect: str):
+    d = (dialect or "").lower()
+    if d == "sqlite":
+        return sa_sqlite.dialect()
+    if d in ("postgresql", "postgres"):
+        return sa_postgresql.dialect()
+    if d in ("mysql", "mariadb"):
+        return sa_mysql.dialect()
+    if d in ("mssql", "microsoft sql server"):
+        return _MSSQL_PREFIX_DIALECT
+    if d == "oracle":
+        return sa_oracle.dialect()
+    raise ValueError(f"unsupported sampling dialect {dialect!r}")
+
+
+def _dbapi_sampling_dialect(dialect: str):
+    d = (dialect or "").lower()
+    if d in ("postgresql", "postgres"):
+        from sqlalchemy.dialects.postgresql import psycopg2 as pg
+
+        return pg.dialect()
+    if d in ("mysql", "mariadb"):
+        from sqlalchemy.dialects.mysql import pymysql as pym
+
+        return pym.dialect()
+    return _sqlalchemy_sampling_dialect(dialect)
+
+
+def _prefix_probe_compliance(stmt: Select) -> Select:
+    """Inline SQL comment before the statement body (``\\n`` so the rest is not commented out)."""
+    return stmt.prefix_with(_COMPLIANCE_SCAN_LEADING)
+
+
+def _unde_double_percent_in_quoted_identifiers(sql: str) -> str:
+    """Undo SQLAlchemy pyformat ``%%`` inside quoted identifiers for audit parity with ``text()`` SQL."""
+
+    def _fix_double(m: re.Match[str]) -> str:
+        return m.group(0).replace("%%", "%")
+
+    s = re.sub(r'"(?:[^"]|"")*"', _fix_double, sql)
+    return re.sub(r"`(?:``|[^`])*`", _fix_double, s)
+
+
+def compile_column_sample_plan_sql(
+    plan: ColumnSamplePlan,
+    dialect: str,
+    *,
+    dbapi: bool = False,
+) -> str:
+    """Render SQL for audits, logs, and tests — not always identical to execution.
+
+    ``TextClause`` plans return the tagged string used on the wire. Core ``Select``
+    plans compile to a normalized string (literal binds, identifier ``%%`` undo for
+    parity with legacy ``text()``). That illustration can differ from the exact
+    statement the DBAPI driver receives (e.g. bind placeholders, dialect quirks);
+    use ``execute_column_sample_plan`` / driver hooks in tests when the wire SQL
+    must be asserted.
+    Optional ``dbapi=True`` selects a psycopg2/pymysql-style dialect for compile.
+    """
+    q = plan.query
+    if isinstance(q, TextClause):
+        return str(q)
+    if not isinstance(q, Select):
+        raise TypeError(f"unexpected query type {type(q)!r}")
+    d = (
+        _dbapi_sampling_dialect(dialect)
+        if dbapi
+        else _sqlalchemy_sampling_dialect(dialect)
+    )
+    compile_kw: dict[str, object] = {}
+    dlow = (dialect or "").lower()
+    if dlow == "oracle" and plan.strategy_label.startswith("prefix_probe_oracle"):
+        compile_kw = {}
+    else:
+        compile_kw["literal_binds"] = True
+    body = str(q.compile(dialect=d, compile_kwargs=compile_kw))
+    if body.endswith(" OFFSET 0"):
+        body = body[: -len(" OFFSET 0")]
+    body = _unde_double_percent_in_quoted_identifiers(body)
+    if isinstance(q, Select) and _COMPLIANCE_SCAN_LEADING in body:
+        return body.strip()
+    return _tag_sql(" ".join(body.split()))
+
+
+def execute_column_sample_plan(connection, plan: ColumnSamplePlan):
+    """Run a column sample plan (``TextClause`` or Core ``Select``)."""
+    return connection.execute(plan.query).fetchall()
+
+
+def _mssql_prefix_table(
+    safe_schema: str, safe_table: str, schema: str | None, safe_col: str
+) -> Table:
+    meta = MetaData()
+    col_name = safe_col.replace('""', '"')
+    tbl_name = safe_table.replace('""', '"')
+    schema_name = safe_schema.replace('""', '"') if schema else None
+    tbl_col = Column(col_name, String, quote=True)
+    return Table(
+        tbl_name,
+        meta,
+        tbl_col,
+        schema=schema_name,
+        quote=True,
+        quote_schema=bool(schema),
+    )
+
+
 def _plan_prefix_sqlite(
     safe_col: str, safe_table: str, lim: int, prefix_bytes: int
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    q = text(
-        _tag_sql(
-            f'SELECT substr("{safe_col}", 1, {pb}) FROM "{safe_table}" '  # nosec B608
-            f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
-        )
+    col_q = _quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    tbl = table(_quoted_from_safe(safe_table))
+    stmt = _prefix_probe_compliance(
+        select(func.substr(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
     )
     return ColumnSamplePlan(
-        query=q,
+        query=stmt,
         strategy_label="prefix_probe_sqlite",
         human_strategy="SUBSTR prefix (SQLite)",
     )
@@ -546,15 +766,21 @@ def _plan_prefix_postgresql(
     prefix_bytes: int,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _ansi_quoted_table(safe_schema, safe_table, schema)
-    q = text(
-        _tag_sql(
-            f'SELECT substring("{safe_col}" from 1 for {pb}) FROM {t} '  # nosec B608
-            f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
-        )
+    col_q = _quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    tbl = table(
+        _quoted_from_safe(safe_table),
+        schema=_quoted_from_safe(safe_schema) if schema else None,
+    )
+    stmt = _prefix_probe_compliance(
+        select(func.substring(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
     )
     return ColumnSamplePlan(
-        query=q,
+        query=stmt,
         strategy_label="prefix_probe_postgresql",
         human_strategy="SUBSTRING prefix (PostgreSQL)",
     )
@@ -570,23 +796,27 @@ def _plan_prefix_mysql(
     statement_timeout_ms: int | None,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _mysql_table_ref(safe_schema, safe_table, schema)
-
-    def _bk(s: str) -> str:
-        return s.replace("`", "``")
-
-    cc = _bk(safe_col)
-    hint = ""
-    if statement_timeout_ms and statement_timeout_ms > 0:
-        hint = f"/*+ MAX_EXECUTION_TIME({int(statement_timeout_ms)}) */ "
-    q = text(
-        _tag_sql(
-            f"SELECT {hint}SUBSTRING(`{cc}`, 1, {pb}) FROM {t} "  # nosec B608
-            f"WHERE `{cc}` IS NOT NULL LIMIT {lim}"
-        )
+    col_q = _mysql_quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    tbl = table(
+        _mysql_quoted_from_safe(safe_table),
+        schema=_mysql_quoted_from_safe(safe_schema) if schema else None,
     )
+    stmt = (
+        select(func.substring(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
+    )
+    if statement_timeout_ms and statement_timeout_ms > 0:
+        ms = int(statement_timeout_ms)
+        stmt = stmt.prefix_with(
+            "/*+ MAX_EXECUTION_TIME(" + str(ms) + ") */", dialect="mysql"
+        )
+    stmt = _prefix_probe_compliance(stmt)
     return ColumnSamplePlan(
-        query=q,
+        query=stmt,
         strategy_label="prefix_probe_mysql",
         human_strategy="SUBSTRING prefix (MySQL)",
     )
@@ -601,15 +831,19 @@ def _plan_prefix_mssql(
     prefix_bytes: int,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _ansi_quoted_table(safe_schema, safe_table, schema)
-    q = text(
-        _tag_sql(
-            f'SELECT TOP ({lim}) SUBSTRING("{safe_col}", 1, {pb}) FROM {t} WITH (NOLOCK) '  # nosec B608
-            f'WHERE "{safe_col}" IS NOT NULL'
-        )
+    tbl = _mssql_prefix_table(safe_schema, safe_table, schema, safe_col)
+    col_q = _quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    stmt = _prefix_probe_compliance(
+        select(func.substring(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
+        .with_hint(tbl, "WITH (NOLOCK)", dialect_name="mssql")
     )
     return ColumnSamplePlan(
-        query=q,
+        query=stmt,
         strategy_label="prefix_probe_mssql",
         human_strategy="SUBSTRING prefix (SQL Server)",
     )
@@ -626,24 +860,30 @@ def _plan_prefix_oracle(
     oracle_lob: bool,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _oracle_table_ref(schema_name, table_name, schema)
-    col_sql = oracle_sql_identifier(col)
+    col_ident = literal_column(oracle_sql_identifier(col))
+    tbl = table(
+        _oracle_quoted_from_catalog(table_name),
+        schema=_oracle_quoted_from_catalog(schema_name) if schema else None,
+    )
     if oracle_lob:
-        expr = f"DBMS_LOB.SUBSTR({col_sql}, {pb}, 1)"
+        probe_expr = _OracleDbmsLobSubstr(col_ident, pb, 1)
         label = "prefix_probe_oracle_lob"
         human = "LOB SUBSTR prefix (Oracle)"
     else:
-        expr = col_sql
+        # RAW columns: read only the first bytes, never the whole column (#2370 S11).
+        pb_param = bindparam("prefix_bytes", pb)
+        raw_len = func.least(_OracleUtlRawLength(col_ident), pb_param)
+        probe_expr = _OracleUtlRawSubstr(col_ident, 1, raw_len)
         label = "prefix_probe_oracle_raw"
         human = "RAW prefix (Oracle)"
-    q = text(
-        _tag_sql(
-            f"SELECT * FROM (SELECT {expr} FROM {t} "  # nosec B608
-            f"WHERE {col_sql} IS NOT NULL) WHERE ROWNUM <= :lim"
-        )
-    ).bindparams(lim=lim)
+    inner = select(probe_expr).select_from(tbl).where(col_ident.isnot(None))
+    stmt = _prefix_probe_compliance(
+        select(literal_column("*"))
+        .select_from(inner.subquery())
+        .where(literal_column("ROWNUM") <= bindparam("lim", lim))
+    )
     return ColumnSamplePlan(
-        query=q,
+        query=stmt,
         strategy_label=label,
         human_strategy=human,
     )

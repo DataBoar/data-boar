@@ -3,6 +3,8 @@
 import re
 
 import pytest
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.dialects import oracle as sa_oracle
 from sqlalchemy.sql.elements import quoted_name
 
 from connectors.sql_sampling import (
@@ -14,19 +16,49 @@ from connectors.sql_sampling import (
     _mysql_table_ref,
     _oracle_table_ref,
     column_sample_sql_for_cursor,
+    _sqlalchemy_sampling_dialect,
+    compile_column_sample_plan_sql,
+    execute_column_sample_plan,
     oracle_sql_identifier,
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
     supports_prefix_probe,
 )
 
-_COMPLIANCE_PREFIX = "-- Data Boar Compliance Scan\n"
+# ``TextClause`` sampling (_tag_sql): leading line comment only.
+_COMPLIANCE_LINE_PREFIX = "-- Data Boar Compliance Scan\n"
+# Core ``Select`` prefix probes: SQLAlchemy inlines the comment immediately after SELECT.
+_SELECT_COMPLIANCE_LEADING = "SELECT -- Data Boar Compliance Scan\n"
+_MSSQL_PREFIX_PROBE_LEADING = "SELECT -- Data Boar Compliance Scan\n TOP 5 substring("
 
 
-def _sql_body(plan) -> str:
+def _sql_where_tail(sql: str) -> str:
+    """Everything after the first WHERE token (normalized whitespace)."""
+    m = re.search(r"\bWHERE\b(.*)", sql, flags=re.I | re.DOTALL)
+    if not m:
+        raise AssertionError(f"no WHERE in {sql!r}")
+    return " ".join(m.group(1).split())
+
+
+def _dialect_for_prefix_plan(plan) -> str:
+    label = plan.strategy_label
+    if not label.startswith("prefix_probe_"):
+        raise ValueError(f"not a prefix probe plan: {label!r}")
+    rest = label[len("prefix_probe_") :]
+    if rest.startswith("oracle"):
+        return "oracle"
+    return rest.split("_", 1)[0]
+
+
+def _sql_body(plan, dialect: str | None = None) -> str:
+    if plan.strategy_label.startswith("prefix_probe_"):
+        d = dialect or _dialect_for_prefix_plan(plan)
+        s = compile_column_sample_plan_sql(plan, d)
+        assert s.startswith(_SELECT_COMPLIANCE_LEADING)
+        return s[len(_SELECT_COMPLIANCE_LEADING) :].lstrip()
     s = str(plan.query)
-    assert s.startswith(_COMPLIANCE_PREFIX)
-    return s[len(_COMPLIANCE_PREFIX) :]
+    assert s.startswith(_COMPLIANCE_LINE_PREFIX)
+    return s[len(_COMPLIANCE_LINE_PREFIX) :]
 
 
 def test_resolve_sql_sample_limit_uses_config_when_env_unset():
@@ -347,6 +379,7 @@ def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
     assert p_sqlite.strategy_label == "prefix_probe_sqlite"
     body = _sql_body(p_sqlite)
     assert 'substr("col_blob", 1, 64)' in body
+    assert '"t_img"' in body
     assert "IS NOT NULL" in body
     assert "LIMIT 5" in body
 
@@ -361,7 +394,7 @@ def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
     )
     assert p_pg.strategy_label == "prefix_probe_postgresql"
     body_pg = _sql_body(p_pg)
-    assert 'substring("c" from 1 for 64)' in body_pg
+    assert 'SUBSTRING("c" FROM 1 FOR 64)' in body_pg
     assert '"pub"."t"' in body_pg
 
     p_my = SamplingManager.build_column_prefix_sample(
@@ -374,16 +407,17 @@ def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
         prefix_bytes=64,
     )
     body_my = _sql_body(p_my)
-    assert "SUBSTRING(`c`, 1, 64)" in body_my
+    assert "substring(`c`, 1, 64)" in body_my
     assert "`db`.`t`" in body_my
 
 
 def test_d2362_11_quoted_identifiers_match_column_sample():
     # D2362-11: prefix SQL cites identifiers the same way as build_column_sample
     tricky = 'a"b'
+    safe_col = tricky.replace('"', '""')
     p_pref = SamplingManager.build_column_prefix_sample(
         "sqlite",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="",
         schema=None,
@@ -391,19 +425,19 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
     )
     p_full = SamplingManager.build_column_sample(
         "sqlite",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="",
         schema=None,
         limit=5,
     )
-    where_pref = _sql_body(p_pref).split(" WHERE ", 1)[1]
-    where_full = _sql_body(p_full).split(" WHERE ", 1)[1]
+    where_pref = _sql_where_tail(_sql_body(p_pref))
+    where_full = _sql_where_tail(_sql_body(p_full))
     assert where_pref == where_full
 
     p_pg = SamplingManager.build_column_prefix_sample(
         "postgresql",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="pub",
         schema="pub",
@@ -411,14 +445,14 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
     )
     full_pg = SamplingManager.build_column_sample(
         "postgresql",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="pub",
         schema="pub",
         limit=5,
     )
-    assert f'"{tricky}"' in _sql_body(p_pg)
-    assert f'"{tricky}"' in str(full_pg.query)
+    assert f'"{safe_col}"' in _sql_body(p_pg)
+    assert f'"{safe_col}"' in str(full_pg.query)
 
 
 def test_d2362_12_duckdb_not_supported():
@@ -446,8 +480,9 @@ def test_d2362_12_prefix_probe_mssql_oracle():
         limit=5,
         prefix_bytes=64,
     )
-    body_ms = _sql_body(p_ms)
-    assert "SELECT TOP (5) SUBSTRING" in body_ms
+    body_ms = compile_column_sample_plan_sql(p_ms, "mssql")
+    assert body_ms.startswith(_MSSQL_PREFIX_PROBE_LEADING)
+    assert "TOP 5 substring(" in body_ms
     assert "WITH (NOLOCK)" in body_ms
     assert ", 64)" in body_ms
 
@@ -462,8 +497,8 @@ def test_d2362_12_prefix_probe_mssql_oracle():
     )
     body_ora = _sql_body(p_ora)
     assert "ROWNUM <= :lim" in body_ora
-    compiled = p_ora.query.compile()
-    assert compiled.params.get("lim") == 5
+    compiled_ora = p_ora.query.compile(dialect=sa_oracle.dialect())
+    assert compiled_ora.params["lim"] == 5
 
 
 def test_d2362_12b_oracle_lob_and_raw_labels():
@@ -490,6 +525,18 @@ def test_d2362_12b_oracle_lob_and_raw_labels():
     )
     assert p_raw.strategy_label == "prefix_probe_oracle_raw"
     assert "DBMS_LOB.SUBSTR" not in _sql_body(p_raw)
+    # #2370 S11: the RAW path reads only the first bytes too, never the whole column.
+    body_raw = _sql_body(p_raw)
+    assert "UTL_RAW.SUBSTR" in body_raw
+    assert "LEAST(UTL_RAW.LENGTH(" in body_raw.upper()
+    compiled_raw = p_raw.query.compile(dialect=sa_oracle.dialect())
+    raw_sql = " ".join(str(compiled_raw).split())
+    assert re.search(
+        r"LEAST\s*\(\s*UTL_RAW\.LENGTH\s*\([^)]+\)\s*,\s*:prefix_bytes\s*\)",
+        raw_sql,
+        re.IGNORECASE,
+    )
+    assert compiled_raw.params["prefix_bytes"] == 64
 
 
 def _unquoted_sql_fragments(sql: str) -> str:
@@ -540,6 +587,64 @@ def _oracle_kwargs(col_raw: str, table_raw: str, schema: str) -> dict:
     }
 
 
+def _build_min_prefix_plan(dialect: str):
+    schema = "pub" if dialect != "sqlite" else None
+    kw: dict = {}
+    if dialect == "oracle":
+        kw = _oracle_kwargs("C", "T", schema or "S")
+    return SamplingManager.build_column_prefix_sample(
+        dialect,
+        safe_col="c",
+        safe_table="t",
+        safe_schema=(schema or "").replace('"', '""'),
+        schema=schema,
+        limit=3,
+        prefix_bytes=16,
+        **kw,
+    )
+
+
+def _driver_sql_sqlite_real(plan) -> str:
+    captured: list[str] = []
+    engine = create_engine("sqlite:///:memory:")
+
+    def _capture_bound(_conn, _cursor, statement, parameters, _context, _executemany):
+        captured.append(statement)
+        return statement, parameters
+
+    event.listen(engine, "before_cursor_execute", _capture_bound, retval=True)
+    conn = engine.connect()
+    try:
+        conn.execute(text("CREATE TABLE t (c TEXT)"))
+        conn.execute(text("INSERT INTO t (c) VALUES ('xy')"))
+        execute_column_sample_plan(conn, plan)
+    finally:
+        event.remove(engine, "before_cursor_execute", _capture_bound)
+        conn.close()
+        engine.dispose()
+    assert captured
+    return captured[-1]
+
+
+@pytest.mark.parametrize(
+    "dialect", ("sqlite", "postgresql", "mysql", "mssql", "oracle")
+)
+def test_prefix_probe_compiled_select_includes_compliance_label(dialect: str) -> None:
+    """#2373 B4/B6: Core ``Select`` compile must start with DBA comment after SELECT."""
+    plan = _build_min_prefix_plan(dialect)
+    sa_dialect = _sqlalchemy_sampling_dialect(dialect)
+    compile_kw = {} if dialect == "oracle" else {"literal_binds": True}
+    compiled = str(plan.query.compile(dialect=sa_dialect, compile_kwargs=compile_kw))
+    assert compiled.startswith(_SELECT_COMPLIANCE_LEADING)
+
+
+def test_prefix_probe_sqlite_driver_sql_includes_compliance_label() -> None:
+    """#2373 B4: compliance label on SQL delivered to SQLite DBAPI (before_cursor_execute)."""
+    plan = _build_min_prefix_plan("sqlite")
+    driver_sql = _driver_sql_sqlite_real(plan)
+    assert driver_sql.startswith(_SELECT_COMPLIANCE_LEADING)
+
+
 _PREFIX_HOSTILE_DIALECTS = (
     "sqlite",
     "postgresql",
@@ -553,10 +658,54 @@ _PREFIX_HOSTILE_IDENTIFIERS = (
     ('a"b', "t1"),
     ("a'b", "t2"),
     ("a;b", "t3"),
+    ("a%b", "t_pct"),
+    ('"a', "t_ldq"),
+    ('a"', "t_trq"),
     ("col space", "tb space"),
     ("select", "order"),
     ("SeLeCt", "TbLe"),
 )
+
+
+@pytest.mark.parametrize("dialect", ("postgresql", "mysql", "mariadb", "mssql"))
+def test_prefix_probe_percent_compiled_select_no_double_escaping(dialect: str) -> None:
+    """#2373 S5: ``a%b`` in compiled Select (execute path), not audit-only ``compile_column_sample_plan_sql``."""
+    schema = "pub"
+    plan = SamplingManager.build_column_prefix_sample(
+        dialect,
+        safe_col="a%b",
+        safe_table="t",
+        safe_schema=schema,
+        schema=schema,
+        limit=3,
+        prefix_bytes=16,
+    )
+    sa_dialect = _sqlalchemy_sampling_dialect(dialect)
+    compiled = str(
+        plan.query.compile(dialect=sa_dialect, compile_kwargs={"literal_binds": True})
+    )
+    assert compiled.startswith(_SELECT_COMPLIANCE_LEADING)
+    quoted = re.findall(r'"(?:[^"]|"")*"|`(?:``|[^`])*`', compiled)
+    col_tokens = [
+        t[1:-1].replace('""', '"').replace("%%", "%").replace("``", "`") for t in quoted
+    ]
+    assert "a%b" in col_tokens
+
+
+def test_prefix_probe_percent_column_sqlite_driver_sql_no_double_escaping() -> None:
+    """#2373 S5: SQLite in-memory driver statement for ``a%b`` column."""
+    plan = SamplingManager.build_column_prefix_sample(
+        "sqlite",
+        safe_col="a%b",
+        safe_table="t",
+        safe_schema="",
+        schema=None,
+        limit=3,
+        prefix_bytes=16,
+    )
+    driver_sql = _driver_sql_sqlite_real(plan)
+    assert "a%b" in driver_sql
+    assert "a%%b" not in driver_sql
 
 
 @pytest.mark.parametrize("dialect", _PREFIX_HOSTILE_DIALECTS)

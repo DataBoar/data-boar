@@ -6,6 +6,7 @@ through the StorageDriver contract with a MockTransport fake. No network, no rea
 
 from __future__ import annotations
 
+import logging
 import base64
 import dataclasses
 from datetime import datetime, timezone
@@ -89,15 +90,32 @@ def test_settings_auth_modes() -> None:
         _cfg(account_key_from_env=None, sas_token_from_env="sv=2020&sig=synthetic")
     )
     assert sas.sas_token == "sv=2020&sig=synthetic"
-    entra = driver.settings(
-        _cfg(
-            account_key_from_env=None,
-            client_id_from_env="cid",
-            client_secret_from_env="sec",
-            tenant_id_from_env="tid",
-        )
-    )
-    assert entra.use_entra_id is True
+    assert sas.use_entra_id is False
+
+
+@pytest.mark.parametrize(
+    "entra_keys",
+    [
+        {
+            "client_id_from_env": "cid",
+            "client_secret_from_env": "sec",
+            "tenant_id_from_env": "tid",
+        },
+        {"client_id_from_env": "cid"},
+        {"tenant_id_from_env": "tid", "sas_token_from_env": "sv=2020&sig=x"},
+    ],
+)
+@pytest.mark.parametrize("in_auth", [False, True])
+def test_entra_id_keys_are_refused_until_2368(
+    entra_keys: dict[str, str], in_auth: bool
+) -> None:
+    """#2370 N1: the driver never obtains an Entra ID token, so a target with
+    Entra keys would send unauthenticated requests (a public container would
+    scan anonymously and look "complete"). Refuse it at config time."""
+    driver = AzureBlobDriver()
+    cfg = _cfg(auth=dict(entra_keys)) if in_auth else _cfg(**entra_keys)
+    with pytest.raises(DriverConfigError, match=r"Entra ID .*not supported.*#2368"):
+        driver.settings(cfg)
 
 
 def test_destination_and_display_path() -> None:
@@ -435,3 +453,21 @@ def test_valid_account_and_suffix_give_expected_destination(
     expected_url = f"https://{expected_host}"
     assert driver.destination(settings) == expected_url
     assert driver.destination_host(cfg) == expected_host
+
+
+def test_sas_signature_never_reaches_the_httpx_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """#2370 S8: the SAS token travels in the URL, and httpx logs each request URL
+    at INFO. Once an azure_blob target is configured, the httpx log must show the
+    host only, never the query with the signature."""
+    driver = AzureBlobDriver()
+    driver.settings(_cfg(auth={"sas_token_from_env": "DATA_BOAR_AZURE_SAS_TOKEN"}))
+    url = (
+        f"https://{ACCOUNT}.blob.core.windows.net/{CONTAINER}"
+        "?restype=container&comp=list&sv=2022-11-02&sp=rl&sig=SYNTHETICSIG"
+    )
+    with caplog.at_level(logging.INFO, logger="httpx"):
+        logging.getLogger("httpx").info('HTTP Request: GET %s "HTTP/1.1 200 OK"', url)
+    assert "SYNTHETICSIG" not in caplog.text
+    assert f"{ACCOUNT}.blob.core.windows.net" in caplog.text
