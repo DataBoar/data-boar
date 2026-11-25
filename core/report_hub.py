@@ -34,9 +34,10 @@ from urllib.parse import quote, urlsplit
 import requests
 
 from config.loader import (
+    OperatorCredentialHostError,
     _operator_host_key,
     assert_credential_env_name,
-    enforce_operator_credential_host_gate,
+    require_operator_credential_host,
 )
 from report.excel_sanitizer import excel_sanitize_cell
 
@@ -154,11 +155,18 @@ def parse_hub_nodes(cfg: Mapping[str, Any]) -> list[HubNode]:
         if env_name:
             label = f"hub.nodes[{node_id}].api_key_from_env"
             assert_credential_env_name(env_name, label)
-            # Same operator host gate as the findings push: a config file alone must not
-            # be able to send an environment secret to an arbitrary host.
-            enforce_operator_credential_host_gate(
-                [{_operator_host_key(base_url)}], label
-            )
+            # A config file alone must not be able to send an environment secret to
+            # an arbitrary host: the operator list applies in every mode (#2259).
+            try:
+                require_operator_credential_host(
+                    [{_operator_host_key(base_url)}], label
+                )
+            except OperatorCredentialHostError:
+                raise HubError(
+                    f"{label}: the node host is not in "
+                    "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS (set the list, or "
+                    "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1 for a lab process)"
+                ) from None
         nodes.append(HubNode(node_id, base_url, env_name))
     return nodes
 
@@ -233,6 +241,21 @@ def fetch_snapshot(
 ) -> NodeSnapshot:
     """Read the newest **completed** session of one node. Never raises for a node-level problem."""
     fetched_at = _utc(now)
+    if token:
+        # Defence in depth at the point where the token leaves (#2259): a node built
+        # without parse_hub_nodes still cannot carry a token to an unlisted host.
+        try:
+            require_operator_credential_host(
+                [{_operator_host_key(node.base_url)}],
+                f"hub.nodes[{node.node_id}].api_key_from_env",
+            )
+        except OperatorCredentialHostError:
+            return NodeSnapshot(
+                node.node_id,
+                "failed",
+                "credential host not allowed",
+                fetched_at=fetched_at,
+            )
     try:
         listing = _get_json(
             node, "/list", token=token, timeout=timeout, max_bytes=max_bytes

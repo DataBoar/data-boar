@@ -380,17 +380,22 @@ def _operator_credential_hosts() -> set[str] | None:
     return {key for item in listed.split(",") if (key := _operator_host_key(item))}
 
 
-def enforce_operator_credential_host_gate(
-    destinations: list[set[str]], label: str
-) -> None:
-    """Accept env-credential destinations only when the operator listed them."""
-    if not _credential_host_gate_strict():
-        return
+class OperatorCredentialHostError(ValueError):
+    """Host gate refusal. The message is written by us: no host value, no secret."""
+
+
+def require_operator_credential_host(destinations: list[set[str]], label: str) -> None:
+    """Accept env-credential destinations only when the operator listed them.
+
+    Fail-closed regardless of DATA_BOAR_CREDENTIAL_STRICT: an unset or empty
+    list refuses, unless DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED=1 (lab only,
+    logged once).
+    """
     allowed = _operator_credential_hosts()
     if allowed is None:
         return
     if not allowed:
-        raise ValueError(
+        raise OperatorCredentialHostError(
             f"{label} uses an environment credential but "
             f"{_OPERATOR_HOSTS_ENV} is unset. Set a comma-separated host list "
             f"(host without port; bracket an IPv6 address) or set "
@@ -398,24 +403,33 @@ def enforce_operator_credential_host_gate(
             f"({_CREDENTIAL_ENV_TAG})."
         )
     if not destinations:
-        raise ValueError(
+        raise OperatorCredentialHostError(
             f"{label} destination is outside {_OPERATOR_HOSTS_ENV} "
             f"({_CREDENTIAL_ENV_TAG})."
         )
     for group in destinations:
         if not group:
-            raise ValueError(
+            raise OperatorCredentialHostError(
                 f"{label} destination is outside {_OPERATOR_HOSTS_ENV} "
                 f"({_CREDENTIAL_ENV_TAG})."
             )
         for host in group:
             key = _operator_host_key(str(host or ""))
             if not key or key not in allowed:
-                raise ValueError(
+                raise OperatorCredentialHostError(
                     f"{label} destination is outside {_OPERATOR_HOSTS_ENV}. "
                     f"allowed_hosts can only narrow that list "
                     f"({_CREDENTIAL_ENV_TAG})."
                 )
+
+
+def enforce_operator_credential_host_gate(
+    destinations: list[set[str]], label: str
+) -> None:
+    """1.7.x contract: the operator host list applies only in strict mode."""
+    if not _credential_host_gate_strict():
+        return
+    require_operator_credential_host(destinations, label)
 
 
 def _assert_yaml_hosts_within_operator(cfg: dict[str, Any], label: str) -> None:
