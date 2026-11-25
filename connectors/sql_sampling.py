@@ -633,7 +633,8 @@ def _plan_prefix_oracle(
         label = "prefix_probe_oracle_lob"
         human = "LOB SUBSTR prefix (Oracle)"
     else:
-        expr = col_sql
+        # RAW columns: read only the first bytes, never the whole column (#2370 S11).
+        expr = f"UTL_RAW.SUBSTR({col_sql}, 1, {pb})"
         label = "prefix_probe_oracle_raw"
         human = "RAW prefix (Oracle)"
     q = text(
