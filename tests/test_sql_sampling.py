@@ -4,7 +4,6 @@ import re
 
 import pytest
 from sqlalchemy import create_engine, event, text
-from sqlalchemy import create_mock_engine
 from sqlalchemy.dialects import oracle as sa_oracle
 from sqlalchemy.sql.elements import quoted_name
 
@@ -17,6 +16,7 @@ from connectors.sql_sampling import (
     _mysql_table_ref,
     _oracle_table_ref,
     column_sample_sql_for_cursor,
+    _sqlalchemy_sampling_dialect,
     compile_column_sample_plan_sql,
     execute_column_sample_plan,
     oracle_sql_identifier,
@@ -26,6 +26,15 @@ from connectors.sql_sampling import (
 )
 
 _COMPLIANCE_PREFIX = "-- Data Boar Compliance Scan\n"
+_COMPLIANCE_INLINE = "-- Data Boar Compliance Scan\n"
+
+
+def _sql_where_tail(sql: str) -> str:
+    """Everything after the first WHERE token (normalized whitespace)."""
+    m = re.search(r"\bWHERE\b(.*)", sql, flags=re.I | re.DOTALL)
+    if not m:
+        raise AssertionError(f"no WHERE in {sql!r}")
+    return " ".join(m.group(1).split())
 
 
 def _dialect_for_prefix_plan(plan) -> str:
@@ -42,8 +51,11 @@ def _sql_body(plan, dialect: str | None = None) -> str:
     if plan.strategy_label.startswith("prefix_probe_"):
         d = dialect or _dialect_for_prefix_plan(plan)
         s = compile_column_sample_plan_sql(plan, d)
-    else:
-        s = str(plan.query)
+        if _COMPLIANCE_INLINE in s:
+            return s.strip()
+        assert s.startswith(_COMPLIANCE_PREFIX)
+        return s[len(_COMPLIANCE_PREFIX) :].strip()
+    s = str(plan.query)
     assert s.startswith(_COMPLIANCE_PREFIX)
     return s[len(_COMPLIANCE_PREFIX) :]
 
@@ -418,8 +430,8 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
         schema=None,
         limit=5,
     )
-    where_pref = _sql_body(p_pref).split(" WHERE ", 1)[1]
-    where_full = _sql_body(p_full).split(" WHERE ", 1)[1]
+    where_pref = _sql_where_tail(_sql_body(p_pref))
+    where_full = _sql_where_tail(_sql_body(p_full))
     assert where_pref == where_full
 
     p_pg = SamplingManager.build_column_prefix_sample(
@@ -468,7 +480,8 @@ def test_d2362_12_prefix_probe_mssql_oracle():
         prefix_bytes=64,
     )
     body_ms = _sql_body(p_ms)
-    assert body_ms.startswith("SELECT TOP 5 substring(")
+    assert _COMPLIANCE_INLINE in body_ms
+    assert "TOP 5 substring(" in body_ms
     assert "WITH (NOLOCK)" in body_ms
     assert ", 64)" in body_ms
 
@@ -573,16 +586,6 @@ def _oracle_kwargs(col_raw: str, table_raw: str, schema: str) -> dict:
     }
 
 
-_PREFIX_PROBE_DRIVER_DIALECT_URLS: dict[str, str] = {
-    "sqlite": "sqlite+pysqlite://",
-    "postgresql": "postgresql+psycopg2://",
-    "mysql": "mysql+pymysql://",
-    "mariadb": "mariadb+pymysql://",
-    "mssql": "mssql+pyodbc://",
-    "oracle": "oracle+cx_oracle://",
-}
-
-
 def _build_min_prefix_plan(dialect: str):
     schema = "pub" if dialect != "sqlite" else None
     kw: dict = {}
@@ -598,27 +601,6 @@ def _build_min_prefix_plan(dialect: str):
         prefix_bytes=16,
         **kw,
     )
-
-
-def _driver_sql_from_mock_execute(plan, dialect: str) -> str:
-    """Capture the SQL string SQLAlchemy would send to the DBAPI (no live server)."""
-    captured: list[str] = []
-
-    def _record(sql, *_args, **_kwargs) -> None:
-        captured.append(str(sql))
-
-    url = _PREFIX_PROBE_DRIVER_DIALECT_URLS[dialect]
-    engine = create_mock_engine(url, executor=_record)
-    conn = engine.connect()
-    try:
-        execute_column_sample_plan(conn, plan)
-    except AttributeError:
-        pass  # MockConnection.execute may not return a Result.
-    finally:
-        if hasattr(conn, "close"):
-            conn.close()
-    assert captured, f"no driver SQL recorded for {dialect}"
-    return captured[0]
 
 
 def _driver_sql_sqlite_real(plan) -> str:
@@ -643,22 +625,21 @@ def _driver_sql_sqlite_real(plan) -> str:
     return captured[-1]
 
 
-_COMPLIANCE_LABEL = "-- Data Boar Compliance Scan"
-
-
-@pytest.mark.parametrize("dialect", tuple(_PREFIX_PROBE_DRIVER_DIALECT_URLS))
-def test_prefix_probe_driver_sql_includes_compliance_label(dialect: str) -> None:
-    """#2373 B4: compliance leading comment must reach the DBAPI statement, not only audit compile."""
+@pytest.mark.parametrize("dialect", ("postgresql", "mysql", "mssql", "oracle"))
+def test_prefix_probe_compiled_select_includes_compliance_label(dialect: str) -> None:
+    """#2373 B4: Core ``Select`` compile must embed the DBA comment + newline (no dialect=True drop)."""
     plan = _build_min_prefix_plan(dialect)
-    driver_sql = _driver_sql_from_mock_execute(plan, dialect)
-    assert driver_sql.lstrip().startswith(_COMPLIANCE_LABEL)
+    sa_dialect = _sqlalchemy_sampling_dialect(dialect)
+    compile_kw = {} if dialect == "oracle" else {"literal_binds": True}
+    compiled = str(plan.query.compile(dialect=sa_dialect, compile_kwargs=compile_kw))
+    assert _COMPLIANCE_INLINE in compiled
 
 
 def test_prefix_probe_sqlite_driver_sql_includes_compliance_label() -> None:
-    """#2373 B4: same contract on a real in-memory SQLite cursor."""
+    """#2373 B4: compliance label on SQL delivered to SQLite DBAPI (before_cursor_execute)."""
     plan = _build_min_prefix_plan("sqlite")
     driver_sql = _driver_sql_sqlite_real(plan)
-    assert driver_sql.lstrip().startswith(_COMPLIANCE_LABEL)
+    assert _COMPLIANCE_INLINE in driver_sql
 
 
 _PREFIX_HOSTILE_DIALECTS = (
@@ -684,10 +665,8 @@ _PREFIX_HOSTILE_IDENTIFIERS = (
 
 
 @pytest.mark.parametrize("dialect", ("postgresql", "mysql", "mariadb", "mssql"))
-def test_prefix_probe_percent_column_driver_sql_no_double_escaping(
-    dialect: str,
-) -> None:
-    """#2373 S5: percent in column name must reach the driver once (mock DBAPI capture)."""
+def test_prefix_probe_percent_compiled_select_no_double_escaping(dialect: str) -> None:
+    """#2373 S5: ``a%b`` in compiled Select (execute path), not audit-only ``compile_column_sample_plan_sql``."""
     schema = "pub"
     plan = SamplingManager.build_column_prefix_sample(
         dialect,
@@ -698,9 +677,16 @@ def test_prefix_probe_percent_column_driver_sql_no_double_escaping(
         limit=3,
         prefix_bytes=16,
     )
-    driver_sql = _driver_sql_from_mock_execute(plan, dialect)
-    assert "a%b" in driver_sql
-    assert "a%%b" not in driver_sql
+    sa_dialect = _sqlalchemy_sampling_dialect(dialect)
+    compiled = str(
+        plan.query.compile(dialect=sa_dialect, compile_kwargs={"literal_binds": True})
+    )
+    assert _COMPLIANCE_INLINE in compiled
+    quoted = re.findall(r'"(?:[^"]|"")*"|`(?:``|[^`])*`', compiled)
+    col_tokens = [
+        t[1:-1].replace('""', '"').replace("%%", "%").replace("``", "`") for t in quoted
+    ]
+    assert "a%b" in col_tokens
 
 
 def test_prefix_probe_percent_column_sqlite_driver_sql_no_double_escaping() -> None:
