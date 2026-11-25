@@ -4,6 +4,7 @@ Ensures refactored helpers _get_skip_schemas, _should_skip_schema, _tables_from_
 _discover_fallback_no_schemas preserve behavior so discover() returns expected tables/columns.
 """
 
+import logging
 import sqlite3
 from unittest.mock import MagicMock, patch
 
@@ -450,6 +451,46 @@ def test_format_column_sample_failure_details_omits_exception_text():
     )
     assert detail == "dbo.users.email dialect=mssql: RuntimeError"
     assert "SECRET-CELL-CONTENT" not in detail
+
+
+def test_sql_connector_sample_failure_log_omits_exception_cell_text(caplog):
+    """#2370/#2373: sample_failed logs exception type only, never driver message text."""
+    target = {"type": "database", "driver": "mssql", "name": "ProdDB"}
+    scanner = MagicMock()
+    db_manager = MagicMock()
+    connector = SQLConnector(target, scanner, db_manager, sample_limit=5)
+    connector.engine = MagicMock()
+    connector.engine.dialect.name = "mssql"
+    conn_ctx = MagicMock()
+    conn = MagicMock()
+    connector.engine.connect.return_value = conn_ctx
+    conn_ctx.__enter__.return_value = conn
+    conn_ctx.__exit__.return_value = False
+    tx_ctx = MagicMock()
+    conn.begin.return_value = tx_ctx
+    tx_ctx.__enter__.return_value = None
+    tx_ctx.__exit__.return_value = False
+    conn.execute.side_effect = ProgrammingError(
+        "SELECT",
+        {},
+        Exception("SECRET-CELL-CONTENT must not appear in logs"),
+    )
+
+    caplog.set_level(logging.WARNING)
+    with pytest.raises(ColumnSampleError):
+        connector.sample("dbo", "users", "cpf")
+
+    assert "SECRET-CELL-CONTENT" not in caplog.text
+    warnings = [
+        r.getMessage() for r in caplog.records if "sample_failed" in r.getMessage()
+    ]
+    assert warnings
+    assert "err_type=" in warnings[0]
+    save = db_manager.save_failure
+    assert save.called
+    details = str(save.call_args[0][2])
+    assert "SECRET-CELL-CONTENT" not in details
+    assert "ProgrammingError" in details
 
 
 def test_sql_connector_sample_syntax_error_records_scan_failure():

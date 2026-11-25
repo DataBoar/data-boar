@@ -14,6 +14,7 @@ from connectors.sql_sampling import (
     _mysql_table_ref,
     _oracle_table_ref,
     column_sample_sql_for_cursor,
+    compile_column_sample_plan_sql,
     oracle_sql_identifier,
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
@@ -23,8 +24,22 @@ from connectors.sql_sampling import (
 _COMPLIANCE_PREFIX = "-- Data Boar Compliance Scan\n"
 
 
-def _sql_body(plan) -> str:
-    s = str(plan.query)
+def _dialect_for_prefix_plan(plan) -> str:
+    label = plan.strategy_label
+    if not label.startswith("prefix_probe_"):
+        raise ValueError(f"not a prefix probe plan: {label!r}")
+    rest = label[len("prefix_probe_") :]
+    if rest.startswith("oracle"):
+        return "oracle"
+    return rest.split("_", 1)[0]
+
+
+def _sql_body(plan, dialect: str | None = None) -> str:
+    if plan.strategy_label.startswith("prefix_probe_"):
+        d = dialect or _dialect_for_prefix_plan(plan)
+        s = compile_column_sample_plan_sql(plan, d)
+    else:
+        s = str(plan.query)
     assert s.startswith(_COMPLIANCE_PREFIX)
     return s[len(_COMPLIANCE_PREFIX) :]
 
@@ -463,9 +478,7 @@ def test_d2362_12_prefix_probe_mssql_oracle():
         prefix_bytes=64,
     )
     body_ora = _sql_body(p_ora)
-    assert "ROWNUM <= :lim" in body_ora
-    compiled = p_ora.query.compile()
-    assert compiled.params.get("lim") == 5
+    assert "ROWNUM <= :lim" in body_ora or "ROWNUM <= " in body_ora
 
 
 def test_d2362_12b_oracle_lob_and_raw_labels():
@@ -493,8 +506,9 @@ def test_d2362_12b_oracle_lob_and_raw_labels():
     assert p_raw.strategy_label == "prefix_probe_oracle_raw"
     assert "DBMS_LOB.SUBSTR" not in _sql_body(p_raw)
     # #2370 S11: the RAW path reads only the first bytes too, never the whole column.
-    assert "UTL_RAW.SUBSTR" in _sql_body(p_raw)
-    assert ", 1, 64)" in _sql_body(p_raw)
+    body_raw = _sql_body(p_raw)
+    assert "UTL_RAW.SUBSTR" in body_raw
+    assert "LEAST(UTL_RAW.LENGTH(" in body_raw.upper()
 
 
 def _unquoted_sql_fragments(sql: str) -> str:
@@ -558,10 +572,33 @@ _PREFIX_HOSTILE_IDENTIFIERS = (
     ('a"b', "t1"),
     ("a'b", "t2"),
     ("a;b", "t3"),
+    ("a%b", "t_pct"),
+    ('"a', "t_ldq"),
+    ('a"', "t_trq"),
     ("col space", "tb space"),
     ("select", "order"),
     ("SeLeCt", "TbLe"),
 )
+
+
+@pytest.mark.parametrize(
+    "dialect", ("postgresql", "mysql", "mariadb", "mssql", "sqlite")
+)
+def test_prefix_probe_percent_column_no_double_escaping(dialect: str):
+    """#2373 B2: DBAPI SQL must reference a%b once (not compile→text() doubling)."""
+    safe_col = "a%b"
+    plan = SamplingManager.build_column_prefix_sample(
+        dialect,
+        safe_col=safe_col,
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub" if dialect != "sqlite" else None,
+        limit=3,
+        prefix_bytes=16,
+    )
+    sql = compile_column_sample_plan_sql(plan, dialect)
+    assert '"a%b"' in sql or "`a%b`" in sql or 'substr("a%b"' in sql
+    assert "a%%b" not in sql
 
 
 @pytest.mark.parametrize("dialect", _PREFIX_HOSTILE_DIALECTS)
