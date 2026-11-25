@@ -347,6 +347,7 @@ def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
     assert p_sqlite.strategy_label == "prefix_probe_sqlite"
     body = _sql_body(p_sqlite)
     assert 'substr("col_blob", 1, 64)' in body
+    assert '"t_img"' in body
     assert "IS NOT NULL" in body
     assert "LIMIT 5" in body
 
@@ -361,7 +362,7 @@ def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
     )
     assert p_pg.strategy_label == "prefix_probe_postgresql"
     body_pg = _sql_body(p_pg)
-    assert 'substring("c" from 1 for 64)' in body_pg
+    assert 'SUBSTRING("c" FROM 1 FOR 64)' in body_pg
     assert '"pub"."t"' in body_pg
 
     p_my = SamplingManager.build_column_prefix_sample(
@@ -374,16 +375,17 @@ def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
         prefix_bytes=64,
     )
     body_my = _sql_body(p_my)
-    assert "SUBSTRING(`c`, 1, 64)" in body_my
+    assert "substring(`c`, 1, 64)" in body_my
     assert "`db`.`t`" in body_my
 
 
 def test_d2362_11_quoted_identifiers_match_column_sample():
     # D2362-11: prefix SQL cites identifiers the same way as build_column_sample
     tricky = 'a"b'
+    safe_col = tricky.replace('"', '""')
     p_pref = SamplingManager.build_column_prefix_sample(
         "sqlite",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="",
         schema=None,
@@ -391,7 +393,7 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
     )
     p_full = SamplingManager.build_column_sample(
         "sqlite",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="",
         schema=None,
@@ -403,7 +405,7 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
 
     p_pg = SamplingManager.build_column_prefix_sample(
         "postgresql",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="pub",
         schema="pub",
@@ -411,14 +413,14 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
     )
     full_pg = SamplingManager.build_column_sample(
         "postgresql",
-        safe_col=tricky,
+        safe_col=safe_col,
         safe_table="t",
         safe_schema="pub",
         schema="pub",
         limit=5,
     )
-    assert f'"{tricky}"' in _sql_body(p_pg)
-    assert f'"{tricky}"' in str(full_pg.query)
+    assert f'"{safe_col}"' in _sql_body(p_pg)
+    assert f'"{safe_col}"' in str(full_pg.query)
 
 
 def test_d2362_12_duckdb_not_supported():
@@ -447,7 +449,7 @@ def test_d2362_12_prefix_probe_mssql_oracle():
         prefix_bytes=64,
     )
     body_ms = _sql_body(p_ms)
-    assert "SELECT TOP (5) SUBSTRING" in body_ms
+    assert body_ms.startswith("SELECT TOP 5 substring(")
     assert "WITH (NOLOCK)" in body_ms
     assert ", 64)" in body_ms
 

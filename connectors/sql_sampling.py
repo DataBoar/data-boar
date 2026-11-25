@@ -58,8 +58,29 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import (
+    Column,
+    MetaData,
+    String,
+    Table,
+    bindparam,
+    column,
+    func,
+    select,
+    table,
+    text,
+)
+from sqlalchemy.dialects import mssql as sa_mssql
+from sqlalchemy.dialects import mysql as sa_mysql
+from sqlalchemy.dialects import oracle as sa_oracle
+from sqlalchemy.dialects import postgresql as sa_postgresql
+from sqlalchemy.dialects import sqlite as sa_sqlite
+from sqlalchemy.dialects.mssql import base as mssql_base
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql import literal_column
 from sqlalchemy.sql.elements import TextClause, quoted_name
+from sqlalchemy.sql.functions import GenericFunction
+from sqlalchemy.types import LargeBinary
 
 # Leading comment on all generated sampling SQL (pg_stat_activity / DMVs).
 #
@@ -520,16 +541,128 @@ def _clamp_prefix_bytes(prefix_bytes: int) -> int:
     return max(1, min(int(prefix_bytes), DEFAULT_PREFIX_PROBE_BYTES))
 
 
+class _OracleUtlRawSubstr(GenericFunction):
+    type = LargeBinary()
+    name = "UTL_RAW.SUBSTR"
+    inherit_cache = True
+
+
+class _OracleDbmsLobSubstr(GenericFunction):
+    type = LargeBinary()
+    name = "DBMS_LOB.SUBSTR"
+    inherit_cache = True
+
+
+def _oracle_substr_sql_arg(clause, compiler, **kw) -> str:
+    bound = getattr(clause, "value", None)
+    if bound is not None and isinstance(bound, (int, float)):
+        return str(int(bound))
+    return compiler.process(clause, **kw)
+
+
+@compiles(_OracleUtlRawSubstr, "oracle")
+def _compile_oracle_utl_raw_substr(element, compiler, **kw):
+    return "%s(%s)" % (
+        element.name,
+        ", ".join(_oracle_substr_sql_arg(c, compiler, **kw) for c in element.clauses),
+    )
+
+
+@compiles(_OracleDbmsLobSubstr, "oracle")
+def _compile_oracle_dbms_lob_substr(element, compiler, **kw):
+    return "%s(%s)" % (
+        element.name,
+        ", ".join(_oracle_substr_sql_arg(c, compiler, **kw) for c in element.clauses),
+    )
+
+
+class _MssqlAnsiQuotedPreparer(mssql_base.MSIdentifierPreparer):
+    """SQL Server sampling uses ANSI double quotes (``QUOTED_IDENTIFIER`` ON)."""
+
+    def quote(self, ident, force=None):
+        if isinstance(ident, str):
+            ident = ident.strip('"')
+        return '"' + ident.replace('"', '""') + '"'
+
+
+class _MssqlAnsiQuotedDialect(sa_mssql.dialect):
+    preparer = _MssqlAnsiQuotedPreparer
+
+
+_MSSQL_PREFIX_DIALECT = _MssqlAnsiQuotedDialect()
+
+
+def _quoted_from_safe(safe: str) -> quoted_name:
+    return quoted_name(safe.replace('""', '"'), quote=True)
+
+
+def _mysql_quoted_from_safe(safe: str) -> quoted_name:
+    """MySQL column/table names keep dialect-escaped ``safe_*`` (ANSI-style doubling)."""
+    return quoted_name(safe, quote=True)
+
+
+def _oracle_quoted_from_catalog(name: Any) -> quoted_name:
+    rendered = oracle_sql_identifier(name)
+    if rendered.startswith('"'):
+        inner = rendered[1:-1].replace('""', '"')
+        return quoted_name(inner, quote=True)
+    return quoted_name(rendered, quote=False)
+
+
+def _prefix_text_from_stmt(
+    stmt,
+    dialect,
+    *,
+    oracle_lim_bind: int | None = None,
+) -> TextClause:
+    # ``literal_binds`` inlines caps; Oracle keeps ``:lim`` for the ROWNUM filter.
+    compile_kw: dict[str, object] = {}
+    if oracle_lim_bind is None:
+        compile_kw["literal_binds"] = True
+    body = " ".join(
+        str(stmt.compile(dialect=dialect, compile_kwargs=compile_kw)).split()
+    )
+    if body.endswith(" OFFSET 0"):
+        body = body[: -len(" OFFSET 0")]
+    q = text(_tag_sql(body))
+    if oracle_lim_bind is not None:
+        q = q.bindparams(lim=oracle_lim_bind)
+    return q
+
+
+def _mssql_prefix_table(
+    safe_schema: str, safe_table: str, schema: str | None, safe_col: str
+) -> Table:
+    meta = MetaData()
+    col_name = safe_col.replace('""', '"')
+    tbl_name = safe_table.replace('""', '"')
+    schema_name = safe_schema.replace('""', '"') if schema else None
+    tbl_col = Column(col_name, String, quote=True)
+    return Table(
+        tbl_name,
+        meta,
+        tbl_col,
+        schema=schema_name,
+        quote=True,
+        quote_schema=bool(schema),
+    )
+
+
 def _plan_prefix_sqlite(
     safe_col: str, safe_table: str, lim: int, prefix_bytes: int
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    q = text(
-        _tag_sql(
-            f'SELECT substr("{safe_col}", 1, {pb}) FROM "{safe_table}" '
-            f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
-        )
+    col_q = _quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    tbl = table(_quoted_from_safe(safe_table))
+    stmt = (
+        select(func.substr(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
     )
+    q = _prefix_text_from_stmt(stmt, sa_sqlite.dialect())
     return ColumnSamplePlan(
         query=q,
         strategy_label="prefix_probe_sqlite",
@@ -546,13 +679,20 @@ def _plan_prefix_postgresql(
     prefix_bytes: int,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _ansi_quoted_table(safe_schema, safe_table, schema)
-    q = text(
-        _tag_sql(
-            f'SELECT substring("{safe_col}" from 1 for {pb}) FROM {t} '
-            f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
-        )
+    col_q = _quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    tbl = table(
+        _quoted_from_safe(safe_table),
+        schema=_quoted_from_safe(safe_schema) if schema else None,
     )
+    stmt = (
+        select(func.substring(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
+    )
+    q = _prefix_text_from_stmt(stmt, sa_postgresql.dialect())
     return ColumnSamplePlan(
         query=q,
         strategy_label="prefix_probe_postgresql",
@@ -570,21 +710,25 @@ def _plan_prefix_mysql(
     statement_timeout_ms: int | None,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _mysql_table_ref(safe_schema, safe_table, schema)
-
-    def _bk(s: str) -> str:
-        return s.replace("`", "``")
-
-    cc = _bk(safe_col)
-    hint = ""
-    if statement_timeout_ms and statement_timeout_ms > 0:
-        hint = f"/*+ MAX_EXECUTION_TIME({int(statement_timeout_ms)}) */ "
-    q = text(
-        _tag_sql(
-            f"SELECT {hint}SUBSTRING(`{cc}`, 1, {pb}) FROM {t} "
-            f"WHERE `{cc}` IS NOT NULL LIMIT {lim}"
-        )
+    col_q = _mysql_quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    tbl = table(
+        _mysql_quoted_from_safe(safe_table),
+        schema=_mysql_quoted_from_safe(safe_schema) if schema else None,
     )
+    stmt = (
+        select(func.substring(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
+    )
+    if statement_timeout_ms and statement_timeout_ms > 0:
+        ms = int(statement_timeout_ms)
+        stmt = stmt.prefix_with(
+            "/*+ MAX_EXECUTION_TIME(" + str(ms) + ") */", dialect="mysql"
+        )
+    q = _prefix_text_from_stmt(stmt, sa_mysql.dialect())
     return ColumnSamplePlan(
         query=q,
         strategy_label="prefix_probe_mysql",
@@ -601,13 +745,18 @@ def _plan_prefix_mssql(
     prefix_bytes: int,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _ansi_quoted_table(safe_schema, safe_table, schema)
-    q = text(
-        _tag_sql(
-            f'SELECT TOP ({lim}) SUBSTRING("{safe_col}", 1, {pb}) FROM {t} WITH (NOLOCK) '
-            f'WHERE "{safe_col}" IS NOT NULL'
-        )
+    tbl = _mssql_prefix_table(safe_schema, safe_table, schema, safe_col)
+    col_q = _quoted_from_safe(safe_col)
+    col_sel = column(col_q)
+    col_where = column(col_q)
+    stmt = (
+        select(func.substring(col_sel, 1, pb))
+        .select_from(tbl)
+        .where(col_where.isnot(None))
+        .limit(lim)
     )
+    stmt = stmt.with_hint(tbl, "WITH (NOLOCK)", dialect_name="mssql")
+    q = _prefix_text_from_stmt(stmt, _MSSQL_PREFIX_DIALECT)
     return ColumnSamplePlan(
         query=q,
         strategy_label="prefix_probe_mssql",
@@ -626,23 +775,27 @@ def _plan_prefix_oracle(
     oracle_lob: bool,
 ) -> ColumnSamplePlan:
     pb = _clamp_prefix_bytes(prefix_bytes)
-    t = _oracle_table_ref(schema_name, table_name, schema)
-    col_sql = oracle_sql_identifier(col)
+    col_ident = literal_column(oracle_sql_identifier(col))
+    tbl = table(
+        _oracle_quoted_from_catalog(table_name),
+        schema=_oracle_quoted_from_catalog(schema_name) if schema else None,
+    )
     if oracle_lob:
-        expr = f"DBMS_LOB.SUBSTR({col_sql}, {pb}, 1)"
+        probe_expr = _OracleDbmsLobSubstr(col_ident, pb, 1)
         label = "prefix_probe_oracle_lob"
         human = "LOB SUBSTR prefix (Oracle)"
     else:
         # RAW columns: read only the first bytes, never the whole column (#2370 S11).
-        expr = f"UTL_RAW.SUBSTR({col_sql}, 1, {pb})"
+        probe_expr = _OracleUtlRawSubstr(col_ident, 1, pb)
         label = "prefix_probe_oracle_raw"
         human = "RAW prefix (Oracle)"
-    q = text(
-        _tag_sql(
-            f"SELECT * FROM (SELECT {expr} FROM {t} "
-            f"WHERE {col_sql} IS NOT NULL) WHERE ROWNUM <= :lim"
-        )
-    ).bindparams(lim=lim)
+    inner = select(probe_expr).select_from(tbl).where(col_ident.isnot(None))
+    stmt = (
+        select(literal_column("*"))
+        .select_from(inner.subquery())
+        .where(literal_column("ROWNUM") <= bindparam("lim"))
+    )
+    q = _prefix_text_from_stmt(stmt, sa_oracle.dialect(), oracle_lim_bind=lim)
     return ColumnSamplePlan(
         query=q,
         strategy_label=label,
