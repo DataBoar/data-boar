@@ -13,6 +13,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
+import logging
+
 import pytest
 
 from config.loader import normalize_config
@@ -477,7 +479,7 @@ def test_hub_node_env_credential_obeys_the_operator_host_gate(
     monkeypatch.setenv("DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS", "good.example")
     monkeypatch.delenv("DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED", raising=False)
     parse_hub_nodes(_cfg(("a", "https://good.example", "DATA_BOAR_HUB_A_KEY")))
-    with pytest.raises(ValueError, match="outside"):
+    with pytest.raises(HubError, match="not in DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"):
         parse_hub_nodes(_cfg(("b", "https://evil.example", "DATA_BOAR_HUB_B_KEY")))
     # A node without a credential has nothing to exfiltrate: the gate does not apply.
     parse_hub_nodes(_cfg(("c", "https://evil.example", "")))
@@ -500,3 +502,229 @@ def test_untrusted_version_is_dropped_not_printed() -> None:
         snap = fetch_snapshot(HubNode("a", a))
     assert snap.status == "ok"
     assert snap.node_version == ""
+
+
+# --- #2259: the hub credential host gate is fail-closed in the default mode -------------------
+
+_HOSTS = "DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"
+_OPEN = "DATA_BOAR_CREDENTIAL_HOSTS_UNRESTRICTED"
+_STRICT = "DATA_BOAR_CREDENTIAL_STRICT"
+_NOT_LISTED = "not in DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS"
+
+
+@pytest.fixture
+def default_mode(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """The default mode: no strict flag, no lab opt-out (the list comes from conftest)."""
+    monkeypatch.delenv(_STRICT, raising=False)
+    monkeypatch.delenv(_OPEN, raising=False)
+    monkeypatch.setattr("config.loader._operator_hosts_unrestricted_logged", False)
+    return monkeypatch
+
+
+def test_d2259_1_default_mode_refuses_a_token_for_an_unlisted_host(
+    default_mode: pytest.MonkeyPatch,
+) -> None:
+    default_mode.setenv(_HOSTS, "good.example")
+    with pytest.raises(HubError, match=_NOT_LISTED) as info:
+        parse_hub_nodes(_cfg(("a", "https://evil.example", "DATA_BOAR_HUB_A_KEY")))
+    assert "evil.example" not in str(info.value)
+
+
+def test_d2259_2_default_mode_accepts_a_listed_host_on_any_port(
+    default_mode: pytest.MonkeyPatch,
+) -> None:
+    default_mode.setenv(_HOSTS, "good.example")
+    nodes = parse_hub_nodes(
+        _cfg(("a", "https://good.example:8443", "DATA_BOAR_HUB_A_KEY"))
+    )
+    assert [n.node_id for n in nodes] == ["a"]
+
+
+def test_d2259_3_default_mode_without_the_list_refuses_a_token(
+    default_mode: pytest.MonkeyPatch,
+) -> None:
+    default_mode.delenv(_HOSTS, raising=False)
+    with pytest.raises(HubError, match=_NOT_LISTED):
+        parse_hub_nodes(_cfg(("a", "https://good.example", "DATA_BOAR_HUB_A_KEY")))
+
+
+def test_d2259_4_lab_opt_out_accepts_and_warns_once(
+    default_mode: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    default_mode.delenv(_HOSTS, raising=False)
+    default_mode.setenv(_OPEN, "1")
+    with caplog.at_level(logging.WARNING):
+        parse_hub_nodes(_cfg(("a", "https://any.example", "DATA_BOAR_HUB_A_KEY")))
+        parse_hub_nodes(_cfg(("b", "https://other.example", "DATA_BOAR_HUB_B_KEY")))
+    assert caplog.text.count("lab only") == 1
+
+
+def test_d2259_5_node_without_a_token_skips_the_gate(
+    default_mode: pytest.MonkeyPatch,
+) -> None:
+    default_mode.setenv(_HOSTS, "good.example")
+    nodes = parse_hub_nodes(_cfg(("a", "https://evil.example", "")))
+    assert [n.node_id for n in nodes] == ["a"]
+
+
+def _rest_target_cfg(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_REST_TOKEN", "rest-secret")
+    normalize_config(
+        {
+            "targets": [
+                {
+                    "name": "api",
+                    "type": "api",
+                    "base_url": "https://api.trusted.example",
+                    "auth": {
+                        "token_from_env": "API_REST_TOKEN",
+                        "allowed_hosts": ["api.trusted.example"],
+                    },
+                }
+            ],
+            "api": {},
+            "report": {"output_dir": "."},
+        }
+    )
+
+
+def _non_rest_target_cfg(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_DB_PASSWORD", "db-secret")
+    normalize_config(
+        {
+            "targets": [
+                {
+                    "name": "db",
+                    "type": "database",
+                    "host": "db.trusted.example",
+                    "user": "scanner",
+                    "pass_from_env": "API_DB_PASSWORD",
+                    "allowed_hosts": ["db.trusted.example"],
+                }
+            ],
+            "api": {},
+            "report": {"output_dir": "."},
+        }
+    )
+
+
+def _object_storage_cfg(monkeypatch: pytest.MonkeyPatch) -> None:
+    host = "databoar-sintetico.s3.sa-east-1.amazonaws.com"
+    for name in (
+        "DATA_BOAR_S3_ACCESS_KEY_ID",
+        "DATA_BOAR_S3_SECRET_ACCESS_KEY",
+    ):
+        monkeypatch.setenv(name, "synthetic-value")
+    normalize_config(
+        {
+            "targets": [
+                {
+                    "name": "bucket-sintetico",
+                    "type": "object_storage",
+                    "driver": "s3",
+                    "bucket": "databoar-sintetico",
+                    "region": "sa-east-1",
+                    "allowed_hosts": [host],
+                    "auth": {
+                        "access_key_id_from_env": "DATA_BOAR_S3_ACCESS_KEY_ID",
+                        "secret_access_key_from_env": "DATA_BOAR_S3_SECRET_ACCESS_KEY",
+                    },
+                }
+            ],
+            "api": {},
+            "report": {"output_dir": "."},
+        }
+    )
+
+
+def _findings_push_cfg(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("API_TEST_SIEM_TOKEN", "siem-secret")
+    normalize_config(
+        {
+            "targets": [],
+            "notifications": {
+                "findings_push": {
+                    "enabled": True,
+                    "url": "https://siem.example.test/x",
+                    "auth_env": "API_TEST_SIEM_TOKEN",
+                }
+            },
+        }
+    )
+
+
+def _rest_connector_cfg(monkeypatch: pytest.MonkeyPatch) -> None:
+    from connectors.rest_connector import _assert_rest_credential_hosts_allowlisted
+
+    monkeypatch.setenv("API_REST_TOKEN", "rest-secret")
+    _assert_rest_credential_hosts_allowlisted(
+        {
+            "base_url": "https://api.trusted.example",
+            "auth": {
+                "type": "bearer",
+                "token_from_env": "API_REST_TOKEN",
+                "allowed_hosts": ["api.trusted.example"],
+            },
+        }
+    )
+
+
+_OTHER_CALLERS = {
+    "rest_target": _rest_target_cfg,
+    "non_rest_target": _non_rest_target_cfg,
+    "object_storage": _object_storage_cfg,
+    "findings_push": _findings_push_cfg,
+    "rest_connector": _rest_connector_cfg,
+}
+
+
+@pytest.mark.parametrize("caller", sorted(_OTHER_CALLERS))
+def test_d2259_6_other_callers_keep_the_1_7_contract(
+    default_mode: pytest.MonkeyPatch, caller: str
+) -> None:
+    """D2259-6: only the hub changed. Default mode without the list still loads;
+    strict mode without the list still refuses."""
+    default_mode.delenv(_HOSTS, raising=False)
+    _OTHER_CALLERS[caller](default_mode)
+    default_mode.setenv(_STRICT, "1")
+    with pytest.raises(ValueError, match=_HOSTS):
+        _OTHER_CALLERS[caller](default_mode)
+
+
+def test_d2259_7_fetch_snapshot_never_sends_a_token_to_an_unlisted_host(
+    default_mode: pytest.MonkeyPatch,
+) -> None:
+    default_mode.setenv(_HOSTS, "good.example")
+    with _node([_session("S1")], {"S1": [_finding(1)]}) as (url, seen):
+        snap = fetch_snapshot(HubNode("a", url), token="t")
+    assert snap.status == "failed"
+    assert snap.detail == "credential host not allowed"
+    assert seen == []
+
+
+def test_d2259_8_cli_refuses_an_unlisted_node_host_and_sends_nothing(
+    tmp_path: Path,
+) -> None:
+    with _node([_session("S1")], {"S1": [_finding(1)]}) as (url, seen):
+        cfg = _write_cfg(
+            tmp_path,
+            [f"    - {{id: a, url: '{url}', api_key_from_env: DATA_BOAR_HUB_A_KEY}}"],
+        )
+        out = tmp_path / "hub.xlsx"
+        env = {k: v for k, v in os.environ.items() if not k.startswith("DATA_BOAR_")}
+        env["XDG_CONFIG_HOME"] = str(tmp_path / "xdg-empty")
+        env[_HOSTS] = "good.example"
+        env["DATA_BOAR_HUB_A_KEY"] = "hub-token"
+        proc = subprocess.run(
+            [sys.executable, "main.py", "--config", str(cfg), "--hub-report", str(out)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+    assert proc.returncode == 1, proc.stderr
+    assert proc.stderr.startswith("Hub error: hub.nodes["), proc.stderr
+    assert "hub-token" not in proc.stderr + proc.stdout
+    assert not out.exists()
+    assert seen == []
