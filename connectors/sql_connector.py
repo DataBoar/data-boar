@@ -1011,31 +1011,29 @@ class SQLConnector:
                     limit=int(cfg["sampling_rows"]),
                 )
             except Exception as exc:
-                details = "image_probe " + format_column_sample_failure_details(
-                    schema=schema or "",
-                    table=table,
-                    column_name=cname,
-                    dialect=dialect,
-                    exc=exc,
+                # Exception type only: a driver message can carry cell content
+                # (#2370 S10, #1722). Same rule as the log line below.
+                details = (
+                    f"image_probe {schema or ''}.{table}.{cname} "
+                    f"dialect={dialect}: {type(exc).__name__}"
                 )
                 self._out().save_failure(
                     target_name,
                     SCAN_FAILURE_REASON_IMAGE_PROBE_ERROR,
                     details,
                 )
-                try:
-                    from utils.logger import get_logger
+                from utils.logger import get_logger
 
-                    get_logger().warning(
-                        "image_probe_failed schema=%s table=%s col=%s dialect=%s err_type=%s",
-                        schema or "",
-                        table,
-                        cname,
-                        dialect,
-                        type(exc).__name__,
-                    )
-                except Exception:
-                    pass
+                # The logging module handles its own handler errors; do not swallow
+                # anything else here (#2370 S9).
+                get_logger().warning(
+                    "image_probe_failed schema=%s table=%s col=%s dialect=%s err_type=%s",
+                    schema or "",
+                    table,
+                    cname,
+                    dialect,
+                    type(exc).__name__,
+                )
                 return
             for blob in prefixes:
                 kind = sniff_image_kind(blob)
