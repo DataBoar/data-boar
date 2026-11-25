@@ -301,6 +301,15 @@ class AzureBlobDriver:
                 "(#2368); use auth.sas_token_from_env"
             )
         use_entra_id = False
+        if sas_token:
+            # The SAS travels in the URL and httpx logs each request URL at INFO
+            # (#2370 S8): reuse the download-URL redactor so the log keeps only
+            # the host.
+            from connectors.sharepoint_online_connector import (
+                install_download_log_filter,
+            )
+
+            install_download_log_filter([f".blob.{endpoint_suffix}"])
 
         return AzureBlobSettings(
             account_name=account_name,
