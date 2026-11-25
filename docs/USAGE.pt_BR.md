@@ -1358,6 +1358,26 @@ O tipo `object_storage` usa **um driver por provedor**; os drivers entregues sã
 
 **Testado contra o Amazon S3 real em 2026-11-24** apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
 
+### Exemplo — Armazenamento de Blobs do Azure (driver: azure_blob)
+
+Um SAS de container com somente leitura e listagem (`sp=rl`, `sr=c`) é a credencial recomendada. O nome da conta **não é um segredo**: faz parte do hostname público (`<account>.blob.core.windows.net`), da mesma forma que o `bucket` do S3 é uma chave inline.
+
+```yaml
+
+- name: "azure-corpus-sintetico"
+  type: object_storage
+  driver: azure_blob
+  account_name: <account>
+  container_name: corpus
+  prefix: lgpd-corpus/
+  auth:
+    sas_token_from_env: DATA_BOAR_AZURE_SAS_TOKEN
+```
+
+Menor privilégio: um SAS de container com apenas leitura (`r`) e listagem (`l`) basta para a varredura e é mais seguro que a chave da conta, pois não permite sobrescrever nem excluir dados quando assim restrito. O SAS deve usar somente HTTPS e ter data de expiração. Credenciais alternativas: `account_key_from_env` (acesso total) ou Entra ID (`client_id_from_env`, `client_secret_from_env`, `tenant_id_from_env`) para autenticação OAuth2.
+
+**Testado contra o Azure Blob Storage real em 2026-11-24** apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
+
 ### Exemplo — MinIO / endpoint compatível genérico (não testado contra appliances de fornecedor)
 
 Use `driver: s3_compatible` e `endpoint_url` (muitas vezes `addressing_style: path`). Mesmo padrão de credenciais do YAML acima.

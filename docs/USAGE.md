@@ -1208,6 +1208,26 @@ The `object_storage` type uses **one driver per provider**; shipped drivers are 
 
 **Tested against the real Amazon S3 service on 2026-11-24** with synthetic data only, using a read-only IAM user whose policy allows `s3:ListBucket` restricted to the target prefix and `s3:GetObject` on `<prefix>*`; with such a policy the target **must** set `prefix:` (without it AWS answers AccessDenied, which comes from the policy, not from the driver). See the least-privilege policy example in this section (around line 1232). Validate in your account before production.
 
+### Example — Azure Blob Storage (driver: azure_blob)
+
+A container SAS (Shared Access Signature) with read and list only (`sp=rl`, `sr=c`) is the recommended credential. The account name is **not a secret**: it is part of the public hostname (`<account>.blob.core.windows.net`), the same way the S3 `bucket` is an inline key.
+
+```yaml
+
+- name: "azure-corpus-sintetico"
+  type: object_storage
+  driver: azure_blob
+  account_name: <account>
+  container_name: corpus
+  prefix: lgpd-corpus/
+  auth:
+    sas_token_from_env: DATA_BOAR_AZURE_SAS_TOKEN
+```
+
+Least privilege: a container SAS with only read (`r`) and list (`l`) permissions is enough for scanning and safer than an account key, because it cannot be used to overwrite or delete data. The SAS must use HTTPS only and have an expiry date. Alternative credentials: `account_key_from_env` (full access) or Entra ID (`client_id_from_env`, `client_secret_from_env`, `tenant_id_from_env`) for OAuth2 authentication.
+
+**Tested against the real Azure Blob Storage service on 2026-11-24** with synthetic data only, using a container SAS with `sp=rl`, `sr=c`, and `spr=https` scoped to the target container. Set `prefix:` when the SAS or listing scope requires it. Validate in your account before production.
+
 ### Example — MinIO / generic compatible endpoint (not tested against vendor appliances)
 
 Use `driver: s3_compatible` and `endpoint_url` (often `addressing_style: path`). Same credential pattern as the YAML above.
