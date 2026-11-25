@@ -31,6 +31,12 @@ from tests.hybrid_license_fixture import (
     test_mldsa_public_pem as dev_mldsa_public_pem,
 )
 from tests.license_verify_pin import pin_embedded_ed25519_pem
+from tests.tty_session import (
+    PTY_AVAILABLE,
+    PTY_SKIP_REASON,
+    env_without_ci,
+    run_under_pty,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ISSUER = REPO_ROOT / "scripts" / "issue_dev_license_jwt.py"
@@ -266,3 +272,47 @@ def test_issuer_encrypted_key_without_env_or_tty_exits_actionably(encrypted_keyp
     assert proc.returncode != 0
     assert PASSWORD_ENV in proc.stderr
     assert "Traceback" not in proc.stderr
+
+
+# --- #2239: signing-key passphrase only from the terminal prompt ------------------------------
+
+_GETPASS_PROBE = (
+    "import getpass, sys\n"
+    "value = getpass.getpass('probe passphrase: ')\n"
+    "sys.stdout.write('GOT:' + value + '\\n')\n"
+)
+
+
+@pytest.mark.skipif(not PTY_AVAILABLE, reason=PTY_SKIP_REASON)
+def test_d2239_0_getpass_reads_tty_and_falls_back_to_a_pipe(tmp_path):
+    """D2239-0 (premise PR-1): getpass reads the pty; without a TTY it reads the pipe.
+
+    The pipe fallback is why the issuer must check for a TTY *before* getpass:
+    otherwise a passphrase piped on stdin would be accepted.
+    """
+    probe = tmp_path / "getpass_probe.py"
+    probe.write_text(_GETPASS_PROBE, encoding="utf-8")
+    on_tty = run_under_pty(
+        [sys.executable, str(probe)],
+        env=env_without_ci(),
+        cwd=str(tmp_path),
+        prompt_marker=b"probe passphrase:",
+        typed="from-the-terminal",
+    )
+    assert on_tty.timed_out is False
+    assert on_tty.exit_code == 0, on_tty.output
+    assert "GOT:from-the-terminal" in on_tty.output
+
+    piped = subprocess.run(
+        [sys.executable, str(probe)],
+        input="from-the-pipe\n",
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+        timeout=60,
+        env=env_without_ci(),
+        start_new_session=True,
+    )
+    assert piped.returncode == 0, piped.stderr
+    assert "GOT:from-the-pipe" in piped.stdout
+    assert "GetPassWarning" in piped.stderr
