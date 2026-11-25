@@ -526,7 +526,7 @@ def _plan_prefix_sqlite(
     pb = _clamp_prefix_bytes(prefix_bytes)
     q = text(
         _tag_sql(
-            f'SELECT substr("{safe_col}", 1, {pb}) FROM "{safe_table}" '  # nosec B608
+            f'SELECT substr("{safe_col}", 1, {pb}) FROM "{safe_table}" '
             f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
         )
     )
@@ -549,7 +549,7 @@ def _plan_prefix_postgresql(
     t = _ansi_quoted_table(safe_schema, safe_table, schema)
     q = text(
         _tag_sql(
-            f'SELECT substring("{safe_col}" from 1 for {pb}) FROM {t} '  # nosec B608
+            f'SELECT substring("{safe_col}" from 1 for {pb}) FROM {t} '
             f'WHERE "{safe_col}" IS NOT NULL LIMIT {lim}'
         )
     )
@@ -581,7 +581,7 @@ def _plan_prefix_mysql(
         hint = f"/*+ MAX_EXECUTION_TIME({int(statement_timeout_ms)}) */ "
     q = text(
         _tag_sql(
-            f"SELECT {hint}SUBSTRING(`{cc}`, 1, {pb}) FROM {t} "  # nosec B608
+            f"SELECT {hint}SUBSTRING(`{cc}`, 1, {pb}) FROM {t} "
             f"WHERE `{cc}` IS NOT NULL LIMIT {lim}"
         )
     )
@@ -604,7 +604,7 @@ def _plan_prefix_mssql(
     t = _ansi_quoted_table(safe_schema, safe_table, schema)
     q = text(
         _tag_sql(
-            f'SELECT TOP ({lim}) SUBSTRING("{safe_col}", 1, {pb}) FROM {t} WITH (NOLOCK) '  # nosec B608
+            f'SELECT TOP ({lim}) SUBSTRING("{safe_col}", 1, {pb}) FROM {t} WITH (NOLOCK) '
             f'WHERE "{safe_col}" IS NOT NULL'
         )
     )
@@ -638,7 +638,7 @@ def _plan_prefix_oracle(
         human = "RAW prefix (Oracle)"
     q = text(
         _tag_sql(
-            f"SELECT * FROM (SELECT {expr} FROM {t} "  # nosec B608
+            f"SELECT * FROM (SELECT {expr} FROM {t} "
             f"WHERE {col_sql} IS NOT NULL) WHERE ROWNUM <= :lim"
         )
     ).bindparams(lim=lim)
