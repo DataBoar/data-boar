@@ -1,13 +1,13 @@
 # PLAN: Legacy host platforms (Linux s390x, AIX, HP-UX, z/OS)
 
-**Status:** In progress (classification documented; nothing tested locally yet)
-**Date:** 2026-11-20
+**Status:** In progress (classification documented; **nothing tested locally**; Linux s390x QEMU recipe pending)
+**Date:** 2026-11-25
 **Priority:** P3
 **GitHub:** [#2183](https://github.com/DataBoar/data-boar/issues/2183)
-**Relates to:** [#1666](https://github.com/DataBoar/data-boar/issues/1666) (indirect mainframe path), [#2179](https://github.com/DataBoar/data-boar/issues/2179) (BSDs), [OS_COMPATIBILITY_TESTING_MATRIX.md](../ops/OS_COMPATIBILITY_TESTING_MATRIX.md)
+**Relates to:** [#1666](https://github.com/DataBoar/data-boar/issues/1666) (indirect mainframe path), [#2179](https://github.com/DataBoar/data-boar/issues/2179) (BSD), [#1182](https://github.com/DataBoar/data-boar/issues/1182) (wheelhouse), [OS_COMPATIBILITY_TESTING_MATRIX.md](../ops/OS_COMPATIBILITY_TESTING_MATRIX.md), [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md)
 
 ---
-<!-- plans-hub-summary: Host vs target boundary for legacy platforms (Linux s390x, AIX, HP-UX, z/OS) in three evidence classes; nothing tested locally yet, s390x QEMU recipe pending. -->
+<!-- plans-hub-summary: Host vs target boundary for legacy platforms (Linux s390x, AIX, HP-UX, z/OS) in three evidence classes; nothing tested locally; s390x QEMU recipe pending; future wheel evidence via data-boar-site release + PEP 503 simple/ (same pattern as #1182). -->
 
 ## Context
 
@@ -30,9 +30,21 @@ Each platform falls into **one** class, with evidence:
 | **HP-UX (PA-RISC / Itanium)** | candidate for **2 or 3** | QEMU emulates PA-RISC (`B160L`, `C3700`) with mixed reports for HP-UX 11.11 and reported failures on 11.23/11.31; no source for Itanium. Licensed media. | Whether any reproducible path exists; until then, no host claim. |
 | **z/OS** | **3** (target) | As in #1666. Python on z/OS exists as a vendor product; running the Boar there is not a goal of this plan. | Nothing for the host side; ingestion follows #1666. |
 
-## Linux s390x QEMU recipe (pending)
+## Linux s390x QEMU recipe (pending acceptance)
 
-Not done. Acceptance for this step (from #2183): installation, Python environment, `uv run python main.py --demo` without tracebacks, the expected findings, and the list of wheels that needed a local build, all recorded here with versions and dates. Until then, s390x stays "candidate for class 1, not verified".
+**Not done.** Acceptance for this step (issue [#2183](https://github.com/DataBoar/data-boar/issues/2183)): installation, Python environment, **`uv run python main.py --demo`** without tracebacks, the expected findings, and the list of **wheels that needed a local build** (package name, version, build command), all recorded here with dates. Until then, s390x stays **candidate for class 1, not verified**.
+
+### Wheel and install evidence (after a successful QEMU pass)
+
+When that QEMU run completes, **record in this plan** (and, if useful, a dated file under `docs/ops/evidence/`): guest image URL/digest; Python and `uv` versions; demo outcome; the **local-build wheel list**.
+
+**Publish binaries** with the same channel discipline as the proven x86-64-v1 wheelhouse ([#1182](https://github.com/DataBoar/data-boar/issues/1182), [PLAN_WHEELHOUSE_DISTRIBUTION.md](PLAN_WHEELHOUSE_DISTRIBUTION.md)):
+
+1. **GitHub Release** on **`DataBoar/data-boar-site`** (versioned tag, `.whl` assets, **`SHA256SUMS`**).
+2. **PEP 503 `simple/`** index at **`https://databoar.com.br/simple/`** (rebuilt in the site repo via `scripts/build-wheelhouse-index.py` — not duplicated here).
+3. Operator install path documented like today’s wheelhouse pattern: [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) (*x86-64-v1 / wheelhouse install*) — `pip install` / `pipx` with `--extra-index-url https://databoar.com.br/simple/` or offline `--find-links` after `gh release download`.
+
+**Today:** the live `simple/` index ships **x86_64 / arm64** (and related) cells from **`wheelhouse-x86-64-v1-2026-07-29`** — **no** s390x slice is published yet. Planning only; not a support claim.
 
 ## Class 3 platforms
 

@@ -137,7 +137,7 @@ Host vs target boundary, in three classes: **1** host validatable in a VM; **2**
 
 | Platform | Class | Status |
 | --- | --- | --- |
-| **Linux s390x (IBM Z / LinuxONE)** | candidate for 1 | `qemu-system-s390x` and official s390x images exist; QEMU recipe **pending, not validated** (big-endian: useful to catch endianness assumptions in native wheels and the Rust extension) |
+| **Linux s390x (IBM Z / LinuxONE)** | candidate for 1 | `qemu-system-s390x` and official s390x images exist; QEMU recipe **pending, not validated** (big-endian: useful to catch endianness assumptions in native wheels and the Rust extension). After a successful run, wheel evidence ships like [#1182](https://github.com/DataBoar/data-boar/issues/1182): **data-boar-site** release + PEP 503 [https://databoar.com.br/simple/](https://databoar.com.br/simple/) — **no s390x slice published today** |
 | **AIX (POWER)** | candidate for 2 | reports say QEMU `pseries` does not boot AIX 7.3; licensed media; Python 3.12+ not verified |
 | **HP-UX (PA-RISC / Itanium)** | candidate for 2 or 3 | mixed QEMU PA-RISC reports (11.11), failures on 11.23/11.31, no Itanium source; licensed media |
 | **z/OS** | 3 (target) | not a host; data reaches a supported host through #1666 |
@@ -211,3 +211,4 @@ For **each** OS you add to the homelab:
 ---
 
 **Português (Brasil):** [OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md](OS_COMPATIBILITY_TESTING_MATRIX.pt_BR.md)
+
