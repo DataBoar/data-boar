@@ -359,3 +359,25 @@ def test_D2362_23_hostile_sqlite_identifiers_png_no_leak(
     assert "%PDF" not in leak
     assert _PNG_B64[:32] not in leak
     assert _PNG[:8].hex() not in leak.lower()
+
+
+def test_image_probe_failure_logs_exception_type_only(
+    docs_db: Path, audit_db: Path, monkeypatch: pytest.MonkeyPatch, caplog
+):
+    """#2370 S10 (#1722): the image_probe warning names the exception type and never
+    the exception text, which can carry cell content from the driver."""
+    import connectors.sql_sampling as sm
+
+    def boom(*_a, **_k):
+        raise RuntimeError("cell value leaked: SECRET-CELL-CONTENT")
+
+    monkeypatch.setattr(sm.SamplingManager, "build_column_prefix_sample", boom)
+    caplog.set_level(logging.WARNING)
+    conn, _ = _connector(docs_db, audit_db, enabled=True)
+    conn.run()
+    probe_lines = [
+        r.getMessage() for r in caplog.records if "image_probe_failed" in r.getMessage()
+    ]
+    assert probe_lines, "the probe failure must be logged"
+    assert all("err_type=RuntimeError" in line for line in probe_lines)
+    assert "SECRET-CELL-CONTENT" not in caplog.text
