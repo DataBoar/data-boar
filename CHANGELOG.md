@@ -158,6 +158,10 @@ Migration notes on the **`1.8.0-rc`** working line (no new semver cut):
 - **DPO + legal pitch (#688):** [PITCH_DPO_AND_LEGAL.md](docs/pitch/PITCH_DPO_AND_LEGAL.md) ([pt-BR](docs/pitch/PITCH_DPO_AND_LEGAL.pt_BR.md)) — litigation/custody companion to [PITCH_DPO.md](docs/pitch/PITCH_DPO.md); CPP Arts. 158-A–F pointers; ADR-0025 ceiling (*laudo* / not a legal-conclusion engine). Honest on hashes vs SSH-signed manifests.
 - **Integrity snapshot public `error` (#1721):** `ensure_integrity_anchor` fail-soft JSON used by unauthenticated `/health` and `/status` stores `type(e).__name__` only. `str(e)` (paths, JSON parse context) stays in the operator log via `SanitizeLogFilter`.
 
+- **Breaking (hub):** node host must always be in `DATA_BOAR_CREDENTIAL_ALLOWED_HOSTS`, not only with `STRICT=1`. See docs/USAGE.md / .pt_BR.md. (#2239, #2259)
+
+- **Breaking (Enterprise, license passphrase):** passphrase now only read from TTY (prompt on TTY; env var ignored without TTY; encrypted key exits code 1 without TTY). See docs/ops/QA_LOCAL_LICENSE.md / .pt_BR.md. (#2239)
+
 - **CPU pre-flight before numpy/ML (#929):** x86 hosts missing SSE4.2, POPCNT, or AVX skip the PyPI numpy/sklearn/DL imports (SIGILL is not catchable). Regex CPF/CNPJ still runs; `core.dl_backend` is lazy from `detector.py`. **Primary** path to restore working ML is the hosted wheelhouse `wheelhouse-x86-64-v1-2026-07-29` (`[noavx]`: `gh release download` + `pip install --no-index --find-links`). Distro numpy / `-Dcpu-baseline=min` are fallbacks only.
 
 - **OpenSSF Scorecard CI (#886):** `.github/workflows/scorecard.yml` runs Scorecard on `main` (push + weekly + `branch_protection_rule`), uploads SARIF, and publishes results for the public badge on README / README.pt_BR. Workflow-level token is `contents: read`; the analysis job keeps the narrower Scorecard grants.
