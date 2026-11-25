@@ -150,6 +150,94 @@ def test_get_request_builds_prepared_get() -> None:
     assert "Authorization" in prep.headers
 
 
+# Synthetic container SAS query string (no live credentials in repo).
+_CONTAINER_SAS = (
+    "sp=rl&st=2026-01-01T00%3A00%3A00Z&se=2027-01-01T00%3A00%3A00Z"
+    "&spr=https&sv=2024-11-04&sr=c&sig=syntheticSasSignature"
+)
+
+
+def _sas_settings() -> AzureBlobSettings:
+    driver = AzureBlobDriver()
+    return driver.settings(
+        _cfg(account_key_from_env=None, sas_token_from_env="DATA_BOAR_AZURE_SAS")
+    )
+
+
+def _sas_creds(token: str = _CONTAINER_SAS) -> ResolvedCredentials:
+    return ResolvedCredentials(
+        {
+            "account_name_from_env": ACCOUNT,
+            "sas_token_from_env": token,
+        }
+    )
+
+
+def test_list_request_sas_url_includes_query_once_and_no_auth_header() -> None:
+    driver = AzureBlobDriver()
+    settings = _sas_settings()
+    prep = driver.list_request(settings, _sas_creds(), "corpus/", None, 5, T0)
+    assert "restype=container" in prep.url
+    assert "comp=list" in prep.url
+    assert "maxresults=5" in prep.url
+    assert f"&{_CONTAINER_SAS}" in prep.url or prep.url.endswith(_CONTAINER_SAS)
+    assert prep.url.count("sig=syntheticSasSignature") == 1
+    assert "Authorization" not in prep.headers
+    assert prep.url.index("?") < prep.url.index("sp=rl")
+    assert "&sp=rl" in prep.url
+
+
+def test_list_request_sas_strips_leading_question_on_token() -> None:
+    driver = AzureBlobDriver()
+    settings = _sas_settings()
+    token = "?" + _CONTAINER_SAS
+    prep = driver.list_request(settings, _sas_creds(token), "", None, 2, T0)
+    assert prep.url.count("?") == 1
+    assert "?restype=container" in prep.url
+    assert prep.url.count("sig=syntheticSasSignature") == 1
+
+
+def test_get_request_sas_url_uses_question_mark_and_no_auth_header() -> None:
+    driver = AzureBlobDriver()
+    settings = _sas_settings()
+    prep = driver.get_request(settings, _sas_creds(), "corpus/blob.png", T0)
+    assert prep.url.startswith(
+        f"https://{ACCOUNT}.blob.{SUFFIX}/{CONTAINER}/corpus/blob.png?"
+    )
+    assert _CONTAINER_SAS in prep.url
+    assert prep.url.count("?") == 1
+    assert prep.url.count("sig=syntheticSasSignature") == 1
+    assert "Authorization" not in prep.headers
+
+
+def test_get_request_sas_strips_leading_question_on_token() -> None:
+    driver = AzureBlobDriver()
+    settings = _sas_settings()
+    prep = driver.get_request(settings, _sas_creds("?" + _CONTAINER_SAS), "x.bin", T0)
+    assert prep.url.count("?") == 1
+    assert prep.url.endswith(_CONTAINER_SAS)
+
+
+def test_sas_mode_missing_resolved_token_raises_driver_config_error() -> None:
+    driver = AzureBlobDriver()
+    settings = _sas_settings()
+    creds = ResolvedCredentials({"account_name_from_env": ACCOUNT})
+    with pytest.raises(DriverConfigError, match="sas_token_from_env"):
+        driver.list_request(settings, creds, "corpus/", None, 5, T0)
+    with pytest.raises(DriverConfigError, match="sas_token_from_env"):
+        driver.get_request(settings, creds, "corpus/a.txt", T0)
+
+
+def test_shared_key_list_and_get_still_set_authorization() -> None:
+    driver = AzureBlobDriver()
+    settings = driver.settings(_cfg())
+    list_prep = driver.list_request(settings, _creds(), "p/", None, 10, T0)
+    get_prep = driver.get_request(settings, _creds(), "p/obj.txt", T0)
+    assert list_prep.headers["Authorization"].startswith("SharedKey ")
+    assert get_prep.headers["Authorization"].startswith("SharedKey ")
+    assert "sig=syntheticSasSignature" not in list_prep.url
+
+
 _AZURE_LIST = f'''<?xml version="1.0" encoding="utf-8"?>
 <EnumerationResults ServiceEndpoint="https://{ACCOUNT}.blob.{SUFFIX}/" ContainerName="{CONTAINER}">
   <Prefix>corpus/</Prefix>

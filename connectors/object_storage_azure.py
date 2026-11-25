@@ -372,7 +372,13 @@ class AzureBlobDriver:
                 headers["Authorization"] = f"Bearer {token_val}"
         elif settings.sas_token:
             # SAS token value read from credentials at request time
-            sas_value = creds.get("sas_token_from_env", settings.sas_token)
+            if "sas_token_from_env" in creds:
+                sas_value = creds["sas_token_from_env"]
+            else:
+                raise DriverConfigError(
+                    "sas_token_from_env is required but not provided"
+                )
+            # SAS appended verbatim after existing query parameters
             url += "&" + sas_value.lstrip("?")
         else:
             # Shared Key auth
@@ -389,7 +395,6 @@ class AzureBlobDriver:
             )
             headers["Authorization"] = auth_header
 
-        url = f"{self.destination(settings)}/{settings.container_name}?{urllib.parse.urlencode(query)}"
         return PreparedGet(url, headers)
 
     def get_request(
@@ -411,8 +416,15 @@ class AzureBlobDriver:
             if token_val:
                 headers["Authorization"] = f"Bearer {token_val}"
         elif settings.sas_token:
-            sas_value = creds.get("sas_token_from_env", settings.sas_token)
-            url += "&" + sas_value.lstrip("?")
+            # SAS token value read from credentials at request time
+            if "sas_token_from_env" in creds:
+                sas_value = creds["sas_token_from_env"]
+            else:
+                raise DriverConfigError(
+                    "sas_token_from_env is required but not provided"
+                )
+            # SAS appended verbatim with ? (since URL has no query params yet)
+            url += "?" + sas_value.lstrip("?")
         else:
             # Shared Key auth for Get Blob
             canonical_uri = (
