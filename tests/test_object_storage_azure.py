@@ -6,6 +6,7 @@ through the StorageDriver contract with a MockTransport fake. No network, no rea
 
 from __future__ import annotations
 
+import logging
 import base64
 import dataclasses
 from datetime import datetime, timezone
@@ -452,3 +453,21 @@ def test_valid_account_and_suffix_give_expected_destination(
     expected_url = f"https://{expected_host}"
     assert driver.destination(settings) == expected_url
     assert driver.destination_host(cfg) == expected_host
+
+
+def test_sas_signature_never_reaches_the_httpx_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """#2370 S8: the SAS token travels in the URL, and httpx logs each request URL
+    at INFO. Once an azure_blob target is configured, the httpx log must show the
+    host only, never the query with the signature."""
+    driver = AzureBlobDriver()
+    driver.settings(_cfg(auth={"sas_token_from_env": "DATA_BOAR_AZURE_SAS_TOKEN"}))
+    url = (
+        f"https://{ACCOUNT}.blob.core.windows.net/{CONTAINER}"
+        "?restype=container&comp=list&sv=2022-11-02&sp=rl&sig=SYNTHETICSIG"
+    )
+    with caplog.at_level(logging.INFO, logger="httpx"):
+        logging.getLogger("httpx").info('HTTP Request: GET %s "HTTP/1.1 200 OK"', url)
+    assert "SYNTHETICSIG" not in caplog.text
+    assert f"{ACCOUNT}.blob.core.windows.net" in caplog.text
