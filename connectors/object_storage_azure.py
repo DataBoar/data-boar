@@ -221,7 +221,7 @@ class AzureBlobDriver:
     max_page_size = 5000  # Azure Blob max results per page
     max_key_bytes = 1024  # Azure blob name max length
     credential_keys: tuple[tuple[str, bool], ...] = (
-        ("account_name_from_env", True),
+        ("account_name_from_env", False),  # Optional: when account_name provided inline
         ("account_key_from_env", False),  # Optional if using SAS or Entra ID
         ("sas_token_from_env", False),  # SAS token alternative
         ("client_id_from_env", False),  # Entra ID client ID
@@ -230,7 +230,6 @@ class AzureBlobDriver:
     )
     forbidden_inline_keys = frozenset(
         {
-            "account_name",
             "account_key",
             "sas_token",
             "client_id",
