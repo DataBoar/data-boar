@@ -446,6 +446,7 @@ class FakeS3:
         self._list_count: int = (
             0  # Monotonic list counter; hostile knobs error at 2000+.
         )
+        self._pending_continuation_token: str | None = None
         self.transport = httpx.MockTransport(self._handle)
 
     # -- identity ----------------------------------------------------------
@@ -569,6 +570,38 @@ class FakeS3:
 
     def _violate(self, text: str) -> None:
         self.violations.append(text)
+
+    def _hostile_listing_knob(self) -> bool:
+        return (
+            self._pages_script is not None
+            or self._fake_empty_pages
+            or self._fake_one_entry
+        )
+
+    def _validate_hostile_continuation(self, params: dict[str, str]) -> None:
+        """Require the client to send the token the previous hostile page returned."""
+        sent = params.get("continuation-token")
+        if self._list_count == 1:
+            if sent:
+                self._violate(
+                    "continuation-token present on first ListObjectsV2 page "
+                    f"(hostile knob): {sent!r}"
+                )
+            return
+        expected = self._pending_continuation_token
+        if expected is None:
+            self._violate(
+                "ListObjectsV2 page without pending continuation token (hostile knob)"
+            )
+            return
+        if sent != expected:
+            self._violate(
+                f"stale continuation-token on hostile listing: got {sent!r}, "
+                f"expected {expected!r}"
+            )
+
+    def _set_pending_continuation(self, token_out: str | None) -> None:
+        self._pending_continuation_token = token_out
 
     def _classify(self, raw_path: str, raw_query: str) -> tuple[str, str | None, bool]:
         """Return (operation, decoded key for GetObject, bucket_ok)."""
@@ -790,6 +823,8 @@ class FakeS3:
         self._list_count += 1
         params = dict(urllib.parse.parse_qsl(raw_query, keep_blank_values=True))
         prefix = params.get("prefix", "")
+        if self._hostile_listing_knob():
+            self._validate_hostile_continuation(params)
         # pages_script override (R7-1 test D2306-93).
         if self._pages_script is not None:
             if self._list_count > len(self._pages_script):
@@ -823,6 +858,7 @@ class FakeS3:
                 page = []
             # Match normal listing behavior: check if request has encoding-type=url.
             encoded = params.get("encoding-type") == "url"
+            self._set_pending_continuation(token_out if truncated else None)
             return httpx.Response(
                 200,
                 headers={
@@ -848,6 +884,7 @@ class FakeS3:
             truncated = True
             token_out = _token_for(self._list_count)
             encoded = params.get("encoding-type") == "url"
+            self._set_pending_continuation(token_out)
             return httpx.Response(
                 200,
                 headers={
@@ -880,6 +917,7 @@ class FakeS3:
             # Use actual content length.
             page = [_Entry(key, len(content), False)]
             encoded = params.get("encoding-type") == "url"
+            self._set_pending_continuation(token_out)
             return httpx.Response(
                 200,
                 headers={
@@ -1012,3 +1050,4 @@ class FakeS3:
 def _reset_list_count(fake: FakeS3) -> None:
     """Reset the safety counter for the fake."""
     fake._list_count = 0
+    fake._pending_continuation_token = None
