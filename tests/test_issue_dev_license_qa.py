@@ -246,13 +246,52 @@ def test_maestro_handler_issues_60d_machine_bound():
 PASSWORD_ENV = "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD"
 
 
-def test_issuer_encrypted_key_with_password_env(encrypted_keypair):
-    """Encrypted signing key + password env issues OK (Maestro/automation path, #910)."""
-    priv_path, pub_key, passphrase = encrypted_keypair
-    env = {**os.environ, PASSWORD_ENV: passphrase}
-    token = _run_issuer("--private-key-pem-file", str(priv_path), env=env)
-    claims = jwt.decode(token, pub_key, algorithms=["EdDSA"])
+_TTY_REQUIRED = "run this command in an interactive terminal"
+_IGNORED_WARNING = (
+    "Warning: DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD is set and ignored: "
+    "the signing key passphrase is read only from the terminal prompt."
+)
+
+
+def test_d2239_1_password_env_is_ignored_and_no_tty_fails_closed(
+    encrypted_keypair, tmp_path
+):
+    """D2239-1: the right passphrase in the env issues nothing without a terminal.
+
+    Replaces ``test_issuer_encrypted_key_with_password_env`` (#910), which
+    asserted the env path issued a token (#2239 removes that path).
+    """
+    priv_path, _pub_key, passphrase = encrypted_keypair
+    env = _issuer_env(tmp_path, **{PASSWORD_ENV: passphrase})
+    proc = _run_issuer_proc("--private-key-pem-file", str(priv_path), env=env)
+    assert proc.returncode == 1
+    assert _TTY_REQUIRED in proc.stderr
+    assert proc.stdout.strip() == ""
+    assert "Traceback" not in proc.stderr
+
+
+def test_d2239_2_password_env_warns_and_never_echoes_the_value(
+    encrypted_keypair, tmp_path
+):
+    """D2239-2: the env var draws the fixed warning; its value never shows up."""
+    priv_path, _pub_key, passphrase = encrypted_keypair
+    env = _issuer_env(tmp_path, **{PASSWORD_ENV: passphrase})
+    proc = _run_issuer_proc("--private-key-pem-file", str(priv_path), env=env)
+    assert _IGNORED_WARNING in proc.stderr
+    assert passphrase not in proc.stderr
+    assert passphrase not in proc.stdout
+
+
+def test_d2239_4_clean_key_with_password_env_issues_and_warns(keypair, tmp_path):
+    """D2239-4: an unencrypted key still issues; the stray env var is reported."""
+    priv_path, _pub_pem, pub_key = keypair
+    env = _issuer_env(tmp_path, **{PASSWORD_ENV: "any-value"})
+    proc = _run_issuer_proc("--private-key-pem-file", str(priv_path), env=env)
+    assert proc.returncode == 0, proc.stderr
+    claims = jwt.decode(proc.stdout.strip(), pub_key, algorithms=["EdDSA"])
     assert claims["dbtier"] == "enterprise"
+    assert _IGNORED_WARNING in proc.stderr
+    assert "any-value" not in proc.stderr
 
 
 def test_issuer_clean_key_without_password_env(keypair):
@@ -264,14 +303,21 @@ def test_issuer_clean_key_without_password_env(keypair):
     assert claims["dbtier"] == "enterprise"
 
 
-def test_issuer_encrypted_key_without_env_or_tty_exits_actionably(encrypted_keypair):
-    """Encrypted key + no env + no TTY exits with an actionable message, not a traceback (#910)."""
+def test_d2239_3_encrypted_key_without_tty_exits_without_naming_the_env(
+    encrypted_keypair, tmp_path
+):
+    """D2239-3: no env, no TTY: exit 1, no traceback, and no env var is suggested.
+
+    Replaces ``test_issuer_encrypted_key_without_env_or_tty_exits_actionably``
+    (#910), which required the env var name in the message.
+    """
     priv_path, _pub_key, _passphrase = encrypted_keypair
-    env = {k: v for k, v in os.environ.items() if k != PASSWORD_ENV}
+    env = {k: v for k, v in _issuer_env(tmp_path).items() if k != PASSWORD_ENV}
     proc = _run_issuer_proc("--private-key-pem-file", str(priv_path), env=env)
-    assert proc.returncode != 0
-    assert PASSWORD_ENV in proc.stderr
+    assert proc.returncode == 1
     assert "Traceback" not in proc.stderr
+    assert PASSWORD_ENV not in proc.stderr
+    assert _TTY_REQUIRED in proc.stderr
 
 
 # --- #2239: signing-key passphrase only from the terminal prompt ------------------------------
@@ -316,3 +362,96 @@ def test_d2239_0_getpass_reads_tty_and_falls_back_to_a_pipe(tmp_path):
     assert piped.returncode == 0, piped.stderr
     assert "GOT:from-the-pipe" in piped.stdout
     assert "GetPassWarning" in piped.stderr
+
+
+def _issuer_on_tty(
+    priv_path: Path, tmp_path: Path, typed: str | None
+) -> tuple[object, Path]:
+    lic = tmp_path / "tty.lic"
+    env = {
+        k: v
+        for k, v in env_without_ci(
+            {
+                "DATA_BOAR_LICENSE_ISSUER_MLDSA_PRIVATE_KEY_PEM_FILE": str(
+                    _dev_mldsa_file(tmp_path)
+                )
+            }
+        ).items()
+        if k != PASSWORD_ENV
+    }
+    result = run_under_pty(
+        [
+            sys.executable,
+            str(ISSUER),
+            "--private-key-pem-file",
+            str(priv_path),
+            "--out",
+            str(lic),
+        ],
+        env=env,
+        cwd=str(REPO_ROOT),
+        prompt_marker=b"passphrase:",
+        typed=typed,
+    )
+    return result, lic
+
+
+@pytest.mark.skipif(not PTY_AVAILABLE, reason=PTY_SKIP_REASON)
+def test_d2239_5_passphrase_typed_on_the_tty_issues_a_valid_token(
+    encrypted_keypair, tmp_path
+):
+    """D2239-5: the passphrase typed at the terminal unlocks the key."""
+    priv_path, pub_key, passphrase = encrypted_keypair
+    result, lic = _issuer_on_tty(priv_path, tmp_path, passphrase)
+    assert result.timed_out is False
+    assert result.prompted is True
+    assert result.exit_code == 0, result.output
+    claims = jwt.decode(
+        lic.read_text(encoding="utf-8").strip(), pub_key, algorithms=["EdDSA"]
+    )
+    assert claims["dbtier"] == "enterprise"
+
+
+@pytest.mark.skipif(not PTY_AVAILABLE, reason=PTY_SKIP_REASON)
+def test_d2239_6_wrong_passphrase_on_the_tty_exits_without_traceback(
+    encrypted_keypair, tmp_path
+):
+    """D2239-6: a wrong passphrase is a fixed message and exit 1, never a traceback."""
+    priv_path, _pub_key, _passphrase = encrypted_keypair
+    result, lic = _issuer_on_tty(priv_path, tmp_path, "not-the-passphrase")
+    assert result.timed_out is False
+    assert result.exit_code == 1
+    assert "Could not decrypt the signing key" in result.output
+    assert "Traceback" not in result.output
+    assert not lic.exists()
+
+
+@pytest.mark.skipif(not PTY_AVAILABLE, reason=PTY_SKIP_REASON)
+def test_d2239_7_empty_passphrase_on_the_tty_aborts(encrypted_keypair, tmp_path):
+    """D2239-7: an empty answer at the prompt aborts signing."""
+    priv_path, _pub_key, _passphrase = encrypted_keypair
+    result, lic = _issuer_on_tty(priv_path, tmp_path, "")
+    assert result.timed_out is False
+    assert result.exit_code == 1
+    assert "Empty passphrase" in result.output
+    assert "Traceback" not in result.output
+    assert not lic.exists()
+
+
+def test_d2239_8_typed_passphrase_is_not_stripped(encrypted_keypair, monkeypatch):
+    """D2239-8: surrounding spaces are part of the passphrase (no silent strip, P11)."""
+    from scripts import issuer_key_passphrase as mod
+
+    priv_path, _pub_key, _passphrase = encrypted_keypair
+    prompts: list[str] = []
+
+    def fake_getpass(prompt: str = "") -> str:
+        prompts.append(prompt)
+        return " a b "
+
+    monkeypatch.delenv(PASSWORD_ENV, raising=False)
+    monkeypatch.setattr(mod, "getpass", fake_getpass, raising=False)
+    monkeypatch.setattr(mod, "stdin_is_interactive", lambda: True)
+    pem = priv_path.read_text(encoding="utf-8")
+    assert mod.resolve_issuer_key_password(pem, prompt="p: ") == b" a b "
+    assert prompts == ["p: "]
