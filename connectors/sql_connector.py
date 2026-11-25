@@ -152,7 +152,8 @@ def format_column_sample_failure_details(
 ) -> str:
     """Stable detail string for scan_failures when SQL column sampling fails."""
     loc = f"{schema}.{table}.{column_name}" if schema else f"{table}.{column_name}"
-    return f"{loc} dialect={dialect}: {type(exc).__name__}: {exc}"
+    # Exception type only: a driver message can carry cell content (#2370).
+    return f"{loc} dialect={dialect}: {type(exc).__name__}"
 
 
 def _get_skip_schemas(dialect: str) -> frozenset[str]:
