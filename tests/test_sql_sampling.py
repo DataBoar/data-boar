@@ -577,6 +577,7 @@ _PREFIX_PROBE_DRIVER_DIALECT_URLS: dict[str, str] = {
     "sqlite": "sqlite+pysqlite://",
     "postgresql": "postgresql+psycopg2://",
     "mysql": "mysql+pymysql://",
+    "mariadb": "mariadb+pymysql://",
     "mssql": "mssql+pyodbc://",
     "oracle": "oracle+cx_oracle://",
 }
@@ -611,8 +612,11 @@ def _driver_sql_from_mock_execute(plan, dialect: str) -> str:
     conn = engine.connect()
     try:
         execute_column_sample_plan(conn, plan)
+    except AttributeError:
+        pass  # MockConnection.execute may not return a Result.
     finally:
-        conn.close()
+        if hasattr(conn, "close"):
+            conn.close()
     assert captured, f"no driver SQL recorded for {dialect}"
     return captured[0]
 
