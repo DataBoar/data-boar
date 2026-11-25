@@ -1374,7 +1374,7 @@ Um SAS de container com somente leitura e listagem (`sp=rl`, `sr=c`) é a creden
     sas_token_from_env: DATA_BOAR_AZURE_SAS_TOKEN
 ```
 
-Menor privilégio: um SAS de container com apenas leitura (`r`) e listagem (`l`) basta para a varredura e é mais seguro que a chave da conta, pois não permite sobrescrever nem excluir dados quando assim restrito. O SAS deve usar somente HTTPS e ter data de expiração. Credenciais alternativas: `account_key_from_env` (o código assina com Shared Key, mas isso não foi testado contra a Azure real; dá acesso total e não é recomendado). Entra ID ainda não é suportado.
+Menor privilégio: um SAS de container com apenas leitura (`r`) e listagem (`l`) basta para a varredura e é mais seguro que a chave da conta, pois não permite sobrescrever nem excluir dados quando assim restrito. O SAS deve usar somente HTTPS e ter data de expiração. Hoje só o SAS funciona. `account_key_from_env` (Shared Key) tem um defeito conhecido na assinatura, e a Azure recusa o acesso ([#2369](https://github.com/DataBoar/data-boar/issues/2369)); Entra ID ainda não é suportado ([#2368](https://github.com/DataBoar/data-boar/issues/2368)).
 
 **Testado contra o Azure Blob Storage real em 2026-11-24** apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
 

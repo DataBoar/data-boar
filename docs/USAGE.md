@@ -1224,7 +1224,7 @@ A container SAS (Shared Access Signature) with read and list only (`sp=rl`, `sr=
     sas_token_from_env: DATA_BOAR_AZURE_SAS_TOKEN
 ```
 
-Least privilege: a container SAS with only read (`r`) and list (`l`) permissions is enough for scanning and safer than an account key, because it cannot be used to overwrite or delete data. The SAS must use HTTPS only and have an expiry date. Alternative credentials: `account_key_from_env` (supported by the code via Shared Key signing, not tested against real Azure, full access, not recommended); Entra ID: not supported yet.
+Least privilege: a container SAS with only read (`r`) and list (`l`) permissions is enough for scanning and safer than an account key, because it cannot be used to overwrite or delete data. The SAS must use HTTPS only and have an expiry date. Only the SAS works today. `account_key_from_env` (Shared Key) has a known signing defect and is rejected by Azure ([#2369](https://github.com/DataBoar/data-boar/issues/2369)); Entra ID is not supported yet ([#2368](https://github.com/DataBoar/data-boar/issues/2368)).
 
 **Tested against the real Azure Blob Storage service on 2026-11-24** with synthetic data only, using a container SAS with `sp=rl`, `sr=c`, and `spr=https` scoped to the target container. Set `prefix:` when the SAS or listing scope requires it. Validate in your account before production.
 
