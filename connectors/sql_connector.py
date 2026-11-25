@@ -1027,12 +1027,12 @@ class SQLConnector:
                     from utils.logger import get_logger
 
                     get_logger().warning(
-                        "image_probe_failed schema=%s table=%s col=%s dialect=%s err=%s",
+                        "image_probe_failed schema=%s table=%s col=%s dialect=%s err_type=%s",
                         schema or "",
                         table,
                         cname,
                         dialect,
-                        str(exc)[:200],
+                        type(exc).__name__,
                     )
                 except Exception:
                     pass
