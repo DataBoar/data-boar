@@ -441,6 +441,17 @@ def test_format_column_sample_failure_details_includes_location_and_dialect():
     assert "ProgrammingError" in detail
 
 
+def test_format_column_sample_failure_details_omits_exception_text():
+    """#2370: a driver error message can carry cell content; the stored and logged
+    detail keeps the location, the dialect and the exception type only."""
+    err = RuntimeError("value near SECRET-CELL-CONTENT")
+    detail = format_column_sample_failure_details(
+        schema="dbo", table="users", column_name="email", dialect="mssql", exc=err
+    )
+    assert detail == "dbo.users.email dialect=mssql: RuntimeError"
+    assert "SECRET-CELL-CONTENT" not in detail
+
+
 def test_sql_connector_sample_syntax_error_records_scan_failure():
     """Sampling SQL errors must persist scan_failures, not return empty clean samples (#1140)."""
     target = {"type": "database", "driver": "mssql", "name": "ProdDB"}
