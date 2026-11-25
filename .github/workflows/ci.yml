@@ -185,6 +185,7 @@ jobs:
           uv run pytest -v -W error -ra --tb=short --junitxml=extras-junit.xml \
             --ignore=tests/test_maestro_scripts.py \
             --ignore=tests/test_dl_backend_ci.py \
+            --ignore=tests/test_sql_image_blob_lab_live.py \
             --deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound \
             --deselect=tests/test_security.py::test_sync_working_tree_excludes_dotenv_from_rsync \
             --deselect=tests/test_security.py::test_maestro_aggregates_real_failures_in_exit

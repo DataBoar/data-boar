@@ -157,6 +157,12 @@ def _error_code(body: bytes) -> str | None:
     return code if code else None
 
 
+def _require_account_key(creds: ResolvedCredentials) -> str:
+    if "account_key_from_env" not in creds:
+        raise DriverConfigError("account_key_from_env is required but not provided")
+    return creds["account_key_from_env"]
+
+
 def _sign_shared_key(
     account_name: str,
     account_key: str,
@@ -382,7 +388,7 @@ class AzureBlobDriver:
             url += "&" + sas_value.lstrip("?")
         else:
             # Shared Key auth
-            account_key = creds["account_key_from_env"]
+            account_key = _require_account_key(creds)
             query_list = self._build_query(prefix, token, page_size)
             canonical_uri = f"/{settings.container_name}"
             auth_header = _sign_shared_key(
@@ -432,7 +438,7 @@ class AzureBlobDriver:
             )
             auth_header = _sign_shared_key(
                 settings.account_name,
-                creds["account_key_from_env"],
+                _require_account_key(creds),
                 canonical_uri,
                 [],
                 headers,
