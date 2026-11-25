@@ -97,18 +97,20 @@ Queue position: H2 (high value; not blocking the current release). Header **Prio
 
 **Goal:** the database scanner detects binary columns that hold images and analyses them.
 
-- [ ] Heuristic for image columns:
+**Delivered in #2362 (presence / magic bytes only — no OCR):** `detection.image_blob`, `core/image_blob.py`, SQL prefix probes, lab seeds `04_lab_image_blob.sql`, synthetic SQLite generator, demo-local rehearsal keys. **Deferred to #2363:** OCR on decoded bytes.
+
+- [x] Heuristic for image columns (#2362):
   - Type: `BLOB`, `BYTEA`, `LONGBLOB`, `MEDIUMBLOB`, `RAW`, `IMAGE`, `VARBINARY`.
   - Name: `foto`, `imagem`, `photo`, `image`, `thumbnail`, `avatar`, `documento`, `attachment`, `img`, `picture`, `scan`.
-  - Type + name combination raises suspicion score.
-- [ ] Base64 in TEXT/VARCHAR:
-  - Regex for long base64 strings (> 100 chars, charset `[A-Za-z0-9+/=]`).
-  - Decode and check magic bytes.
-- [ ] Configurable sampling: `image_blob_sampling_rows: 5` (never load the whole table).
-- [ ] Pipeline: decode bytes → magic bytes → if image, OCR tier 1.
-- [ ] **Privacy by design:** never persist decoded image bytes in logs or reports. Findings only (path, pattern, category).
-- [ ] Initial engines: MariaDB, PostgreSQL, Oracle XE (already in the synthetic lab).
-- [ ] Tests: synthetic containers with BLOBs of fake ID-card images.
+  - Type + name combination raises suspicion score (`column_name_suggests_image` in `norm_tag` only).
+- [x] Base64 in TEXT/VARCHAR (#2362):
+  - Long base64 in the existing text sample (`base64_min_chars`, charset `[A-Za-z0-9+/=_-]`).
+  - Decode prefix and check magic bytes (no extra SQL query).
+- [x] Configurable sampling: `detection.image_blob.sampling_rows` (default 5; never load the whole table for prefix probes).
+- [ ] Pipeline: decode bytes → magic bytes → if image, **OCR tier 1** (**#2363** — not #2362).
+- [x] **Privacy by design:** never persist decoded image bytes in logs or reports. Findings only (path, pattern, category).
+- [x] Initial engines (#2362): PostgreSQL, MariaDB, MSSQL, Oracle XE (lab smoke seeds); SQLite (generator + unit tests). **MySQL** (non-MariaDB): SQL builder covered in unit tests only (lab compose uses MariaDB).
+- [x] Tests: lab/static seeds + `tests/test_sql_image_blob*.py`; synthetic SQLite `scripts/generate_synthetic_image_blob_db.py`.
 
 ### Phase 3 — Images embedded in documents (2–3 days)
 
@@ -204,7 +206,7 @@ Queue position: H2 (high value; not blocking the current release). Header **Prio
 ## Success indicators
 
 - [ ] Scanner detects a national ID on JPEG with Tesseract at F1 > 0.85 on the synthetic corpus.
-- [ ] BLOB with a fake registry-card image in synthetic MariaDB reported as a finding.
+- [x] BLOB with synthetic image/PDF **headers** in MariaDB (and other lab engines) reported as `IMAGE_BLOB_IN_COLUMN` / `IMAGE_BASE64_IN_COLUMN` (#2362 — presence, not OCR on card content).
 - [ ] Scanned PDF (no native text) with a national ID returns a finding.
 - [ ] `.mp3` with JPEG magic reported as `image_cloaked_as: mp3`.
 - [ ] No image bytes persisted in report artifacts.

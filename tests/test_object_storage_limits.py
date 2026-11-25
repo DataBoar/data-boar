@@ -276,7 +276,10 @@ def test_D2306_51_tamanho_mentiroso_da_size_mismatch(
 
 def test_D2306_52_content_length_acima_do_teto_aborta_sem_ler(h: Harness) -> None:
     """D2306-52: a Content-Length above the ceiling aborts the read without consuming the
-    body (the simulator counts the bytes delivered)."""
+    body (the simulator counts the bytes delivered). The ceiling of an object is the
+    smallest of its listed Size, max_object_bytes and the remaining budget, so a
+    Content-Length above the listed Size is above the ceiling; with a listed Size the
+    reason is size_mismatch (R6-2: no size_mismatch without a size)."""
     fake = h.s3({"corpus/a.txt": CPF_TXT, "corpus/ok.txt": CPF_TXT})
     fake.content_length("corpus/a.txt", 10 * MIB)
     out = h.run(fake.transport, s3_target())

@@ -97,5 +97,10 @@ api:
 report:
   output_dir: ${DEMO_LOCAL_DATA_DIR}
 sqlite_path: ${DEMO_LOCAL_DATA_DIR}/audit_results.db
+
+detection:
+  image_blob:
+    enabled: true
+
 scan:
   max_workers: 1

@@ -26,6 +26,20 @@ uv run pytest -v -W error --include-private
 # Or: set INCLUDE_PRIVATE_LINT=1 (same effect for markdown + private script checks)
 ```
 
+### Inspecting skipped tests (not part of `check-all`)
+
+`./scripts/check-all.sh`, `.\scripts\check-all.ps1`, and **`[tool.pytest.ini_options]`** in `pyproject.toml` use **`-v -W error`** without **`-ra`/`-rs`** so the full gate (~10 minutes, thousands of tests) stays readable while still surfacing failures and the **skip count** in the footer.
+
+When the skip total changes, you touched **optional extras** / connectors / lab-only tests, or you need the **reason** each test skipped, run a **second pass** (does not replace the publish gate):
+
+```bash
+./scripts/quick-test.sh --skips-summary
+# same intent on Windows: .\scripts\quick-test.ps1 -SkipsSummary
+# ad hoc: uv run pytest -q tests -W error -rs
+```
+
+**`-rs`** prints a **skipped** summary at the end (lighter than **`-ra`**). CI job **`test-extras`** still uses **`-ra`** on its narrower install set; the main Test matrix does not.
+
 **Optional — `docs/private/`:** By default **markdown lint** and **script syntax** tests **skip** the gitignored **`docs/private/`** tree. To include it locally (e.g. after editing private notes), pass **`pytest --include-private`** or set **`INCLUDE_PRIVATE_LINT=1`**. To fix Markdown there: **`uv run python scripts/fix_markdown_sonar.py --include-private`** (or the same env var). CI does **not** set this flag.
 
 **Pytest warnings (`-W error`, #1915):** `pyproject.toml` keeps **`addopts = -v -W error`** with **no** `filterwarnings` ignore list. **Starlette 1.7.0** (Kludex/starlette#3498) removed the need to silence `anyio.abc.BlockingPortal` `DeprecationWarning` during collection; the retired filter and the matching `tests/conftest.py` hook are gone. Regression guard: `tests/test_pytest_blockingportal_filterwarnings.py`. Release note: [CHANGELOG.md](../CHANGELOG.md) § *Pytest warnings (#1915)*.

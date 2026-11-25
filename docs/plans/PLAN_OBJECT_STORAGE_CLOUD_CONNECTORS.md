@@ -2,7 +2,7 @@
 
 <!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob and GCS later as drivers; Enterprise tier. -->
 
-**Status:** In progress (epic `epic/s3-object-storage-reader`, slices 2306.1–2306.5; Phase 1 read connector on branch, epic PR pending)
+**Status:** In progress (Phase 1, S3 and S3-compatible read connector, merged on `main` by PR [#2350](https://github.com/DataBoar/data-boar/pull/2350) on 2026-11-22; Phase 2, Azure Blob, in design: [#2307](https://github.com/DataBoar/data-boar/issues/2307); GCS not started)
 **Date:** 2026-03-26
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -36,7 +36,9 @@ Enterprises increasingly store “data soup” in **cloud object storage**: **Am
 | 1.5 | **Tests:** `moto` or MinIO container in CI (or heavy tests marked optional); unit tests for listing + one synthetic object path.                                                                                                                                                             | ✅ Simulated S3 + SeaweedFS evidence (#2312) |
 | 1.6 | **Docs:** `USAGE` / `TECH_GUIDE` / operator samples (EN + pt-BR); IAM policy example (least privilege); security note on **never** using overly broad `s3:*` for audit use.                                                                                                                  | ✅ Epic #2311 + README pitch (#2306) on branch; epic PR pending |
 
-### Phase 2 — **S3-compatible and Azure Blob**
+### Phase 2 — **Azure Blob**
+
+S3-compatible was delivered in Phase 1 (#2306, PR #2350).
 
 | #   | To-do                                                                                                                   | Status    |
 | -   | -----                                                                                                                   | ------    |

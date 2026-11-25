@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 310  (Done: 191 | Incomplete: 119)
-- **Incomplete breakdown:** Pending `⬜`=97, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 316  (Done: 191 | Incomplete: 125)
+- **Incomplete breakdown:** Pending `⬜`=103, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 79 | 53 | 26 |
 | `H2` | 4 | 4 | 0 |
-| `H3` | 145 | 79 | 66 |
+| `H3` | 151 | 79 | 72 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 17 | 14 | 3 |
@@ -57,7 +57,7 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 
 ### Integration / active threads — last refreshed **2026-09-13**
 
-- **Legacy host platforms ([#2183](https://github.com/DataBoar/data-boar/issues/2183)):** 🔄 **In progress** — [PLAN_LEGACY_HOST_PLATFORMS.md](PLAN_LEGACY_HOST_PLATFORMS.md) ([pt-BR](PLAN_LEGACY_HOST_PLATFORMS.pt_BR.md)) records the host vs target boundary in three evidence classes (Linux s390x candidate for 1, AIX candidate for 2, HP-UX candidate for 2 or 3, z/OS class 3 via [#1666](https://github.com/DataBoar/data-boar/issues/1666)); **nothing tested locally**. Still open: the validated Linux s390x QEMU recipe (`--demo`, wheels that needed a local build). Matrix: [OS_COMPATIBILITY_TESTING_MATRIX.md](../ops/OS_COMPATIBILITY_TESTING_MATRIX.md) Tier 4.5.
+- **Legacy host platforms ([#2183](https://github.com/DataBoar/data-boar/issues/2183)):** 🔄 **In progress** — [PLAN_LEGACY_HOST_PLATFORMS.md](PLAN_LEGACY_HOST_PLATFORMS.md) ([pt-BR](PLAN_LEGACY_HOST_PLATFORMS.pt_BR.md)) records the host vs target boundary in three evidence classes (Linux s390x candidate for 1, AIX candidate for 2, HP-UX candidate for 2 or 3, z/OS class 3 via [#1666](https://github.com/DataBoar/data-boar/issues/1666)); **nothing tested locally**. Still open: validated Linux s390x QEMU recipe (`uv run python main.py --demo`, wheel build list); when done, ship wheels like [#1182](https://github.com/DataBoar/data-boar/issues/1182) (GitHub Release on **data-boar-site** + PEP 503 **`https://databoar.com.br/simple/`**). Matrix: [OS_COMPATIBILITY_TESTING_MATRIX.md](../ops/OS_COMPATIBILITY_TESTING_MATRIX.md) Tier 4.5.
 - **dashBOARd design-system evolution ([#1004](https://github.com/DataBoar/data-boar/issues/1004)):** ⬜ **Pending** — intent-only [PLAN_WEB_GUI_DESIGN_SYSTEM_EVOLUTION.md](PLAN_WEB_GUI_DESIGN_SYSTEM_EVOLUTION.md). Private sibling **`data-boar-design-system`**: tokens/components/templates for dashBOARd; **never** paste private assets into this tree. After **M-MOBILE-V1** / **#86** functional work. Milestone **v1.8.0**.
 - **CI optional extras coverage ([#1638](https://github.com/DataBoar/data-boar/issues/1638)):** 🔄 **Active** — default matrix still `uv sync --extra shares`; job **`test-extras`** (Python 3.13) installs SQL extras except `mariadb` (1.1.14 `SyntaxError` on 3.13) plus `nosql` + `compressed` + `dataformats`, deselects `MAESTRO_ROOT`-gated tests, and fails if skipped tests exceed **60**. Dedicated **`test-dl`** ([#1822](https://github.com/DataBoar/data-boar/issues/1822)) installs `--extra dl` and encodes via `core/dl_backend.py` (not hung off extras; skip ceiling unchanged). [PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md](PLAN_CI_OPTIONAL_EXTRAS_COVERAGE.md). Found via [#1636](https://github.com/DataBoar/data-boar/issues/1636). Remaining extras (`otel`, `bigdata`, `richmedia`, `grc-dashboard`) stay out of those jobs.
 - **Operator-gated PR attestation ([#1709](https://github.com/DataBoar/data-boar/issues/1709)):** 🔄 **Active** — CI (`pull_request_target`, checkout of PR **base** only) fails when the PR is labeled `operator-gated` **or** the pulls-API file list touches `GATE_FILES`, unless the **latest** PR comment is `Gate-Change-Approved-By:` **plus** verified SSHSIG bound to PR + head SHA. Agents **never** fill that trailer. Required check on ruleset `main-gate-pii` is **operator-only**. [PLAN_OPERATOR_GATED_PR_GUARD.md](PLAN_OPERATOR_GATED_PR_GUARD.md).
@@ -91,7 +91,7 @@ When **partners** or **buyers** anchor on a vertical (MSP, insurance, RPO, real 
 - **Governance Lens:** Phases A–E **[#539](https://github.com/DataBoar/data-boar/issues/539)–[#543](https://github.com/DataBoar/data-boar/issues/543)** are **closed** on GitHub (not a live v1.8.0 gate). Spec: [PLAN_GOVERNANCE_LENS.md](PLAN_GOVERNANCE_LENS.md). Curated framework maps stay **off** public Git; Open Core keeps technical findings only.
 - **Wave 1 — sequenciamento explícito (v1.7.4 + v1.8.0-beta fase U0/U1):** Executar na ordem do issue #656. Parar após todos os itens da Fase 5 fechados. Não avançar para U2 sem instrução do operador. **Mapa visual:** [#654](https://github.com/DataBoar/data-boar/issues/654) — [ISSUE_QUEUE_SEQUENCING_MAP.md](../ops/ISSUE_QUEUE_SEQUENCING_MAP.md) (Mermaid; refresh when **NÃO INICIAR** chains change).
 - **Remediation interface — manifest + host hook:** `--session` + `--export-remediation-manifest` ([#649](https://github.com/DataBoar/data-boar/issues/649)); in-process `RemediationPlugin` hook ([#606](https://github.com/DataBoar/data-boar/issues/606) / ADR-0059) ✅. **Partner SDK guide:** [PLAN_PLUGIN_SDK.md](PLAN_PLUGIN_SDK.md) / docs `PLUGIN_SDK.md` — **[#611](https://github.com/DataBoar/data-boar/issues/611)**. **Follow-up:** automatic findings JSONL path wiring **[#1443](https://github.com/DataBoar/data-boar/issues/1443)** ✅ host write from SQLite (#649 taxonomy). **v1.8.0 survey [#1057](https://github.com/DataBoar/data-boar/issues/1057):** docs-first anonymizer/policy mapping on [PLAN_REMEDIATION_INTERFACE.md](PLAN_REMEDIATION_INTERFACE.md) (no in-core anonymizer). **Partner L1/L2/L3 interface plan:** [PLAN_PLUGIN_PARTNER_INTERFACE.md](PLAN_PLUGIN_PARTNER_INTERFACE.md) — **[#695](https://github.com/DataBoar/data-boar/issues/695)** 🔄 (doc slice; L2/L3 runtime → epic **[#865](https://github.com/DataBoar/data-boar/issues/865)**; bidirectional → **[#1116](https://github.com/DataBoar/data-boar/issues/1116)**).
-- **Cloud object storage (data soup):** **🔄 In progress** on branch `epic/s3-object-storage-reader` ([#2306](https://github.com/DataBoar/data-boar/issues/2306) / [#2311](https://github.com/DataBoar/data-boar/issues/2311)): read-only `object_storage` (`s3`, `s3_compatible`, Enterprise); Azure Blob / GCS still Phase 2–3 in [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md).
+- **Cloud object storage (data soup):** **🔄 In progress** — Phase 1 (S3 and S3-compatible read connector, Enterprise) is **merged** ([#2306](https://github.com/DataBoar/data-boar/issues/2306), PR [#2350](https://github.com/DataBoar/data-boar/pull/2350), 2026-11-22): `object_storage` with `s3` and `s3_compatible`, own SigV4 (no `botocore`), partial-coverage report; local proof against SeaweedFS 4.54 (2026-11-20); operator proof against **real Amazon S3 with synthetic data** on **2026-11-24** using read-only IAM user; R2 and MinIO **not tested against the real service**. **Next:** Azure Blob ([#2307](https://github.com/DataBoar/data-boar/issues/2307), branch `epic/azure-blob-reader`, design in progress), then GCS; per-scan limit adjustment ([#2313](https://github.com/DataBoar/data-boar/issues/2313)) later. Plan: [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md).
 - **SQL sampling (SRE + audit evidence):** **Slice 1** on `main` — per-column reads use **`WHERE <col> IS NOT NULL`** before the row cap; **`connectors/sql_sampling.py`** (`SamplingManager` + legacy `SqlColumnSampleQueryBuilder`, per-table **strategy** INFO log, optional `TableSamplingMetadata` labels, **`DATA_BOAR_SQL_SAMPLE_LIMIT`** env override). **Slice 1b** — optional YAML **`sql_sampling.overrides`** cascade (**`core/sampling_policy.py`**, `SQLConnector` + Snowflake). **Slice 2–3** (metadata-first caps, optional `TABLESAMPLE` / coverage metadata, egress-aware defaults; per-statement timeout matrix follow-up) — [PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md](completed/PLAN_SQL_SAMPLING_SRE_AND_AUDIT_EVIDENCE.md), [ADR 0043](../adr/ADR-0043-sql-column-sampling-non-null-and-strategy-hook.md).
 - **Action Plan Generator (APG — post-scan):** Turn findings into **tiered suggested actions** + optional **remediation snippet export** + **scan evidence manifest** for diligence narratives—not legal conclusions. PoC phases: schema/report hooks, exposure diagnosis narrative, JSON/SQL templates, audit log alignment with export trail — [PLAN_ACTION_PLAN_GENERATOR_POST_SCAN.md](PLAN_ACTION_PLAN_GENERATOR_POST_SCAN.md) (cross-links: [PLAN_PDF_GRC_REPORT.md](PLAN_PDF_GRC_REPORT.md), [PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md](PLAN_BUILD_IDENTITY_RELEASE_INTEGRITY.md), ADR **0025**).
 - **Semgrep:** ✅ **Plan complete** — OSS scan on push/PR; [PLAN_SEMGREP_CI.md](completed/PLAN_SEMGREP_CI.md). **Slack on CI/Semgrep failure:** **`Slack CI failure notify`** ships on **`origin`** (**`.github/workflows/slack-ci-failure-notify.yml`**); **private snapshot** **`docs/private/raw_pastes/cursor-incident/slack-ci-failure-notify.yml.old`** documents pause drills — [OPERATOR_NOTIFICATION_CHANNELS.md](../ops/OPERATOR_NOTIFICATION_CHANNELS.md) §4.1.1. Optional smoke: temporary failing branch — see plan § *Optional operator smoke*.
@@ -793,7 +793,7 @@ Tighten runtime defaults for the API host. Implemented: default `127.0.0.1`, opt
 
 **Additional data soup formats:** [PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md](completed/PLAN_ADDITIONAL_DATA_SOUP_FORMATS.md) – **Tier 3 rich media** and **Tier 1** + **opt-in stego hints** ✅ **on `main`** (optional **`[dataformats]`**, `scan_for_stego` / CLI / dashboard). **Still backlog:** **Tier 3b** embedded-tracker/heuristics and **Tier 4** doc-layer taxonomy (implementation phased per plan).
 
-**Cloud object storage (S3-class):** [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) – **🔄 Phase 1 on epic branch** ([#2306](https://github.com/DataBoar/data-boar/issues/2306); epic PR not merged yet). **Azure Blob / GCS** remain plan-only. Until merge, **`main`** still has no object-storage connector; compressed-file and share connectors remain the fallback for file-like data on published releases.
+**Cloud object storage (S3-class):** [PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md](PLAN_OBJECT_STORAGE_CLOUD_CONNECTORS.md) – **🔄 Phase 1 merged on `main`** ([#2306](https://github.com/DataBoar/data-boar/issues/2306), PR [#2350](https://github.com/DataBoar/data-boar/pull/2350)); **not in a published release yet**, so compressed-file and share connectors remain the fallback for file-like data on published releases. **Azure Blob** is in design ([#2307](https://github.com/DataBoar/data-boar/issues/2307)); **GCS** remains plan-only.
 
 **LLM PII-leakage monitoring (generic):** [PLAN_LLM_PII_LEAKAGE_MONITORING.md](PLAN_LLM_PII_LEAKAGE_MONITORING.md) – **⬜ Proposed / research only** (Phase 0 before Phase 1). Covers PII **in motion** via LLM assistants (Gemini first via [#1230](https://github.com/DataBoar/data-boar/issues/1230); other providers table is non-commitment). Tracking: [#1582](https://github.com/DataBoar/data-boar/issues/1582). Not an implementation greenlight.
 
@@ -950,6 +950,21 @@ Docs-first `[noavx]` = proven [#929](https://github.com/DataBoar/data-boar/issue
 | P1 | **v1.8.0 #1059 — doc-first:** PLAN_PACKAGING EN + pt-BR wave; `plans_hub_sync` + this file ([#1059](https://github.com/DataBoar/data-boar/issues/1059)) | ✅ Done |
 | P2 | **#1059 —** name `[noavx]` in pip/pipx onboarding; pointer to #929 + wheelhouse two-step | ✅ Done (#929 / PR #1874) |
 | P3 | **#1059 —** CPU pre-flight + loud capability banner / report footer (FN-first) | ⬜ Pending |
+
+---
+
+### Legacy package extras (native packages) – [#2185](https://github.com/DataBoar/data-boar/issues/2185)
+
+**Goal:** Document the operator recipe for native package extras (venv over embedded Python, `--system-site-packages`), document status by evidence, and decide distribution strategy for subpackages (deb/rpm/apk/pacman).
+
+| Step | To-do | Status |
+| ---- | ----- | ------ |
+| P1 | Document operator recipe (venv over embedded Python, `--system-site-packages`, `PYTHONPATH` or `DATA_BOAR_EXTRAS_PATH`) | ⬜ Pending |
+| P2 | Document per-extra status by evidence (what works, what needs compiler, what is not supported) | ⬜ Pending |
+| P3 | Document open decision on subpackage distribution (options + trade-offs, pending operator decision) | ⬜ Pending |
+| P4 | Document status for all four formats (deb/rpm/apk/pacman) or declare untested | ⬜ Pending |
+| P5 | Update `PLAN_PACKAGING_EXTRAS.md` and `PLAN_PACKAGING_EXTRAS.pt_BR.md` with new section | ⬜ Pending |
+| P6 | Run `python scripts/plans_hub_sync.py --write` | ⬜ Pending |
 
 ---
 

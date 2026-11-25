@@ -681,6 +681,28 @@ detection:
 
 in your config. To **enable alphanumeric CNPJ via overrides only** (for example, on older installs or for experimentation), you can copy the `LGPD_CNPJ_ALNUM` example from `config/regex_overrides.example.yaml` or from [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#yaml-example-regex-overrides) into your own `regex_overrides_file`.
 
+#### Image or document bytes in SQL columns (`detection.image_blob`)
+
+When you enable **`detection.image_blob`**, the SQL connector reports **MEDIUM** findings if a column sample looks like it stores an image or PDF—either in a **binary** column (BLOB, BYTEA, VARBINARY, IMAGE, and similar types) or as **base64** (and data-URI wrappers) in text columns. The scan reads at most a **prefix** of each cell (magic bytes only). It does **not** run OCR and does **not** persist decoded bytes in logs or in the audit database. Full pixel or document reading is tracked separately (**#2363**).
+
+**Default:** `enabled: false` (no extra SQL prefix probes; text sampling unchanged).
+
+```yaml
+detection:
+  image_blob:
+    enabled: false          # set true to probe binary columns and decode base64 prefixes
+    sampling_rows: 5        # 1–50 rows per binary column (prefix probe only)
+    base64_min_chars: 100   # 64–150; minimum visible base64 length in a text sample
+```
+
+**Patterns:** `IMAGE_BLOB_IN_COLUMN` (binary prefix), `IMAGE_BASE64_IN_COLUMN` (decoded prefix from the existing text sample). **`norm_tag`** lists detected kinds (`jpeg`, `png`, `pdf`, …) and states that content was not read.
+
+**Engines:** prefix SQL is implemented for SQLite, PostgreSQL, MySQL/MariaDB, Microsoft SQL Server, and Oracle. The lab smoke stack seeds `lab_image_blob` on PostgreSQL, MariaDB, MSSQL, and Oracle XE (`deploy/lab-smoke-stack/init/*/04_lab_image_blob.sql`). **MySQL** (non-MariaDB) uses the same SQL builder as MariaDB in unit tests but is not part of the default lab compose stack.
+
+**Synthetic SQLite corpus (no container):** `uv run python scripts/generate_synthetic_image_blob_db.py --output /path/to/synth.sqlite --force` then point a `sqlite` target at that file with `detection.image_blob.enabled: true`.
+
+**Demo local:** `deploy/demo-local/config.demo-local.yaml` enables this flag for the bundled PostgreSQL lab target; see `deploy/demo-local/rehearsal.py` keys `lab_image_blob.foto_documento` and `lab_image_blob.foto_b64`.
+
 ### Custom regex patterns (new personal/sensitive values)
 
 To detect **new possibly personal or sensitive values** (e.g. RG, vehicle plate, health plan ID), add custom regex patterns. In the main config set **`regex_overrides_file`** to the path of a YAML or JSON file with a list of `{ name, pattern, norm_tag }`. The detector matches each pattern against the column name and sample text; any match is reported with HIGH sensitivity. Your file adds to or overrides built-in patterns (CPF, CNPJ, email, phone, SSN, credit card, dates). **Format and examples:** [SENSITIVITY_DETECTION.md](SENSITIVITY_DETECTION.md#custom-regex-patterns-detecting-new-personalsensitive-values) (EN) · [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#padrões-regex-customizados-detectar-novos-dados-pessoaissensíveis) (pt-BR). For **multiple regulations and sample configuration** (built-in: LGPD, GDPR, CCPA, HIPAA, GLBA; extensibility for UK GDPR, PIPEDA, POPIA, APPI, PCI-DSS, or custom), and for assistance with tuning, see [COMPLIANCE_FRAMEWORKS.md](COMPLIANCE_FRAMEWORKS.md) ([pt-BR](COMPLIANCE_FRAMEWORKS.pt_BR.md)).
@@ -1169,7 +1191,7 @@ For **AWS only**, use `driver: s3` (virtual-hosted; do not set `endpoint_url` or
 
 The `object_storage` type uses **one driver per provider**; shipped drivers are `s3` and `s3_compatible`.
 
-### Example — AWS S3 (not tested against the real AWS service)
+### Example — AWS S3 (tested against the real AWS service with synthetic data)
 
 ```yaml
 
@@ -1184,7 +1206,27 @@ The `object_storage` type uses **one driver per provider**; shipped drivers are 
     secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
 ```
 
-**Not tested against the real Amazon S3 service** in this repository's published evidence. Validate in your account before production.
+**Tested against the real Amazon S3 service on 2026-11-24** with synthetic data only, using a read-only IAM user whose policy allows `s3:ListBucket` restricted to the target prefix and `s3:GetObject` on `<prefix>*`; with such a policy the target **must** set `prefix:` (without it AWS answers AccessDenied, which comes from the policy, not from the driver). See the least-privilege policy example in this section (around line 1232). Validate in your account before production.
+
+### Example — Azure Blob Storage (driver: azure_blob)
+
+A container SAS (Shared Access Signature) with read and list only (`sp=rl`, `sr=c`) is the recommended credential. The account name is **not a secret**: it is part of the public hostname (`<account>.blob.core.windows.net`), the same way the S3 `bucket` is an inline key.
+
+```yaml
+
+- name: "azure-corpus-sintetico"
+  type: object_storage
+  driver: azure_blob
+  account_name: <account>
+  container_name: corpus
+  prefix: lgpd-corpus/
+  auth:
+    sas_token_from_env: DATA_BOAR_AZURE_SAS_TOKEN
+```
+
+Least privilege: a container SAS with only read (`r`) and list (`l`) permissions is enough for scanning and safer than an account key, because it cannot be used to overwrite or delete data. The SAS must use HTTPS only and have an expiry date. Only the SAS works today. `account_key_from_env` (Shared Key) has a known signing defect and is rejected by Azure ([#2369](https://github.com/DataBoar/data-boar/issues/2369)); Entra ID is not supported yet ([#2368](https://github.com/DataBoar/data-boar/issues/2368)).
+
+**Tested against the real Azure Blob Storage service on 2026-11-24** with synthetic data only, using a container SAS with `sp=rl`, `sr=c`, and `spr=https` scoped to the target container. Set `prefix:` when the SAS or listing scope requires it. Validate in your account before production.
 
 ### Example — MinIO / generic compatible endpoint (not tested against vendor appliances)
 
@@ -1213,12 +1255,12 @@ Replace `<ACCOUNT_ID>` with your Cloudflare account id. **Not tested against the
 
 - **Credentials:** values live only in the environment via `auth.*_from_env` names (no inline keys, no AWS credential chain, no shared credentials file, no instance metadata, no anonymous access). Env var names follow the project prefix rules ([#1977](https://github.com/DataBoar/data-boar/issues/1977)). Optional `session_token_from_env` supports short-lived STS-style keys when you inject them at runtime.
 - **Transport:** `https` only; TLS certificate verification is always on. `allow_private_networks: true` applies **only** when you set a lab-style `endpoint_url` on `s3_compatible` (RFC1918, loopback, or other private targets your policy allows).
-- **Limits (defaults are suggestions):** `max_objects`, `max_download_bytes`, and `max_object_bytes` may each be a positive integer or `unlimited`. When a cap is hit, listing or download stops, the scan records **partial coverage** (counts and bytes not scanned), and the Excel **Target coverage** sheet explains why. Raising limits increases list traffic, temporary disk use, and runtime — tune per target. Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Limits (defaults are suggestions):** `max_objects`, `max_download_bytes`, and `max_object_bytes` may each be a positive integer or `unlimited`. When a cap is hit, listing or download stops, the scan records **partial coverage** (counts and bytes not scanned), and the Excel **Target coverage** sheet explains why. Raising limits increases list traffic, temporary disk use, and runtime — tune per target. Per-scan limit override is **not** in this release ([#2313](https://github.com/DataBoar/data-boar/issues/2313)). Setting `unlimited` does not disable the built-in listing page ceiling (the connector still stops listing at its internal maximum of pages and records `limit_reached`).
 - **Object keys:** segments containing `.` or `..` are skipped and reported as `unsafe_key`. Object versions and anonymous buckets are **not** supported.
 - **Partial coverage vs “no findings”:** **Target coverage** can show `PARTIAL` even when the findings sheet is empty — that is not a clean bill of health. By default, **unscanned object names** appear only as **counts** in coverage output; set `report_object_names: true` on the target when you need names in the coverage sheet (findings always carry the object path for hits).
 - **LGPD / GDPR:** scanning a customer bucket processes **their** personal data. Lawful basis, purpose limitation, retention, and DPA terms stay with the **customer**; Data Boar performs technical read and classification only.
 - **Evidence posture:** reports describe what was read under your config — **evidence for triage, not a legal conclusion** and not protection against regulatory fines.
-- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3 and Cloudflare R2 remain **not tested against the real cloud service** in that evidence.
+- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3 and Cloudflare R2 are supported; validate in your account before production.
 
 ### IAM — least privilege (AWS)
 
@@ -1259,7 +1301,7 @@ All share types use the same `file_scan` settings (extensions, recursive, scan_s
 
 ### Microsoft Graph, delegated mode (`type: sharepoint_online`)
 
-Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. **Evidence:** CI and local tests use a **simulated** Graph; operator proof against a **personal** OneDrive in **delegated** mode through this connector on **2026-11-18** (presentation demo, session `c001d83a80c8_20261118_123726`) is in [m365_graph_onedrive_delegated_2260_2026-11-18.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). SharePoint Online site libraries and **work or school** tenants remain **not validated**.
+Read-only reader for **one folder of the signed-in user's OneDrive** through Microsoft Graph. **Enterprise** tier. It needs only the core install (`httpx`), not the `shares` extra. **Evidence:** CI and local tests use a **simulated** Graph; operator proof against a **personal** OneDrive in **delegated** mode through this connector is recorded in [m365_graph_onedrive_delegated_2260_2026-11-18.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). SharePoint Online site libraries and **work or school** tenants remain **not validated**.
 
 ```yaml
 

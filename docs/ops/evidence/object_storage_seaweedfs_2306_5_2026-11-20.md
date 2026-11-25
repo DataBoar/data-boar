@@ -14,7 +14,7 @@ This document is **evidence of what was run**, not a legal conclusion and does n
 | ----- | ----- |
 | Server product | SeaweedFS |
 | Reported version | `30GB 4.54` (`weed version` inside the container) |
-| Container image | `docker.io/chrislusf/seaweedfs:latest` |
+| Container image | `docker.io/chrislusf/seaweedfs:latest` (pulled as `:latest` tag on 2026-11-20; reproduction must use the digest in the next row) |
 | Image digest | `sha256:4b42c212543a0acd4c0e675215ecdcaf62a186ef98def76c7e12701871222d15` |
 | Host OS | Debian 13 (kernel `7.2.12+deb13-amd64`, x86_64) |
 | Podman | 5.4.2 |
@@ -40,7 +40,7 @@ podman run -d --name seaweed-2306-5 \
   -p 127.0.0.1:19443:19443 \
   -v ~/.cache/claude-pm/2306.5:/certs:Z \
   -v ~/.cache/claude-pm/2306.5/data:/data:Z \
-  docker.io/chrislusf/seaweedfs:latest server \
+  docker.io/chrislusf/seaweedfs@sha256:4b42c212543a0acd4c0e675215ecdcaf62a186ef98def76c7e12701871222d15 server \
   -dir=/data -filer -s3 \
   -s3.port.https=19443 -s3.ip.bind=0.0.0.0 \
   -s3.cert.file=/certs/server.crt -s3.key.file=/certs/server.key \

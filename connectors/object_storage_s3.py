@@ -39,7 +39,10 @@ from connectors.s3_addressing import (
 from connectors.s3_sigv4 import sign_get, uri_encode
 
 _ERROR_BODY_LIMIT = 64 * 1024
-_SIZE_RE = re.compile(r"[0-9]+")
+# 20 digits far exceeds the 5 TB S3 object maximum (5*10^12 ~ 13 digits).
+# Python's int() string conversion limit is 4300 digits; this bound prevents
+# a hostile server from triggering ValueError via oversized <Size> values.
+_SIZE_RE = re.compile(r"[0-9]{1,20}")
 _MALFORMED = "malformed listing response"
 
 # Error vocabulary of section 11: only these codes ever leave the driver.

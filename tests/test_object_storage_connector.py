@@ -97,9 +97,8 @@ def _list_reqs(fake: Any) -> list[Any]:
 @pytest.mark.parametrize(
     ("driver", "message"),
     [
-        (None, "driver must be one of: s3, s3_compatible"),
-        ("ftp", "driver must be one of: s3, s3_compatible"),
-        ("azure_blob", "driver azure_blob is not available yet"),
+        (None, "driver must be one of: azure_blob, s3, s3_compatible"),
+        ("ftp", "driver must be one of: azure_blob, s3, s3_compatible"),
         ("gcs", "driver gcs is not available yet"),
     ],
 )
@@ -131,7 +130,7 @@ def test_D2306_64_lista_da_mensagem_vem_do_registro(h: Harness) -> None:
     out = h.run(fake.transport, s3_target(driver="x"))
 
     assert out.db.details("config_error") == [
-        "driver must be one of: s3, s3_compatible, toy"
+        "driver must be one of: azure_blob, s3, s3_compatible, toy"
     ]
     assert fake.requests == []
     assert store.requests == []
@@ -406,6 +405,46 @@ def test_D2306_35_slowdown_espera_e_segue(
     assert out.clock.sleeps == expected
     assert paths(out.db) == EXPECTED_PATHS
     assert "throttled" not in out.db.reasons()
+
+
+_MALFORMED_DECIMAL_HEADER = "1" + "0" * 4999
+_UNICODE_DIGIT_HEADER = "\u00b2"
+
+
+def _patch_httpx_latin1_header_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Wire-format header values may be non-ASCII; FakeS3 builds ``httpx.Response`` in-process."""
+    import httpx._models as models
+
+    original = models._normalize_header_value
+
+    def _normalize_header_value(value: str | bytes, encoding: str | None) -> bytes:
+        if isinstance(value, bytes):
+            return original(value, encoding)
+        enc = encoding or "ascii"
+        try:
+            return value.encode(enc)
+        except UnicodeEncodeError:
+            return value.encode("latin-1")
+
+    monkeypatch.setattr(models, "_normalize_header_value", _normalize_header_value)
+
+
+@pytest.mark.parametrize(
+    "retry_after", [_MALFORMED_DECIMAL_HEADER, _UNICODE_DIGIT_HEADER]
+)
+def test_D2306_R4_retry_after_nao_numerico_ignorado(
+    h: Harness, monkeypatch: pytest.MonkeyPatch, retry_after: str
+) -> None:
+    """R4: Retry-After values that isdigit() accepts but int() cannot parse must not
+    abort the whole target (failed:error); listing and downloads proceed."""
+    if retry_after == _UNICODE_DIGIT_HEADER:
+        _patch_httpx_latin1_header_values(monkeypatch)
+    fake = h.s3()
+    fake.throttle(1, retry_after=retry_after)
+    out = h.run(fake.transport, s3_target())
+
+    assert "error" not in out.db.reasons()
+    assert paths(out.db) == EXPECTED_PATHS
 
 
 def test_D2306_36_5xx_esgotado_na_listagem_da_unreachable(h: Harness) -> None:
@@ -1206,6 +1245,24 @@ def test_D2306_86_chave_valida_sem_tamanho_baixa_com_teto(h: Harness) -> None:
     assert "size_mismatch=0" in summary
 
 
+@pytest.mark.parametrize(
+    "content_length", [_MALFORMED_DECIMAL_HEADER, _UNICODE_DIGIT_HEADER]
+)
+def test_D2306_R4_content_length_nao_numerico_ignorado(
+    h: Harness, monkeypatch: pytest.MonkeyPatch, content_length: str
+) -> None:
+    """R4: Content-Length values that isdigit() accepts but int() cannot parse must not
+    abort the whole target; other objects still download."""
+    if content_length == _UNICODE_DIGIT_HEADER:
+        _patch_httpx_latin1_header_values(monkeypatch)
+    fake = h.s3({"corpus/a.txt": CPF_TXT, "corpus/ok.txt": PLAIN_TXT})
+    fake.content_length("corpus/a.txt", content_length)
+    out = h.run(fake.transport, s3_target())
+
+    assert "error" not in out.db.reasons()
+    assert "corpus/ok.txt" in fake.fetched
+
+
 def test_D2306_86_sem_tamanho_passar_do_saldo_e_over_budget(h: Harness) -> None:
     """D2306-86 (R6-2): without a size, passing the max_download_bytes balance in the stream
     counts over_budget, and the bytes read enter the budget."""
@@ -1437,3 +1494,142 @@ def test_D2306_91_erro_da_extracao_e_por_objeto(
     assert mark not in out.db.as_text()
     assert mark not in caplog.text
     assert made and not any(Path(d).exists() for d in made)
+
+
+# ----------------------------------------------------------------------------
+# D2306-92 to D2306-95: listing without a page ceiling (R7-1)
+# ----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("max_objects", [10, "unlimited"])
+def test_D2306_92_lista_sem_teto_de_pages_vai_em_loop_sem_knob(
+    h: Harness, max_objects: int | str
+) -> None:
+    """D2306-92 (R7-1): with empty_pages_forever() and max_objects 10 or unlimited,
+    the listing returns 16 empty pages; a failure protocol_error with the rule text is recorded;
+    listing_complete is false and coverage is partial.
+    The connector must NOT sleep in this path (no retry, no backoff)."""
+    fake = h.s3()
+    fake.empty_pages_forever()
+    out = h.run(fake.transport, s3_target(max_objects=max_objects))
+
+    # The killer list count (safety cap in the fake is 2000, but the rule is 16).
+    assert ops(fake, "ListObjectsV2") == 16
+    assert out.db.details("protocol_error") == [
+        "listing returned 16 empty pages in a row; listing stopped before the end of the prefix"
+    ]
+    assert executive(out.db)["listing_complete"] is False
+    assert executive(out.db)["coverage"] == "partial"
+    # The connector never sleeps in this path (no retry, no backoff).
+    assert out.clock.sleeps == []
+
+
+def test_D2306_93_lista_com_15_vazias_e_2_entradas_no_fim(h: Harness) -> None:
+    """D2306-93: 15 empty pages then a page with 2 entries and truncated=False ends complete
+    with 2 scanned; variant: 15 empty, 1 with entry, 15 empty, 1 with entry and end also
+    complete (the count resets).
+
+    With pages_script([0]*15 + [2, -1]): 15 empty pages, then 2 entries (truncated), then end.
+    The empty-page count resets after a page with entries.
+    The pages_script now yields unique downloadable keys under the requested prefix,
+    so the entries are accepted and scanned (not out_of_prefix).
+    This test should PASS today and after the fix (it guards against a ceiling that is too eager).
+    """
+    fake = h.s3()
+    # Script: 15 empty pages, then 2 entries (truncated), then end (0 entries, not truncated).
+    script = [0] * 15 + [2, -1]
+    fake.pages_script(script)
+    out = h.run(fake.transport, s3_target(max_objects="unlimited"))
+
+    # 15 empty + 1 with 2 entries + 1 end = 17 list requests.
+    assert ops(fake, "ListObjectsV2") == 17
+    # No failure for empty pages (counter resets on page with entries).
+    assert "protocol_error" not in out.db.reasons()
+    assert "limit_reached" not in out.db.reasons()
+    # No failures at all: the 2 entries are under the prefix and scanned.
+    assert out.db.reasons() == []
+    assert executive(out.db)["listing_complete"] is True
+    assert executive(out.db)["coverage"] == "complete"
+    assert executive(out.db)["objects_scanned"] == 2
+    assert executive(out.db)["objects_listed"] == 2
+    assert executive(out.db)["objects_not_scanned"] == 0
+
+
+def test_D2306_93_variante_contador_zera(h: Harness) -> None:
+    """D2306-93 variant: 15 empty, 1 with entry, 15 empty, 1 with entry and end -> complete.
+    The empty-page counter resets when a page has at least one entry.
+    Script: [0]*15 + [1] + [0]*15 + [1, -1] = 33 list requests, 2 objects scanned, complete.
+    """
+    fake = h.s3()
+    script = [0] * 15 + [1] + [0] * 15 + [1, -1]
+    fake.pages_script(script)
+    out = h.run(fake.transport, s3_target(max_objects="unlimited"))
+
+    # 15 + 1 + 15 + 1 + 1 = 33 list requests.
+    assert ops(fake, "ListObjectsV2") == 33
+    assert "protocol_error" not in out.db.reasons()
+    assert "limit_reached" not in out.db.reasons()
+    assert out.db.reasons() == []
+    assert executive(out.db)["listing_complete"] is True
+    assert executive(out.db)["coverage"] == "complete"
+    assert executive(out.db)["objects_scanned"] == 2
+    assert executive(out.db)["objects_listed"] == 2
+    assert executive(out.db)["objects_not_scanned"] == 0
+
+
+def test_D2306_94_teto_absoluto_de_pages_com_monkeypatch(
+    h: Harness, monkeypatch
+) -> None:
+    """D2306-94: with _LISTING_MAX_PAGES monkeypatched to 5 and one_entry_per_page_forever(),
+    max_objects unlimited, exactly 5 list requests, limit_reached with rule text,
+    listing_complete false, coverage partial, 5 objects scanned."""
+    mod = connector_module()
+    monkeypatch.setattr(mod, "_LISTING_MAX_PAGES", 5)
+
+    fake = h.s3()
+    fake.one_entry_per_page_forever()
+    out = h.run(fake.transport, s3_target(max_objects="unlimited"))
+
+    assert ops(fake, "ListObjectsV2") == 5
+    assert executive(out.db)["listing_complete"] is False
+    assert executive(out.db)["coverage"] == "partial"
+    assert executive(out.db)["objects_scanned"] == 5
+    assert executive(out.db)["status"] == "limited"
+    assert "limit_reached" in out.db.reasons()
+    # The design formats the number from the constant.
+    assert out.db.details("limit_reached") == [
+        "built-in listing page ceiling reached (5 pages); listing stopped before the end of the prefix"
+    ]
+
+
+def test_D2306_95_constantes_das_regras_e_failure_hint(h: Harness) -> None:
+    """D2306-95: targets with max_pages: 3 and max_empty_pages: 2 keys get the same result
+    as test_D2306_92 (16 list requests, same protocol_error detail); core.database
+    failure_hint("limit_reached") contains the text about built-in ceiling not being disabled.
+    These config keys are NOT accepted by the connector (no config key can disable the ceilings)."""
+    mod = connector_module()
+    # Check constants exist with correct values.
+    assert getattr(mod, "_MAX_EMPTY_PAGES_IN_A_ROW", None) == 16
+    assert getattr(mod, "_LISTING_MAX_PAGES", None) == 1_000_000
+
+    # Test that failure_hint("limit_reached") contains the built-in ceiling text.
+    from core.database import failure_hint
+
+    hint = failure_hint("limit_reached")
+    assert "The built-in listing page ceiling cannot be disabled" in hint
+    assert "split the target by prefix" in hint
+
+    # A target with max_pages: 3 and max_empty_pages: 2 (ignored keys) gets the SAME
+    # result as D2306-92: 16 list requests, protocol_error with the rule text.
+    fake = h.s3()
+    fake.empty_pages_forever()
+    target = s3_target(max_objects="unlimited", max_pages=3, max_empty_pages=2)
+    out = h.run(fake.transport, target)
+
+    assert ops(fake, "ListObjectsV2") == 16
+    assert out.db.details("protocol_error") == [
+        "listing returned 16 empty pages in a row; listing stopped before the end of the prefix"
+    ]
+    assert executive(out.db)["listing_complete"] is False
+    assert executive(out.db)["coverage"] == "partial"
+    assert out.clock.sleeps == []

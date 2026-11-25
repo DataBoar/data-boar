@@ -808,6 +808,7 @@ def test_ci_yml_has_optional_extras_job() -> None:
     assert "--max-skipped 60" in runs
     assert "--ignore=tests/test_maestro_scripts.py" in runs
     assert "--ignore=tests/test_dl_backend_ci.py" in runs
+    assert "--ignore=tests/test_sql_image_blob_lab_live.py" in runs
     assert (
         "--deselect=tests/test_issue_dev_license_qa.py::test_maestro_handler_issues_60d_machine_bound"
         in runs

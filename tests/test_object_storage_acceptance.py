@@ -20,12 +20,13 @@ Contradictions between A-7 and A-21/A-22 and the rest of the design are noted on
 
 from __future__ import annotations
 
+import importlib
 import logging
 import re
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, Literal, NamedTuple
 
 import httpx
 import jwt
@@ -46,6 +47,7 @@ from tests.object_storage_toy_driver import (
 from tests.s3_fake import (
     EMPTY_SHA256,
     EVIL_HOST,
+    _token_for,
     aws_doc_example_secret,
     GOOD_IP,
     METADATA_IP,
@@ -200,7 +202,7 @@ def make_fake(monkeypatch: pytest.MonkeyPatch, creds: Creds):
         objects: dict[str, bytes] | None = None,
         *,
         host: str = AWS_HOST,
-        addressing: str = "virtual",
+        addressing: Literal["virtual", "path"] = "virtual",
         region: str = REGION,
         ip: str = GOOD_IP,
         **kw: Any,
@@ -209,7 +211,7 @@ def make_fake(monkeypatch: pytest.MonkeyPatch, creds: Creds):
             BUCKET,
             corpus() if objects is None else objects,
             host,
-            addressing,  # type: ignore[arg-type]
+            addressing,
             region,
             access_key_id=creds.access_key_id,
             session_token=creds.session_token,
@@ -443,12 +445,8 @@ def test_A2306_8_nome_de_variavel_sem_prefixo_e_recusado(monkeypatch):
             "secret_access_key_from_env": ENV_SK,
         }
     )
-    err = None
-    try:
+    with pytest.raises(ValueError, match=r"access_key_id_from_env"):
         normalize_config(_config_with(target))
-    except Exception as exc:  # noqa: BLE001 - the assertion below fixes the type
-        err = exc
-    assert isinstance(err, ValueError)
 
 
 def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypatch):
@@ -459,14 +457,9 @@ def test_A2306_9_segredo_em_texto_no_yaml_e_recusado_sem_ecoar_o_valor(monkeypat
     monkeypatch.setenv(ENV_AK, "SYNTHAK" + "0" * 16)
     monkeypatch.setenv(ENV_SK, "SYNTHSK" + "0" * 32)
     target = make_target(secret_access_key=marker)
-    err = None
-    try:
+    with pytest.raises(ValueError, match=r"secret_access_key") as excinfo:
         normalize_config(_config_with(target))
-    except Exception as exc:  # noqa: BLE001 - the assertions below fix the type
-        err = exc
-    assert isinstance(err, ValueError)
-    assert "secret_access_key" in str(err)
-    assert marker not in str(err)
+    assert marker not in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -690,11 +683,12 @@ DRIVER_TIER_KEYS = {
 
 def _gate_error(cfg: dict[str, Any], reset, driver: str) -> Exception | None:
     from core.connector_registry import require_connector_allowed
+    from core.licensing.errors import FeatureTierBlockedError
 
     reset()
     try:
         require_connector_allowed(cfg, {"type": "object_storage", "driver": driver})
-    except Exception as exc:  # noqa: BLE001 - callers assert the type
+    except FeatureTierBlockedError as exc:
         return exc
     return None
 
@@ -728,24 +722,13 @@ def test_A2306_17_tier_enterprise_fail_closed(tmp_path, clean_license_guard):
 
 def test_A2306_18_registro_resolve_o_conector_novo():
     """A2306-18 (connector_for_target devolve ObjectStorageConnector, nos dois drivers)."""
-    import core.engine  # noqa: F401 - the engine imports the connector modules (registration)
+    importlib.import_module("core.engine")
     from core.connector_registry import connector_for_target
 
     for driver in DRIVER_TIER_KEYS:
         resolved = connector_for_target({"type": "object_storage", "driver": driver})
         assert resolved is not None, driver
         assert resolved[0].__name__ == "ObjectStorageConnector", driver
-
-
-def test_A2306_19_azure_blob_ainda_nao_existe(make_fake):
-    """A2306-19 (driver azure_blob: config_error 'not available yet', zero requisicoes)."""
-    fake = make_fake()
-    out = scan(fake, make_target(driver="azure_blob"))
-
-    assert "config_error" in out.db.reasons()
-    assert any("not available yet" in d for d in out.db.details("config_error"))
-    assert fake.requests == []
-    assert out.db.findings == []
 
 
 def test_A2306_20_slowdown_com_retry_after_espera_e_segue(make_fake):
@@ -855,6 +838,33 @@ def test_A2306_24_limite_desligado_por_alvo_com_unlimited(make_fake, tmp_path):
     assert row["Coverage"] == "COMPLETE"
     assert "max_object_bytes" in str(row["Limits disabled"])
     assert report_info_value(wb, "Coverage") == []
+
+
+def test_A2306_27_lista_sem_teto_de_pages_na_aceitacao(make_fake, tmp_path):
+    """A2306-27 (R7-1): with empty_pages_forever() and max_objects 10,
+    the target ends (exactly 16 ListObjectsV2), there is a protocol_error failure,
+    and Target coverage shows PARTIAL, Listing complete = no, and the incomplete-listing note."""
+    fake = make_fake()
+    fake.empty_pages_forever()
+    out, wb = run_with_report(fake, make_target(max_objects=10), tmp_path)
+
+    # The fake safety cap is 2000, but the rule stops at 16.
+    lists = list_requests(fake)
+    assert len(lists) == 16, f"expected 16 listings, got {len(lists)}"
+
+    # There should be a protocol_error failure with the rule text.
+    assert "protocol_error" in out.db.reasons()
+    assert out.db.details("protocol_error") == [
+        "listing returned 16 empty pages in a row; listing stopped before the end of the prefix"
+    ]
+
+    # Target coverage: PARTIAL, Listing complete = no, with incomplete-listing note.
+    row = coverage_row(wb)
+    assert row["Coverage"] == "PARTIAL"
+    assert row["Listing complete"] == "no"
+    note = str(row["Note"])
+    assert "Listing stopped before the end" in note
+    assert "number of unlisted objects is unknown" in note
 
 
 # ----------------------------------------------------------------------------
@@ -1009,6 +1019,44 @@ def test_selfcheck_listagem_virtual_pagina_e_decodifica_chaves():
     assert second.status_code == 200 and _keys(second) == ["corpus/z.txt"]
     assert fake.operations == ["ListObjectsV2", "ListObjectsV2"]
     assert fake.violations == [] and fake.auth_failures == []
+
+
+def test_selfcheck_knobs_hostis_rejeitam_continuation_token_obsoleto():
+    """S4 / PR #2361: hostile listing knobs must enforce the token the prior page returned."""
+    fake, c = _fresh(objects={"corpus/only.txt": b"x"})
+    fake.empty_pages_forever()
+    q = "/?list-type=2&prefix=corpus%2F&encoding-type=url"
+    first = _get(fake, c, q)
+    assert first.status_code == 200
+    assert [
+        e.text
+        for e in DefusedET.fromstring(first.content).iter()
+        if e.tag.endswith("IsTruncated")
+    ] == ["true"]
+    stale = _token_for(99_999)
+    second = _get(
+        fake,
+        c,
+        q + "&continuation-token=" + uri_encode(stale, keep_slash=False),
+    )
+    assert second.status_code == 200
+    assert any("stale continuation-token" in v for v in fake.violations)
+
+    fake2, c2 = _fresh(objects={"corpus/only.txt": b"x"})
+    fake2.empty_pages_forever()
+    good = _get(fake2, c2, q)
+    nxt = [
+        e.text
+        for e in DefusedET.fromstring(good.content).iter()
+        if e.tag.endswith("NextContinuationToken")
+    ][0]
+    ok = _get(
+        fake2,
+        c2,
+        q + "&continuation-token=" + uri_encode(nxt, keep_slash=False),
+    )
+    assert ok.status_code == 200
+    assert fake2.violations == []
 
 
 def test_selfcheck_estilo_por_caminho_com_porta_e_bucket_errado():
@@ -1167,7 +1215,7 @@ def test_selfcheck_botoes_de_listagem_defeituosa():
     fake.encoding_type = None
     assert "EncodingType" not in _get(fake, c, q).text
     fake.malformed_xml = True
-    with pytest.raises(Exception):  # noqa: B017,PT011 - any parser error is the point
+    with pytest.raises(DefusedET.ParseError):
         DefusedET.fromstring(_get(fake, c, q).content)
     fake.malformed_xml = False
     fake.doctype_entity = True

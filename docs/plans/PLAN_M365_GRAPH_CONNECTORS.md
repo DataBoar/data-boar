@@ -1,7 +1,7 @@
 # Plan: Microsoft 365 read-only connectors via Microsoft Graph (SharePoint Online, OneDrive, Exchange Online)
 
 **Status:** In progress (Phase 0 personal OneDrive proof through the connector on 2026-11-18: [m365_graph_onedrive_delegated_2260_2026-11-18.md](../ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.md); Phase 1 reader on `main` via PR #2265/#2271; SharePoint Online sites and work tenants not validated)
-**Date:** 2026-11-10 (updated 2026-11-17)
+**Date:** 2026-11-10 (updated 2026-11-22)
 **Authors:** Fabio Leitao
 **Priority:** H1
 **GitHub:** [#2206](https://github.com/DataBoar/data-boar/issues/2206)

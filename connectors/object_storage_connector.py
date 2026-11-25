@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -83,6 +84,9 @@ _TIMEOUT_DEFAULTS = (25, 90)
 _TIMEOUT_RANGE = (1, 300)
 
 _LISTING_MAX_BYTES = 16 * 1024 * 1024
+# R7-1: listing page ceiling constants (no config key can disable them).
+_MAX_EMPTY_PAGES_IN_A_ROW = 16
+_LISTING_MAX_PAGES = 1_000_000
 _ERROR_BODY_MAX_BYTES = 64 * 1024
 _BACKOFF = (1, 2, 4)
 _RETRY_AFTER_MAX = 60
@@ -271,9 +275,12 @@ def _readable_int(value: Any) -> bool:
 
 def _retry_after(headers: httpx.Headers) -> int | None:
     raw = headers.get("retry-after")
-    if raw is None or not raw.strip().isdigit():
+    if raw is None:
         return None
-    return min(int(raw.strip()), _RETRY_AFTER_MAX)
+    stripped = raw.strip()
+    if not re.fullmatch(r"[0-9]{1,20}", stripped):
+        return None
+    return min(int(stripped), _RETRY_AFTER_MAX)
 
 
 def _key_ext(key: str) -> str:
@@ -732,6 +739,8 @@ class ObjectStorageConnector:
         token: str | None = None
         seen_tokens: set[str] = set()
         consecutive = [0]
+        pages_requested = 0
+        empty_pages_in_a_row = 0
         while True:
             page_size = (
                 driver.max_page_size
@@ -742,25 +751,58 @@ class ObjectStorageConnector:
             if page is None:  # the listing ended with a recorded failure
                 return
             entries = list(page.entries)
+            pages_requested += 1
+
+            # (a) process the entries
             dropped = left is not None and len(entries) > left
             if left is not None:
                 entries = entries[:left]
                 left -= len(entries)
             self._stats.listed += len(entries)
             self._process(client, entries, consecutive)
+
+            # Track empty pages (entries == [] before any classification, with truncated=True)
+            if page.truncated and len(entries) == 0:
+                empty_pages_in_a_row += 1
+            else:
+                empty_pages_in_a_row = 0
+
+            # (b) max_objects rule
             if dropped or (page.truncated and left == 0):
                 self._limit_failures.append(
                     f"max_objects reached ({limits.max_objects}); listing stopped "
                     "before the end of the prefix"
                 )
                 return
+
+            # (c) truncated=False ends complete
             if not page.truncated:
                 self._stats.listing_complete = True
                 return
+
+            # (d) missing/repeated token (D2306-41)
             nxt = page.next_token
             if not nxt or nxt in seen_tokens or nxt == token:
                 self._failure("protocol_error", "listing pagination loop")
                 return
+
+            # (e) 16 empty pages in a row -> protocol_error
+            if empty_pages_in_a_row >= _MAX_EMPTY_PAGES_IN_A_ROW:
+                self._failure(
+                    "protocol_error",
+                    f"listing returned {_MAX_EMPTY_PAGES_IN_A_ROW} empty pages in a row; "
+                    "listing stopped before the end of the prefix",
+                )
+                return
+
+            # (f) absolute ceiling of pages -> limit_reached
+            if pages_requested >= _LISTING_MAX_PAGES:
+                self._limit_failures.append(
+                    f"built-in listing page ceiling reached ({_LISTING_MAX_PAGES} pages); "
+                    "listing stopped before the end of the prefix",
+                )
+                return
+
             seen_tokens.add(nxt)
             token = nxt
 
@@ -961,10 +1003,12 @@ class ObjectStorageConnector:
     ) -> None:
         ceiling = self._ceiling(entry)
         declared = response.headers.get("content-length")
-        if declared is not None and declared.strip().isdigit():
-            length = int(declared.strip())
-            if ceiling is not None and length > ceiling:
-                raise self._overflow(entry, length)
+        if declared is not None:
+            stripped = declared.strip()
+            if re.fullmatch(r"[0-9]{1,20}", stripped):
+                length = int(stripped)
+                if ceiling is not None and length > ceiling:
+                    raise self._overflow(entry, length)
         read = 0
         fd = os.open(local, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:

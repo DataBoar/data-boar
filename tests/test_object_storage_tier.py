@@ -24,6 +24,7 @@ from tests.object_storage_dev_harness import MINIO_ENDPOINT, connector_module
 DRIVER_TIER_KEYS = {
     "s3": "connector_s3_object_storage",
     "s3_compatible": "connector_s3_compatible",
+    "azure_blob": "connector_azure_blob",
 }
 
 
@@ -54,8 +55,8 @@ def _gate(cfg: dict[str, Any], target: dict[str, Any]) -> Exception | None:
 
 def test_D2306_22_tier_por_driver_enterprise_e_falha_fechada() -> None:
     """D2306-22: s3 -> connector_s3_object_storage, s3_compatible -> connector_s3_compatible,
-    both ENTERPRISE; no driver / unknown -> None; azure_blob stays PRO; the old key
-    connector_object_storage does not exist; Pro is blocked, Enterprise and Tier.OPEN pass."""
+    both ENTERPRISE; no driver / unknown -> None; azure_blob -> connector_azure_blob (ENTERPRISE);
+    the old key connector_object_storage does not exist; Pro is blocked, Enterprise and Tier.OPEN pass."""
     from core.connector_registry import tier_feature_for_target
 
     for driver, feature in DRIVER_TIER_KEYS.items():
@@ -70,7 +71,7 @@ def test_D2306_22_tier_por_driver_enterprise_e_falha_fechada() -> None:
         tier_feature_for_target({"type": "object_storage", "driver": "azure_blob"})
         == "connector_azure_blob"
     )
-    assert FEATURE_TIER_MAP.get("connector_azure_blob") == Tier.PRO
+    assert FEATURE_TIER_MAP.get("connector_azure_blob") == Tier.ENTERPRISE
     assert "connector_object_storage" not in FEATURE_TIER_MAP
     # Normalised driver name (lower case, no surrounding spaces).
     assert (
@@ -172,7 +173,7 @@ def test_D2306_79_tier_nao_depende_da_url() -> None:
 
 def test_D2306_80_todo_driver_implementado_tem_tier() -> None:
     """D2306-80: every driver of the registry that has an implemented connector (s3,
-    s3_compatible) has a key in _CONNECTOR_TIER_FEATURES and a value in FEATURE_TIER_MAP;
+    s3_compatible, azure_blob) has a key in _CONNECTOR_TIER_FEATURES and a value in FEATURE_TIER_MAP;
     the claims check keeps passing with the alias object_storage -> s3_object_storage."""
     from core.connector_registry import _CONNECTOR_TIER_FEATURES
     from tests.test_claims_consistency import connectors_without_tier
@@ -182,7 +183,7 @@ def test_D2306_80_todo_driver_implementado_tem_tier() -> None:
         for n in object_storage_driver._REGISTRY
         if n not in object_storage_driver.NOT_AVAILABLE_YET
     )
-    assert implemented == ["s3", "s3_compatible"]
+    assert implemented == ["azure_blob", "s3", "s3_compatible"]
     for name in implemented:
         assert name in _CONNECTOR_TIER_FEATURES, name
         assert _CONNECTOR_TIER_FEATURES[name] == DRIVER_TIER_KEYS[name], name

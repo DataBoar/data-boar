@@ -183,3 +183,81 @@ Do **not** auto-install AVX wheels on a v1 CPU (SIGILL). Do **not** pretend DL r
 | P2 | Name `[noavx]` in USAGE/TECH_GUIDE pip/pipx onboarding; pointer to #929 + wheelhouse two-step (no new recipe) | ✅ Done (#929 / PR #1874) |
 | P3 | CPU pre-flight + **loud** capability banner / report footer (FN-first copy) | 🔄 Runtime pre-flight + warning log shipped (#929); banner / report footer still open |
 | P4 | Optional `pyproject` extra aliases `[nlp]` / `[ocr]` if they stay distinct from `[dl]` / `[richmedia]` | ⬜ Pending |
+
+---
+
+## Native package extras (issue #2185)
+
+**Context:** The native packages (.rpm/.deb/.apk/.pkg.tar.zst) ship only the core. The embedded Python (cp314t free-threading) blocks `pip` via PEP 668. Subpackages are defined in `packaging/nfpm/generated/` but are **not shipped** in the release (`release-manifest.json` `native_packages[]` lists only the 4 main formats).
+
+### Operator recipe (verified against repo files)
+
+The following mechanisms were tested on AlmaLinux 9.8 with `data-boar-1.8.0-1.x86_64.rpm` (embedded Python: `/usr/lib/data-boar/python3.14t/bin/python3.14t`, cp314t free-threading):
+
+| Mechanism | Result | Notes |
+| --------- | ------ | ----- |
+| `pip install` / `pip install --user` | **Blocked** | PEP 668 ("managed by uv") |
+| `pip install --target <dir> <pkg>` + `PYTHONPATH=<dir>` | **Works** | Launcher `/usr/bin/data-boar` respects `PYTHONPATH`; only `--version` tested, scan with extra module **not verified** |
+| `python3 -m venv --system-site-packages ~/xvenv` + `pip install` in venv | **Works** for `nosql`, `dataformats` | Venv lacks `data-boar` script; launcher + `PYTHONPATH` still needed |
+
+**Not verified:**
+- Whether a scan actually uses modules from the venv (not just `import`)
+- Upgrade path with existing venv
+- `.deb`, `.apk`, `.pkg.tar.zst` formats
+- `richmedia`, `shares`, `detection-fuzzy`, `bigdata` extras
+
+### Per-extra status by evidence (from issue #2185 comments)
+
+| Extra | Packages | Status | System dependencies | Notes |
+| ----- | -------- | ------ | ------------------- | ----- |
+| `nosql` | `pymongo`, `redis` | **Works** | None | Installs and imports in venv |
+| `dataformats` | `pyarrow`, `fastavro`, `dbfread` | **Works** | None | Installs and imports in venv |
+| `mssql` | `pymssql` | **Partial** | FreeTDS (`libsybdb.so.5`) | Installs; import fails without FreeTDS (not tested) |
+| `compressed` | `py7zr` | **Fails** | Compiler (gcc/cmake), `brotli` | No wheel for cp314t; falls back to source build |
+| `dl` | `sentence-transformers` | **Fails** | Rust, compiler | `safetensors` builds from source |
+| `richmedia` | `pytesseract`, `pillow-heif`, `mutagen` | **Not verified** | Tesseract binary, compiler | `pytesseract` needs tesseract-ocr |
+| `shares` | `smbprotocol`, `webdavclient3`, `requests_ntlm` | **Not verified** | None apparent | Pure Python |
+| `detection-fuzzy` | `rapidfuzz` | **Not verified** | Compiler | C++ extension |
+| `bigdata` | `snowflake-connector-python` | **Not verified** | None apparent | Pure Python |
+
+**`--check-extras` bug:** The command `data-boar --check-extras` crashes with `FileNotFoundError: .../site-packages/pyproject.toml` (`core/extras_manifest.py:97`). The native package does not install `pyproject.toml`, breaking the "first step when a connector fails for missing dependencies" help promise. **Not verified** if fixed.
+
+### Subpackage distribution (open decision — pending operator decision)
+
+The subpackages are defined in `packaging/nfpm/generated/` (6 extras: compressed, dataformats, mssql, nosql, richmedia, shares) but **do not appear** in `release-manifest.json` `native_packages[]`. Only the 4 main format packages are shipped.
+
+**Options:**
+1. **Publish subpackages as release assets** (one per format: .deb/.rpm/.apk/.pkg.tar.zst) — users install via package manager; requires CI/CD pipeline changes and signing infrastructure
+2. **Document venv recipe only** — no subpackage shipping; users build their own wheels/venvs; lowest effort but requires compiler for some extras
+3. **Hybrid** — publish subpackages for "easy" extras (pure Python: nosql, dataformats, shares, bigdata); document venv recipe for "hard" extras (compressed, dl, richmedia) needing compiler/Rust
+
+**Trade-offs:**
+- Option 1: Best UX; highest maintenance (CI/CD, signing, 4 formats × N extras)
+- Option 2: Lowest effort; worst UX for extras needing compiler (users blocked)
+- Option 3: Balanced; requires classifying extras by build complexity
+
+**Decision:** Pending operator decision. Marked as AC 3 in issue #2185.
+
+### Native package formats coverage
+
+| Format | Subpackages shipped | Status |
+| ------ | ------------------- | ------ |
+| `.rpm` | **None** (only main package) | Verified on AlmaLinux 9.8 |
+| `.deb` | **None** | Not verified |
+| `.apk` | **None** | Not verified |
+| `.pkg.tar.zst` (Arch) | **None** | Not verified |
+
+**Note:** The `packaging/nfpm/generated/` directory contains 6 subpackage YAMLs, but they are not included in the release pipeline. The `EXTRAS_MANIFEST.native.json` lists 20 extras and only `mssql`, `oracle` and `sql-community` have `in_artifact: true` (included in base image for container). No subpackages are produced for native packages today.
+
+### Man page integration (related to #2163)
+
+The extras documentation must also appear in `man data-boar` of the native package (currently absent, tracked in #2163). The man page should explain the chosen recipe (venv + `--system-site-packages` + `PYTHONPATH` or `DATA_BOAR_EXTRAS_PATH`).
+
+### boar_fast_filter licensing decision (related)
+
+Per issue comments: `boar_fast_filter` is pre-compiled in the base package. Options:
+- (a) Keep in base package with license gating (depends on #2180 fix)
+- (b) Separate opt-in subpackage `data-boar-fast-filter` in commercial channel (ADR-0089 §3, 3B); public repo ships only Community
+
+Fallback Python path exists (demo produces same findings without Rust module), so (b) is technically viable. Decision is operator's (AC 3 in #2185).
+

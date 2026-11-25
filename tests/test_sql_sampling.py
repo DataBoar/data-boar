@@ -1,16 +1,32 @@
 """Tests for SQL column sampling helpers (non-null filter, env cap, dialect SQL shape)."""
 
+import re
+
+import pytest
 from sqlalchemy.sql.elements import quoted_name
 
 from connectors.sql_sampling import (
+    PREFIX_PROBE_DIALECTS,
     SamplingManager,
     SqlColumnSampleQueryBuilder,
     TableSamplingMetadata,
+    _ansi_quoted_table,
+    _mysql_table_ref,
+    _oracle_table_ref,
     column_sample_sql_for_cursor,
     oracle_sql_identifier,
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
+    supports_prefix_probe,
 )
+
+_COMPLIANCE_PREFIX = "-- Data Boar Compliance Scan\n"
+
+
+def _sql_body(plan) -> str:
+    s = str(plan.query)
+    assert s.startswith(_COMPLIANCE_PREFIX)
+    return s[len(_COMPLIANCE_PREFIX) :]
 
 
 def test_resolve_sql_sample_limit_uses_config_when_env_unset():
@@ -305,3 +321,296 @@ def test_column_sample_sql_for_cursor_oracle_literal_rownum():
     assert '"s"' not in sql
     assert label == "non_null_rownum_oracle"
     assert human == "ROWNUM inner filter (Oracle)"
+
+
+def test_d2362_10_prefix_probe_dialects_frozen():
+    # D2362-10: dialects with prefix probe support
+    assert "postgresql" in PREFIX_PROBE_DIALECTS
+    assert "mysql" in PREFIX_PROBE_DIALECTS
+    assert supports_prefix_probe("PostgreSQL")
+    assert supports_prefix_probe("mysql")
+    assert not supports_prefix_probe("snowflake")
+    assert not supports_prefix_probe("duckdb")
+
+
+def test_d2362_11_prefix_probe_sqlite_postgres_mysql():
+    # D2362-11: prefix sampling SQL shape (body without compliance tag)
+    p_sqlite = SamplingManager.build_column_prefix_sample(
+        "sqlite",
+        safe_col="col_blob",
+        safe_table="t_img",
+        safe_schema="",
+        schema=None,
+        limit=5,
+        prefix_bytes=64,
+    )
+    assert p_sqlite.strategy_label == "prefix_probe_sqlite"
+    body = _sql_body(p_sqlite)
+    assert 'substr("col_blob", 1, 64)' in body
+    assert "IS NOT NULL" in body
+    assert "LIMIT 5" in body
+
+    p_pg = SamplingManager.build_column_prefix_sample(
+        "postgresql",
+        safe_col="c",
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub",
+        limit=5,
+        prefix_bytes=64,
+    )
+    assert p_pg.strategy_label == "prefix_probe_postgresql"
+    body_pg = _sql_body(p_pg)
+    assert 'substring("c" from 1 for 64)' in body_pg
+    assert '"pub"."t"' in body_pg
+
+    p_my = SamplingManager.build_column_prefix_sample(
+        "mysql",
+        safe_col="c",
+        safe_table="t",
+        safe_schema="db",
+        schema="db",
+        limit=5,
+        prefix_bytes=64,
+    )
+    body_my = _sql_body(p_my)
+    assert "SUBSTRING(`c`, 1, 64)" in body_my
+    assert "`db`.`t`" in body_my
+
+
+def test_d2362_11_quoted_identifiers_match_column_sample():
+    # D2362-11: prefix SQL cites identifiers the same way as build_column_sample
+    tricky = 'a"b'
+    p_pref = SamplingManager.build_column_prefix_sample(
+        "sqlite",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="",
+        schema=None,
+        limit=5,
+    )
+    p_full = SamplingManager.build_column_sample(
+        "sqlite",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="",
+        schema=None,
+        limit=5,
+    )
+    where_pref = _sql_body(p_pref).split(" WHERE ", 1)[1]
+    where_full = _sql_body(p_full).split(" WHERE ", 1)[1]
+    assert where_pref == where_full
+
+    p_pg = SamplingManager.build_column_prefix_sample(
+        "postgresql",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub",
+        limit=5,
+    )
+    full_pg = SamplingManager.build_column_sample(
+        "postgresql",
+        safe_col=tricky,
+        safe_table="t",
+        safe_schema="pub",
+        schema="pub",
+        limit=5,
+    )
+    assert f'"{tricky}"' in _sql_body(p_pg)
+    assert f'"{tricky}"' in str(full_pg.query)
+
+
+def test_d2362_12_duckdb_not_supported():
+    # D2362-12
+    assert supports_prefix_probe("duckdb") is False
+    with pytest.raises(ValueError, match="prefix probe not supported"):
+        SamplingManager.build_column_prefix_sample(
+            "duckdb",
+            safe_col="c",
+            safe_table="t",
+            safe_schema="",
+            schema=None,
+            limit=5,
+        )
+
+
+def test_d2362_12_prefix_probe_mssql_oracle():
+    # D2362-12: MSSQL SUBSTRING + TOP; Oracle ROWNUM binds
+    p_ms = SamplingManager.build_column_prefix_sample(
+        "mssql",
+        safe_col="c",
+        safe_table="t",
+        safe_schema="dbo",
+        schema="dbo",
+        limit=5,
+        prefix_bytes=64,
+    )
+    body_ms = _sql_body(p_ms)
+    assert "SELECT TOP (5) SUBSTRING" in body_ms
+    assert "WITH (NOLOCK)" in body_ms
+    assert ", 64)" in body_ms
+
+    p_ora = SamplingManager.build_column_prefix_sample(
+        "oracle",
+        safe_col="BLOBCOL",
+        safe_table="T",
+        safe_schema="S",
+        schema="S",
+        limit=5,
+        prefix_bytes=64,
+    )
+    body_ora = _sql_body(p_ora)
+    assert "ROWNUM <= :lim" in body_ora
+    compiled = p_ora.query.compile()
+    assert compiled.params.get("lim") == 5
+
+
+def test_d2362_12b_oracle_lob_and_raw_labels():
+    p_lob = SamplingManager.build_column_prefix_sample(
+        "oracle",
+        safe_col="BLOBCOL",
+        safe_table="T",
+        safe_schema="S",
+        schema="S",
+        limit=5,
+        prefix_bytes=64,
+        oracle_lob=True,
+    )
+    assert p_lob.strategy_label == "prefix_probe_oracle_lob"
+    assert "DBMS_LOB.SUBSTR" in _sql_body(p_lob)
+    p_raw = SamplingManager.build_column_prefix_sample(
+        "oracle",
+        safe_col="RAWCOL",
+        safe_table="T",
+        safe_schema="S",
+        schema="S",
+        limit=5,
+        oracle_lob=False,
+    )
+    assert p_raw.strategy_label == "prefix_probe_oracle_raw"
+    assert "DBMS_LOB.SUBSTR" not in _sql_body(p_raw)
+
+
+def _unquoted_sql_fragments(sql: str) -> str:
+    """Remove dialect-quoted identifiers so hostile names cannot hide in literals."""
+    s = sql
+    s = re.sub(r'"(?:[^"]|"")*"', " ", s)
+    s = re.sub(r"`(?:``|[^`])*`", " ", s)
+    return s
+
+
+def _where_col_token(body: str, dialect: str) -> str:
+    d = dialect.lower()
+    pat_is_null = r'WHERE ("(?:[^"]|"")+"|\S+) IS NOT NULL'
+    if d in ("mysql", "mariadb"):
+        m = re.search(r"WHERE (`(?:``|[^`])+`) IS NOT NULL", body, re.IGNORECASE)
+        assert m, f"no WHERE col token in: {body!r}"
+        return m.group(1)
+    if d == "oracle":
+        matches = list(re.finditer(pat_is_null, body, re.IGNORECASE))
+        assert matches, f"no WHERE col token in: {body!r}"
+        return matches[0].group(1)
+    m = re.search(r'WHERE ("(?:[^"]|"")+") IS NOT NULL', body, re.IGNORECASE)
+    assert m, f"no WHERE col token in: {body!r}"
+    return m.group(1)
+
+
+def _expected_table_ref(
+    dialect: str,
+    *,
+    safe_schema: str,
+    safe_table: str,
+    schema: str | None,
+    table_raw: str,
+) -> str:
+    if dialect in ("mysql", "mariadb"):
+        return _mysql_table_ref(safe_schema, safe_table, schema)
+    if dialect == "oracle":
+        schema_key = schema or safe_schema
+        return _oracle_table_ref(schema_key, table_raw, schema)
+    return _ansi_quoted_table(safe_schema, safe_table, schema)
+
+
+def _oracle_kwargs(col_raw: str, table_raw: str, schema: str) -> dict:
+    return {
+        "raw_col": col_raw,
+        "raw_table": table_raw,
+        "raw_schema": schema,
+    }
+
+
+_PREFIX_HOSTILE_DIALECTS = (
+    "sqlite",
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "mssql",
+    "oracle",
+)
+
+_PREFIX_HOSTILE_IDENTIFIERS = (
+    ('a"b', "t1"),
+    ("a'b", "t2"),
+    ("a;b", "t3"),
+    ("col space", "tb space"),
+    ("select", "order"),
+    ("SeLeCt", "TbLe"),
+)
+
+
+@pytest.mark.parametrize("dialect", _PREFIX_HOSTILE_DIALECTS)
+@pytest.mark.parametrize("col_raw,table_raw", _PREFIX_HOSTILE_IDENTIFIERS)
+def test_d2362_prefix_probe_hostile_identifiers_match_sampler(
+    dialect: str, col_raw: str, table_raw: str
+):
+    # Prefix-read SQL must quote identifiers like build_column_sample (no raw splice).
+    schema = "pub" if dialect != "sqlite" else None
+    safe_col = col_raw.replace('"', '""')
+    safe_table = table_raw.replace('"', '""')
+    safe_schema = (schema or "").replace('"', '""')
+    extra = (
+        _oracle_kwargs(col_raw, table_raw, schema or "") if dialect == "oracle" else {}
+    )
+    pref = SamplingManager.build_column_prefix_sample(
+        dialect,
+        safe_col=safe_col,
+        safe_table=safe_table,
+        safe_schema=safe_schema,
+        schema=schema,
+        limit=4,
+        prefix_bytes=32,
+        **extra,
+    )
+    full = SamplingManager.build_column_sample(
+        dialect,
+        safe_col=safe_col,
+        safe_table=safe_table,
+        safe_schema=safe_schema,
+        schema=schema,
+        limit=4,
+        **extra,
+    )
+    body_pref = _sql_body(pref)
+    body_full = _sql_body(full)
+    assert _where_col_token(body_pref, dialect) == _where_col_token(body_full, dialect)
+    tref = _expected_table_ref(
+        dialect,
+        safe_schema=safe_schema,
+        safe_table=safe_table,
+        schema=schema,
+        table_raw=table_raw,
+    )
+    assert tref in body_pref
+    assert tref in body_full
+    if dialect == "oracle":
+        col_ref = oracle_sql_identifier(col_raw)
+        assert col_ref in body_pref
+        assert col_ref in body_full
+    unq = _unquoted_sql_fragments(body_pref)
+    assert col_raw not in unq
+    assert table_raw not in unq
+    if dialect == "sqlite":
+        assert (
+            f'substr("{safe_col}"' in body_pref or f'substr("{safe_col}",' in body_pref
+        )

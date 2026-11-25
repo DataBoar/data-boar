@@ -125,15 +125,21 @@ def test_no_secret_is_tracked():
     example = json.loads((DEMO / "samba" / "users.example.json").read_text())
     for entry in example["users"]["all_entries"]:
         assert entry["password"].startswith("CHANGE-ME")
-    for path in DEMO.rglob("*"):
+    # Walk only git-tracked files under deploy/demo (strict UTF-8 read, no silent skip)
+    result = subprocess.run(
+        ["git", "ls-files", "-z", "--", "deploy/demo"],
+        capture_output=True,
+        cwd=REPO,
+        check=True,
+        text=True,
+    )
+    for raw_path in result.stdout.rstrip("\0").split("\0"):
+        if not raw_path:
+            continue
+        path = REPO / raw_path
         if not path.is_file():
             continue
-        if "__pycache__" in path.parts:
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
+        text = path.read_text(encoding="utf-8")
         assert not re.search(r"\$2[aby]\$\d\d\$", text), path  # bcrypt hash
         assert not re.search(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", text), path
         for ip in re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", text):

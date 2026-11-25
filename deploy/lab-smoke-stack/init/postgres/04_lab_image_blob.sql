@@ -1,0 +1,34 @@
+-- Synthetic lab data only — image/PDF headers in BYTEA/TEXT columns (#2362).
+-- Do not use real personal data or decodable documents.
+
+CREATE TABLE lab_image_blob (
+    id serial PRIMARY KEY,
+    foto_documento BYTEA NOT NULL,
+    anexo BYTEA,
+    foto_b64 TEXT NOT NULL,
+    hash_blob BYTEA NOT NULL
+);
+
+COMMENT ON TABLE lab_image_blob IS 'Lab smoke: synthetic JPEG/PDF/PNG headers for image_blob probe (#2362).';
+
+INSERT INTO lab_image_blob (foto_documento, anexo, foto_b64, hash_blob) VALUES
+(
+    decode(
+        'ffd8ffe000104a46494600010100000100010000ffdb00430008060607060508070707090a110b0c0d0e0f1012111415161718191a',
+        'hex'
+    ),
+    decode('255044462d312e340a25504f44546d696e616c0a2525000a', 'hex'),
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2ZkAAAAASUVORK5CYII'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+    decode('deadbeefcafebabe0102030405060708090a0b0c0d0e0f10', 'hex')
+),
+(
+    decode(
+        'ffd8ffe000104a46494600010100000200010000ffdb00430008060607060508070707090a110b0c0d0e0f1012111415161718191a',
+        'hex'
+    ),
+    decode('255044462d312e340a25504f44546d696e616c0a2525000a', 'hex'),
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChAI9jU77yQAAAABJRU5ErkJggg'
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+    decode('c0ffee00cafebabe1111222233334444555566667777888899990000', 'hex')
+);

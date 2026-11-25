@@ -493,3 +493,95 @@ def test_D2306_83_token_from_env_do_brinquedo_so_vale_em_auth(
     target["auth"]["token_from_env"] = "DATA_BOAR_S3_TOKEN"
     message = _refused(monkeypatch, target)
     assert "token_from_env" in message
+
+
+# ----------------------------------------------------------------------------
+# D2307-1: Azure Blob account_name is inline, not secret; account_name_from_env optional
+# ----------------------------------------------------------------------------
+
+
+def test_D2307_1_azure_account_name_inline_aceito_e_leitura(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """account_name in Azure Blob is inline and not a secret (like bucket in S3).
+    A target with account_name inline should pass through normalize_config.
+    """
+    import connectors.object_storage_azure as azure_driver
+
+    # Register the Azure driver so normalize_config can find it
+    azure_driver.register_azure_blob_driver()
+
+    target = {
+        "name": "azure-corpus-sintetico",
+        "type": "object_storage",
+        "driver": "azure_blob",
+        "account_name": "syntheticsa",
+        "container_name": "corpus",
+        "auth": {
+            "sas_token_from_env": "DATA_BOAR_AZURE_SAS_TOKEN",
+        },
+    }
+    monkeypatch.setenv("DATA_BOAR_AZURE_SAS_TOKEN", "sv=2020&sig=synthetic")
+
+    cfg = {"targets": [target], "api": {}, "report": {"output_dir": "."}}
+    out = normalize_config(cfg)
+    assert out["targets"][0]["account_name"] == "syntheticsa"
+    assert out["targets"][0]["container_name"] == "corpus"
+
+
+def test_D2307_1_azure_account_name_from_env_opcional(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """account_name_from_env is optional when providing account_name inline."""
+    import connectors.object_storage_azure as azure_driver
+
+    azure_driver.register_azure_blob_driver()
+
+    target = {
+        "name": "azure-corpus-sintetico",
+        "type": "object_storage",
+        "driver": "azure_blob",
+        "account_name": "syntheticsa",
+        "container_name": "corpus",
+        "auth": {
+            "sas_token_from_env": "DATA_BOAR_AZURE_SAS_TOKEN",
+        },
+    }
+    monkeypatch.setenv("DATA_BOAR_AZURE_SAS_TOKEN", "sv=2020&sig=synthetic")
+
+    cfg = {"targets": [target], "api": {}, "report": {"output_dir": "."}}
+    out = normalize_config(cfg)
+    # account_name should NOT appear in auth since it's inline at target level
+    assert out["targets"][0]["account_name"] == "syntheticsa"
+    assert "account_name_from_env" not in out["targets"][0]["auth"]
+
+
+def test_D2307_1_azure_account_name_required_no_auth(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Azure target without account_name anywhere: normalize_config passes, but settings() fails."""
+    import connectors.object_storage_azure as azure_driver
+
+    azure_driver.register_azure_blob_driver()
+
+    target = {
+        "name": "azure-corpus-sintetico",
+        "type": "object_storage",
+        "driver": "azure_blob",
+        "container_name": "corpus",
+        "auth": {
+            "sas_token_from_env": "DATA_BOAR_AZURE_SAS_TOKEN",
+        },
+    }
+    monkeypatch.setenv("DATA_BOAR_AZURE_SAS_TOKEN", "sv=2020&sig=synthetic")
+
+    cfg = {"targets": [target], "api": {}, "report": {"output_dir": "."}}
+
+    # normalize_config allows it (doesn't check required_keys)
+    out = normalize_config(cfg)
+    assert "account_name" not in out["targets"][0]
+
+    # But Azure driver.settings() raises KeyError for missing account_name
+    driver = azure_driver.AzureBlobDriver()
+    with pytest.raises(KeyError):
+        driver.settings(out["targets"][0])

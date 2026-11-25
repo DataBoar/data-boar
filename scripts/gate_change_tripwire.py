@@ -59,6 +59,7 @@ GATE_FILES: frozenset[str] = frozenset(
         "tests/test_gatekeeper_audit_word_boundary.py",
         "tests/test_gate_change_tripwire.py",
         "security/pii_gate_allowlist.txt",
+        "security/gitleaks.toml",
         "docs/private.example/security_audit/PII_LOCAL_SEEDS.example.txt",
         "docs/adr/ADR-0018-pii-anti-recurrence-guardrails-for-tracked-files-and-branch-history.md",
         "docs/adr/ADR-0020-ci-full-git-history-pii-gate.md",

@@ -113,7 +113,11 @@ def test_D2306_64_get_driver_s3_e_nomes_desconhecidos(registry_snapshot: None) -
     assert isinstance(compat, S3Driver)
     assert compat.name == "s3_compatible"
 
-    for name in ("azure_blob", "gcs"):
+    # azure_blob is now implemented (#2307)
+    driver = get_driver("azure_blob")
+    assert driver.name == "azure_blob"
+
+    for name in ("gcs",):
         with pytest.raises(KeyError) as info:
             get_driver(name)
         assert info.value.args[0] == f"driver {name} is not available yet"
@@ -122,7 +126,9 @@ def test_D2306_64_get_driver_s3_e_nomes_desconhecidos(registry_snapshot: None) -
     for name in ("x", "", "ftp", mark):
         with pytest.raises(KeyError) as info:
             get_driver(name)
-        assert info.value.args[0] == "driver must be one of: s3, s3_compatible"
+        assert (
+            info.value.args[0] == "driver must be one of: azure_blob, s3, s3_compatible"
+        )
 
 
 def test_D2306_64_lista_da_mensagem_vem_do_registro(registry_snapshot: None) -> None:
@@ -130,10 +136,13 @@ def test_D2306_64_lista_da_mensagem_vem_do_registro(registry_snapshot: None) -> 
     assert isinstance(get_driver("toy"), ToyDriver)
     with pytest.raises(KeyError) as info:
         get_driver("x")
-    assert info.value.args[0] == "driver must be one of: s3, s3_compatible, toy"
-    with pytest.raises(KeyError) as info:
-        get_driver("azure_blob")
-    assert info.value.args[0] == "driver azure_blob is not available yet"
+    assert (
+        info.value.args[0]
+        == "driver must be one of: azure_blob, s3, s3_compatible, toy"
+    )
+    # azure_blob is now implemented (#2307)
+    driver = get_driver("azure_blob")
+    assert driver.name == "azure_blob"
 
 
 def test_D2306_64_registro_guarda_fabrica_e_cria_instancia_nova(
@@ -515,6 +524,23 @@ def test_D2306_82_entrada_sem_size_valido_vira_chave_none(size: str | None) -> N
     body = _listing(
         _item("corpus/ok-1.txt", "4")
         + _item("corpus/a.txt", size)
+        + _item("corpus/ok-2.txt", "0")
+    )
+    page = S3Driver().parse_list(body)
+    assert page.entries == [
+        ObjectEntry("corpus/ok-1.txt", 4),
+        ObjectEntry(None, None),
+        ObjectEntry("corpus/ok-2.txt", 0),
+    ]
+
+
+def test_D2306_82_size_com_muitos_digitos_vira_chave_none() -> None:
+    """Size with 5000 digits should be treated as malformed (int() would overflow),
+    not raise ValueError. The entry should become ObjectEntry(None, None)."""
+    size_5000 = "1" + "0" * 4999  # 5000 digits
+    body = _listing(
+        _item("corpus/ok-1.txt", "4")
+        + _item("corpus/a.txt", size_5000)
         + _item("corpus/ok-2.txt", "0")
     )
     page = S3Driver().parse_list(body)

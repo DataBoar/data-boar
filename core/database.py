@@ -251,7 +251,9 @@ _OBJECT_STORAGE_HINTS: dict[str, str] = {
     ),
     "limit_reached": (
         "Raise or disable the limit for this target in config (max_objects, "
-        "max_download_bytes, max_object_bytes); see USAGE.md. Coverage is partial until then."
+        "max_download_bytes, max_object_bytes); see USAGE.md. Coverage is partial until then. "
+        "The built-in listing page ceiling cannot be disabled; if it was reached, "
+        "split the target by prefix."
     ),
     "too_large": (
         "An object was larger than max_object_bytes and was not scanned. Raise "
@@ -313,6 +315,12 @@ def failure_hint(reason: str) -> str:
             "Column sampling failed (SQL syntax, permissions, or connectivity). The column was not "
             "evaluated — this is not a clean result. Check dialect-specific sampling notes, credentials, "
             "and the detailed message; fix the target or sampling plan before re-running."
+        )
+    if r == "image_probe_error":
+        return (
+            "Image/BLOB probe failed for this column (SQL dialect, permissions or connectivity). "
+            "Text detection still ran, but image presence was not evaluated: not a clean result "
+            "for images. Check the detailed message and the dialect notes."
         )
     if r == "encrypted_no_password":
         return (

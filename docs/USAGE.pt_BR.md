@@ -1000,6 +1000,28 @@ Para o **CNPJ** brasileiro, o detector inclui dois padrões regex embutidos:
 
 Ambos usam o mesmo `norm_tag` (`LGPD Art. 5`). Nesta etapa a detecção é apenas por **compatibilidade de formato** (sem validação de dígito verificador); veja [SENSITIVITY_DETECTION.pt_BR.md](SENSITIVITY_DETECTION.pt_BR.md#formatos-de-cnpj-brasil-numérico-legado-e-alfanumérico) para detalhes e para saber como estender/substituir padrões via `regex_overrides_file`.
 
+#### Imagem ou documento em colunas SQL (`detection.image_blob`)
+
+Com **`detection.image_blob`** habilitado, o conector SQL registra achados **MEDIUM** quando a amostra de uma coluna parece guardar imagem ou PDF — em coluna **binária** (BLOB, BYTEA, VARBINARY, IMAGE e tipos equivalentes) ou como **base64** (incluindo data URIs) em colunas de texto. A varredura lê no máximo um **prefixo** de cada célula (magic bytes). **Não** executa OCR e **não** grava bytes decodificados em log nem no banco de auditoria. Leitura completa de pixels ou documento fica no escopo **#2363**.
+
+**Padrão:** `enabled: false` (sem probes SQL extras de prefixo; amostragem de texto inalterada).
+
+```yaml
+detection:
+  image_blob:
+    enabled: false          # true para sondar colunas binárias e prefixos base64
+    sampling_rows: 5        # 1–50 linhas por coluna binária (só prefixo)
+    base64_min_chars: 100   # 64–150; tamanho mínimo da sequência base64 na amostra
+```
+
+**Padrões de achado:** `IMAGE_BLOB_IN_COLUMN` (prefixo binário), `IMAGE_BASE64_IN_COLUMN` (prefixo decodificado da amostra de texto já existente). O **`norm_tag`** lista os tipos detectados (`jpeg`, `png`, `pdf`, …) e deixa explícito que o conteúdo não foi lido.
+
+**Motores:** SQL de prefixo para SQLite, PostgreSQL, MySQL/MariaDB, Microsoft SQL Server e Oracle. O lab smoke inclui a tabela `lab_image_blob` em PostgreSQL, MariaDB, MSSQL e Oracle XE (`deploy/lab-smoke-stack/init/*/04_lab_image_blob.sql`). **MySQL** puro compartilha o builder com MariaDB nos testes unitários, mas não entra no compose padrão do lab.
+
+**Corpus SQLite sintético (sem contêiner):** `uv run python scripts/generate_synthetic_image_blob_db.py --output /caminho/synth.sqlite --force` e aponte um alvo `sqlite` a esse arquivo com `detection.image_blob.enabled: true`.
+
+**Demo local:** `deploy/demo-local/config.demo-local.yaml` liga a chave no PostgreSQL do pacote; o ensaio em `deploy/demo-local/rehearsal.py` valida `lab_image_blob.foto_documento` e `lab_image_blob.foto_b64`.
+
 ### Alvos: bancos de dados
 
 Cada alvo é um objeto em `targets` com pelo menos `name` e `type`. Para SQL use `type: database` e o `driver` adequado. O driver precisa bater com o extra opcional: MSSQL padrão é `mssql` ou `mssql+pymssql` com `data-boar[mssql]` (alias `data-boar[mssql-pymssql]`); use `mssql+pyodbc` com `data-boar[mssql-pyodbc]` quando ODBC for necessário. **Carga da varredura:** não há limite rígido de alvos por sessão; listas muito grandes (centenas de bancos ou APIs) aumentam tempo e memória. Prefira um escopo razoável por varredura.
@@ -1319,7 +1341,7 @@ Para **só AWS**, use `driver: s3` (virtual-hosted; não defina `endpoint_url` n
 
 O tipo `object_storage` usa **um driver por provedor**; os drivers entregues são `s3` e `s3_compatible`.
 
-### Exemplo — Amazon S3 (não testado contra o serviço AWS real)
+### Exemplo — Amazon S3 (testado contra o serviço AWS real com dados sintéticos)
 
 ```yaml
 
@@ -1334,7 +1356,27 @@ O tipo `object_storage` usa **um driver por provedor**; os drivers entregues sã
     secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
 ```
 
-**Não testado contra o Amazon S3 real** na evidência publicada neste repositório. Valide na sua conta antes de produção.
+**Testado contra o Amazon S3 real em 2026-11-24** apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
+
+### Exemplo — Armazenamento de Blobs do Azure (driver: azure_blob)
+
+Um SAS de container com somente leitura e listagem (`sp=rl`, `sr=c`) é a credencial recomendada. O nome da conta **não é um segredo**: faz parte do hostname público (`<account>.blob.core.windows.net`), da mesma forma que o `bucket` do S3 é uma chave inline.
+
+```yaml
+
+- name: "azure-corpus-sintetico"
+  type: object_storage
+  driver: azure_blob
+  account_name: <account>
+  container_name: corpus
+  prefix: lgpd-corpus/
+  auth:
+    sas_token_from_env: DATA_BOAR_AZURE_SAS_TOKEN
+```
+
+Menor privilégio: um SAS de container com apenas leitura (`r`) e listagem (`l`) basta para a varredura e é mais seguro que a chave da conta, pois não permite sobrescrever nem excluir dados quando assim restrito. O SAS deve usar somente HTTPS e ter data de expiração. Hoje só o SAS funciona. `account_key_from_env` (Shared Key) tem um defeito conhecido na assinatura, e a Azure recusa o acesso ([#2369](https://github.com/DataBoar/data-boar/issues/2369)); Entra ID ainda não é suportado ([#2368](https://github.com/DataBoar/data-boar/issues/2368)).
+
+**Testado contra o Azure Blob Storage real em 2026-11-24** apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
 
 ### Exemplo — MinIO / endpoint compatível genérico (não testado contra appliances de fornecedor)
 
@@ -1363,12 +1405,12 @@ Substitua `<ACCOUNT_ID>` pelo id da conta Cloudflare. **Não testado contra o Cl
 
 - **Credenciais:** valores só no ambiente, via nomes `auth.*_from_env` (sem chaves inline, sem cadeia de credenciais da AWS, sem arquivo de perfil compartilhado, sem metadados de instância, sem acesso anônimo). Os nomes das variáveis seguem as regras de prefixo do projeto ([#1977](https://github.com/DataBoar/data-boar/issues/1977)). `session_token_from_env` opcional para chaves temporárias no estilo STS.
 - **Transporte:** só `https`; verificação de certificado TLS sempre ativa. `allow_private_networks: true` vale **somente** com `endpoint_url` de laboratório em `s3_compatible` (RFC1918, loopback ou outros destinos privados permitidos pela sua política).
-- **Limites (padrões são sugestões):** `max_objects`, `max_download_bytes` e `max_object_bytes` podem ser inteiro positivo ou `unlimited`. Ao atingir um teto, a listagem ou o download para, a varredura registra **cobertura parcial** (contagens e bytes não varridos) e a planilha **Target coverage** no Excel explica o motivo. Subir limites aumenta tráfego de listagem, disco temporário e tempo de execução. Ajuste pontual de limite por varredura **não** entra nesta entrega ([#2313](https://github.com/DataBoar/data-boar/issues/2313)).
+- **Limites (padrões são sugestões):** `max_objects`, `max_download_bytes` e `max_object_bytes` podem ser inteiro positivo ou `unlimited`. Ao atingir um teto, a listagem ou o download para, a varredura registra **cobertura parcial** (contagens e bytes não varridos) e a planilha **Target coverage** no Excel explica o motivo. Subir limites aumenta tráfego de listagem, disco temporário e tempo de execução. Ajuste pontual de limite por varredura **não** entra nesta entrega ([#2313](https://github.com/DataBoar/data-boar/issues/2313)). Definir `unlimited` não desativa o teto interno de páginas de listagem (o conector ainda para de listar no seu máximo interno de páginas e registra `limit_reached`).
 - **Chaves de objeto:** segmentos com `.` ou `..` são ignorados e reportados como `unsafe_key`. Versões de objeto e buckets anônimos **não** são suportados.
 - **Cobertura parcial vs “sem achados”:** **Target coverage** pode mostrar `PARTIAL` com a planilha de achados vazia — isso **não** é atestado de higiene. Por padrão, **nomes de objetos não varridos** aparecem só como **contagens**; use `report_object_names: true` no alvo se precisar dos nomes na cobertura (achados sempre carregam o caminho do objeto quando há hit).
 - **LGPD / GDPR:** varrer um bucket do cliente processa **dados pessoais dele**. Base legal, finalidade, retenção e DPA continuam com o **cliente**; o Data Boar faz leitura e classificação técnicas.
 - **Postura de evidência:** os relatórios descrevem o que foi lido sob a sua config — **evidência para triagem, não conclusão jurídica** e sem proteção contra multa regulatória.
-- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 e Cloudflare R2 seguem **não testados contra o serviço de nuvem real** nessa evidência.
+- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3 e Cloudflare R2 são suportados; valide na sua conta antes de produção.
 
 ### IAM — menor privilégio (AWS)
 
@@ -1409,7 +1451,7 @@ Todos os tipos de *share* usam as mesmas chaves de `file_scan` (extensões, recu
 
 ### Microsoft Graph em modo delegado (`type: sharepoint_online`)
 
-Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. **Evidência:** o CI usa um Graph **simulado**; prova do operador em OneDrive **pessoal** em modo **delegado** pelo conector em **2026-11-18** (demo apresentação, sessão `c001d83a80c8_20261118_123726`) em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Bibliotecas **SharePoint Online** e tenants de **trabalho ou escola** seguem **sem validação**.
+Leitor somente leitura de **uma pasta do OneDrive do usuário que entrou**, pelo Microsoft Graph. Tier **Enterprise**. Precisa só da instalação base (`httpx`), não do extra `shares`. **Evidência:** o CI usa um Graph **simulado**; prova do operador em OneDrive **pessoal** em modo **delegado** pelo conector está registrada em [m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md](ops/evidence/m365_graph_onedrive_delegated_2260_2026-11-18.pt_BR.md) ([#2260](https://github.com/DataBoar/data-boar/issues/2260)). Bibliotecas **SharePoint Online** e tenants de **trabalho ou escola** seguem **sem validação**.
 
 ```yaml
 

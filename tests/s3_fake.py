@@ -439,6 +439,14 @@ class FakeS3:
         self._redirect: dict[str, Any] | None = None
         self._extra_entries = 0
         self._raw_listing: bytes | None = None
+        # Knobs for listing without page ceiling (R7-1, D2306-92 to D2306-95).
+        self._fake_empty_pages: bool = False
+        self._fake_one_entry: bool = False
+        self._pages_script: list[int] | None = None
+        self._list_count: int = (
+            0  # Monotonic list counter; hostile knobs error at 2000+.
+        )
+        self._pending_continuation_token: str | None = None
         self.transport = httpx.MockTransport(self._handle)
 
     # -- identity ----------------------------------------------------------
@@ -529,10 +537,71 @@ class FakeS3:
         """Every listing answers this redirect (a 301 carries ``code`` in the body)."""
         self._redirect = {"status": status, "code": code, "location": location}
 
+    def empty_pages_forever(self) -> None:
+        """Knob for R7-1: every ListObjectsV2 returns empty entries, IsTruncated=true,
+        and a new continuation token each time. Safety cap: after 2000 requests,
+        IsTruncated=false is returned (prevents hanging tests)."""
+        self._fake_empty_pages = True
+        self._fake_one_entry = False
+
+    def one_entry_per_page_forever(self) -> None:
+        """Knob for R7-1: every ListObjectsV2 returns exactly one entry with a new token.
+        Safety cap: after 2000 requests, IsTruncated=false is returned."""
+        self._fake_one_entry = True
+        self._fake_empty_pages = False
+
+    def pages_script(self, sequence: list[int] | None) -> None:
+        """Knob for R7-1 test D2306-93: script a specific page sequence.
+
+        Each integer is the number of entries to return. The last entry
+        with value -1 means truncated=False (listing complete). Safety cap:
+        if the script runs longer than 2000 requests, it stops.
+
+        Example for D2306-93: pages_script([0, 0, ..., 0, 2, -1]) for 15 empty + 2 entries.
+        """
+        if sequence is None:
+            self._pages_script = None
+        else:
+            self._pages_script = list(sequence)
+        self._fake_empty_pages = False
+        self._fake_one_entry = False
+
     # -- request handling -------------------------------------------------
 
     def _violate(self, text: str) -> None:
         self.violations.append(text)
+
+    def _hostile_listing_knob(self) -> bool:
+        return (
+            self._pages_script is not None
+            or self._fake_empty_pages
+            or self._fake_one_entry
+        )
+
+    def _validate_hostile_continuation(self, params: dict[str, str]) -> None:
+        """Require the client to send the token the previous hostile page returned."""
+        sent = params.get("continuation-token")
+        if self._list_count == 1:
+            if sent:
+                self._violate(
+                    "continuation-token present on first ListObjectsV2 page "
+                    f"(hostile knob): {sent!r}"
+                )
+            return
+        expected = self._pending_continuation_token
+        if expected is None:
+            self._violate(
+                "ListObjectsV2 page without pending continuation token (hostile knob)"
+            )
+            return
+        if sent != expected:
+            self._violate(
+                f"stale continuation-token on hostile listing: got {sent!r}, "
+                f"expected {expected!r}"
+            )
+
+    def _set_pending_continuation(self, token_out: str | None) -> None:
+        self._pending_continuation_token = token_out
 
     def _classify(self, raw_path: str, raw_query: str) -> tuple[str, str | None, bool]:
         """Return (operation, decoded key for GetObject, bucket_ok)."""
@@ -750,8 +819,115 @@ class FakeS3:
         return len(self.objects[key])
 
     def _list(self, raw_query: str, headers: dict[str, str]) -> httpx.Response:
+        # Safety counter for hostile knobs (increment on every call).
+        self._list_count += 1
         params = dict(urllib.parse.parse_qsl(raw_query, keep_blank_values=True))
         prefix = params.get("prefix", "")
+        # Safety caps run before continuation enforcement so cap violations stay sole signal.
+        if self._pages_script is not None and self._list_count > len(
+            self._pages_script
+        ):
+            self._violate(
+                f"pages_script safety cap exceeded: request {self._list_count} "
+                f"past end of script (length {len(self._pages_script)})"
+            )
+            return self._error(599, "SafetyCapExceeded", headers)
+        if self._fake_empty_pages and self._list_count > 2000:
+            self._violate(
+                f"empty_pages_forever safety cap exceeded: request {self._list_count} "
+                f"past 2000-request limit"
+            )
+            return self._error(599, "SafetyCapExceeded", headers)
+        if self._fake_one_entry and self._list_count > 2000:
+            self._violate(
+                f"one_entry_per_page_forever safety cap exceeded: request {self._list_count} "
+                f"past 2000-request limit"
+            )
+            return self._error(599, "SafetyCapExceeded", headers)
+        if self._hostile_listing_knob():
+            self._validate_hostile_continuation(params)
+        # pages_script override (R7-1 test D2306-93).
+        if self._pages_script is not None:
+            spec = self._pages_script[self._list_count - 1]
+            if spec == -1:
+                truncated = False
+                token_out = None
+            else:
+                truncated = True
+                token_out = _token_for(self._list_count)
+            # Create entries based on spec.
+            if truncated:
+                page = []
+                for i in range(spec):
+                    # Generate unique key under the requested prefix with real content.
+                    key = f"{prefix}scripted-page-{self._list_count:06d}-entry-{i:06d}.txt"
+                    content = (
+                        f"synthetic content for scripted page {self._list_count} entry {i}\n"
+                    ).encode("utf-8")
+                    # Store in objects so GetObject can return it.
+                    self.objects[key] = content
+                    # Use actual content length.
+                    page.append(_Entry(key, len(content), False))
+            else:
+                page = []
+            # Match normal listing behavior: check if request has encoding-type=url.
+            encoded = params.get("encoding-type") == "url"
+            self._set_pending_continuation(token_out if truncated else None)
+            return httpx.Response(
+                200,
+                headers={
+                    "Content-Type": "application/xml",
+                    "Server": self.server_header,
+                    "x-amz-request-id": f"REQ{len(self.requests):06d}",
+                },
+                stream=_CountingStream(
+                    self._listing_xml(page, prefix, 1, truncated, token_out, encoded),
+                    [],
+                ),
+            )
+        # Hostile knobs override normal listing (R7-1 knobs).
+        if self._fake_empty_pages:
+            truncated = True
+            token_out = _token_for(self._list_count)
+            encoded = params.get("encoding-type") == "url"
+            self._set_pending_continuation(token_out)
+            return httpx.Response(
+                200,
+                headers={
+                    "Content-Type": "application/xml",
+                    "Server": self.server_header,
+                    "x-amz-request-id": f"REQ{len(self.requests):06d}",
+                },
+                stream=_CountingStream(
+                    self._listing_xml([], prefix, 1, truncated, token_out, encoded),
+                    [],
+                ),
+            )
+        if self._fake_one_entry:
+            # One entry forever until safety cap of 2000 requests.
+            truncated = True
+            token_out = _token_for(self._list_count)
+            # Generate unique key under the requested prefix.
+            key = f"{prefix}page-{self._list_count:06d}.txt"
+            content = f"synthetic content for page {self._list_count}\n".encode("utf-8")
+            # Store in objects so GetObject can return it.
+            self.objects[key] = content
+            # Use actual content length.
+            page = [_Entry(key, len(content), False)]
+            encoded = params.get("encoding-type") == "url"
+            self._set_pending_continuation(token_out)
+            return httpx.Response(
+                200,
+                headers={
+                    "Content-Type": "application/xml",
+                    "Server": self.server_header,
+                    "x-amz-request-id": f"REQ{self._list_count:06d}",
+                },
+                stream=_CountingStream(
+                    self._listing_xml(page, prefix, 1, truncated, token_out, encoded),
+                    [],
+                ),
+            )
         try:
             wanted = int(params.get("max-keys", "1000"))
         except ValueError:
@@ -867,3 +1043,9 @@ class FakeS3:
     def delivered(self, key: str) -> int:
         """Bytes the client really pulled for ``key`` (summed over the requests for it)."""
         return sum(sum(s) for s in self._delivered_sinks.get(key, []))
+
+
+def _reset_list_count(fake: FakeS3) -> None:
+    """Reset the safety counter for the fake."""
+    fake._list_count = 0
+    fake._pending_continuation_token = None
