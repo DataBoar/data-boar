@@ -30,15 +30,15 @@ Use these tags in headings to keep priorities explicit and machine-countable:
 
 Do not edit this block manually; refresh with `python scripts/plans-stats.py --write`.
 
-- **Status rows counted:** 310  (Done: 191 | Incomplete: 119)
-- **Incomplete breakdown:** Pending `⬜`=97, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
+- **Status rows counted:** 316  (Done: 191 | Incomplete: 125)
+- **Incomplete breakdown:** Pending `⬜`=103, Tracked `🔄` / `Tracked (partially done)`=22, Under consideration=0, Backlog-marked rows=0
 
 | Horizon | Total rows | Done | Incomplete |
 | ------- | ----------: | ----: | ----------: |
 | `H0` | 65 | 41 | 24 |
 | `H1` | 79 | 53 | 26 |
 | `H2` | 4 | 4 | 0 |
-| `H3` | 145 | 79 | 66 |
+| `H3` | 151 | 79 | 72 |
 | `H4` | 0 | 0 | 0 |
 | `H5` | 0 | 0 | 0 |
 | `UNSPECIFIED` | 17 | 14 | 3 |
@@ -950,6 +950,21 @@ Docs-first `[noavx]` = proven [#929](https://github.com/DataBoar/data-boar/issue
 | P1 | **v1.8.0 #1059 — doc-first:** PLAN_PACKAGING EN + pt-BR wave; `plans_hub_sync` + this file ([#1059](https://github.com/DataBoar/data-boar/issues/1059)) | ✅ Done |
 | P2 | **#1059 —** name `[noavx]` in pip/pipx onboarding; pointer to #929 + wheelhouse two-step | ✅ Done (#929 / PR #1874) |
 | P3 | **#1059 —** CPU pre-flight + loud capability banner / report footer (FN-first) | ⬜ Pending |
+
+---
+
+### Legacy package extras (native packages) – [#2185](https://github.com/DataBoar/data-boar/issues/2185)
+
+**Goal:** Document the operator recipe for native package extras (venv over embedded Python, `--system-site-packages`), document status by evidence, and decide distribution strategy for subpackages (deb/rpm/apk/pacman).
+
+| Step | To-do | Status |
+| ---- | ----- | ------ |
+| P1 | Document operator recipe (venv over embedded Python, `--system-site-packages`, `PYTHONPATH` or `DATA_BOAR_EXTRAS_PATH`) | ⬜ Pending |
+| P2 | Document per-extra status by evidence (what works, what needs compiler, what is not supported) | ⬜ Pending |
+| P3 | Document open decision on subpackage distribution (options + trade-offs, pending operator decision) | ⬜ Pending |
+| P4 | Document status for all four formats (deb/rpm/apk/pacman) or declare untested | ⬜ Pending |
+| P5 | Update `PLAN_PACKAGING_EXTRAS.md` and `PLAN_PACKAGING_EXTRAS.pt_BR.md` with new section | ⬜ Pending |
+| P6 | Run `python scripts/plans_hub_sync.py --write` | ⬜ Pending |
 
 ---
 

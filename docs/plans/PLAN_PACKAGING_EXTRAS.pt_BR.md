@@ -175,6 +175,85 @@ Aliases exatos de extra no `pyproject.toml` ficam **TBD** até uma fatia de pack
 
 **Não** auto-instalar wheels AVX numa CPU v1 (SIGILL). **Não** fingir que o DL rodou se não rodou. Pre-flight **antes** de `import numpy` continua a lição da #929 (SIGILL não é `try`/`except`).
 
+---
+
+## Extras de pacote nativo (issue #2185)
+
+**Contexto:** Os pacotes nativos (.rpm/.deb/.apk/.pkg.tar.zst) entregam apenas o núcleo. O Python embutido (cp314t free-threading) bloqueia `pip` via PEP 668. Subpacotes são definidos em `packaging/nfpm/generated/` mas **não são publicados** no release (`release-manifest.json` `native_packages[]` lista apenas os 4 formatos principais).
+
+### Receita do operador (verificada contra arquivos do repo)
+
+Os seguintes mecanismos foram testados no AlmaLinux 9.8 com `data-boar-1.8.0-1.x86_64.rpm` (Python embutido: `/usr/lib/data-boar/python3.14t/bin/python3.14t`, cp314t free-threading):
+
+| Mecanismo | Resultado | Notas |
+| --------- | --------- | ----- |
+| `pip install` / `pip install --user` | **Bloqueado** | PEP 668 ("managed by uv") |
+| `pip install --target <dir> <pkg>` + `PYTHONPATH=<dir>` | **Funciona** | Launcher `/usr/bin/data-boar` respeita `PYTHONPATH`; só `--version` testado; scan com módulo extra **não verificado** |
+| `python3 -m venv --system-site-packages ~/xvenv` + `pip install` no venv | **Funciona** para `nosql`, `dataformats` | Venv não tem script `data-boar`; launcher + `PYTHONPATH` ainda necessário |
+
+**Não verificado:**
+- Se um scan efetivamente usa módulos do venv (não só `import`)
+- Caminho de upgrade com venv existente
+- Formatos `.deb`, `.apk`, `.pkg.tar.zst`
+- Extras `richmedia`, `shares`, `detection-fuzzy`, `bigdata`
+
+### Status por extra por evidência (dos comentários da issue #2185)
+
+| Extra | Pacotes | Status | Dependências de sistema | Notas |
+| ----- | ------- | ------ | ----------------------- | ----- |
+| `nosql` | `pymongo`, `redis` | **Funciona** | Nenhuma | Instala e importa no venv |
+| `dataformats` | `pyarrow`, `fastavro`, `dbfread` | **Funciona** | Nenhuma | Instala e importa no venv |
+| `mssql` | `pymssql` | **Parcial** | FreeTDS (`libsybdb.so.5`) | Instala; import falha sem FreeTDS (não testado) |
+| `compressed` | `py7zr` | **Faz falha** | Compilador (gcc/cmake), `brotli` | Sem wheel para cp314t; cai em build de fonte |
+| `dl` | `sentence-transformers` | **Faz falha** | Rust, compilador | `safetensors` cai em build de fonte |
+| `richmedia` | `pytesseract`, `pillow-heif`, `mutagen` | **Não verificado** | Tesseract binário, compilador | `pytesseract` precisa tesseract-ocr |
+| `shares` | `smbprotocol`, `webdavclient3`, `requests_ntlm` | **Não verificado** | Nenhuma aparente | Python puro |
+| `detection-fuzzy` | `rapidfuzz` | **Não verificado** | Compilador | Extensão C++ |
+| `bigdata` | `snowflake-connector-python` | **Não verificado** | Nenhuma aparente | Python puro |
+
+**Bug `--check-extras`:** O comando `data-boar --check-extras` quebra com `FileNotFoundError: .../site-packages/pyproject.toml` (`core/extras_manifest.py:97`). O pacote nativo não instala o `pyproject.toml`, quebrando a promessa do help ("first step when a connector fails for missing dependencies"). **Não verificado** se corrigido.
+
+### Distribuição dos subpacotes (decisão aberta — pendente decisão do operador)
+
+Os subpacotes são definidos em `packaging/nfpm/generated/` (6 extras: compressed, dataformats, mssql, nosql, richmedia, shares) mas **não aparecem** no `release-manifest.json` `native_packages[]`. Só os 4 pacotes de formato principal são publicados.
+
+**Opções:**
+1. **Publicar subpacotes como assets do release** (um por formato: .deb/.rpm/.apk/.pkg.tar.zst) — usuários instalam via gerenciador de pacotes; exige mudanças no CI/CD e infra de assinatura
+2. **Documentar só a receita de venv** — sem subpacotes; usuários montam seus próprios wheels/venvs; menor esforço mas exige compilador para alguns extras
+3. **Híbrido** — publicar subpacotes para extras "fáceis" (Python puro: nosql, dataformats, shares, bigdata); documentar receita de venv para extras "difíceis" (compressed, dl, richmedia) que exigem compilador/Rust
+
+**Trade-offs:**
+- Opção 1: Melhor UX; maior manutenção (CI/CD, assinatura, 4 formatos × N extras)
+- Opção 2: Menor esforço; pior UX para extras que precisam de compilador (usuários travados)
+- Opção 3: Equilibrada; requer classificar extras por complexidade de build
+
+**Decisão:** Pendente decisão do operador. Marcado como AC 3 na issue #2185.
+
+### Cobertura de formatos de pacote nativo
+
+| Formato | Subpacotes publicados | Status |
+| ------- | --------------------- | ------ |
+| `.rpm` | **Nenhum** (só pacote principal) | Verificado no AlmaLinux 9.8 |
+| `.deb` | **Nenhum** | Não verificado |
+| `.apk` | **Nenhum** | Não verificado |
+| `.pkg.tar.zst` (Arch) | **Nenhum** | Não verificado |
+
+**Nota:** O diretório `packaging/nfpm/generated/` contém 6 YAMLs de subpacotes, mas eles não estão no pipeline de release. O `EXTRAS_MANIFEST.native.json` lista 20 extras, e só `mssql`, `oracle` e `sql-community` têm `in_artifact: true` (incluídos na imagem base do container). Nenhum subpacote é produzido para pacotes nativos hoje.
+
+### Página de man (relacionado a #2163)
+
+A documentação dos extras deve aparecer também no `man data-boar` do pacote nativo (hoje ausente, rastreado em #2163). A man page deve explicar a receita escolhida (venv + `--system-site-packages` + `PYTHONPATH` ou `DATA_BOAR_EXTRAS_PATH`).
+
+### Decisão sobre boar_fast_filter (relacionado)
+
+Por comentários da issue: `boar_fast_filter` vai pré-compilado no pacote base. Opções:
+- (a) Manter no pacote base com gating por licença (depende do fix da #2180)
+- (b) Subpacote opt-in separado `data-boar-fast-filter` no canal comercial (ADR-0089 §3, 3B); repo público assinado leva só o Community
+
+Fallback Python existe (demo produz mesmos findings sem módulo Rust), então (b) é viável tecnicamente. Decisão é do operador (AC 3 na #2185).
+
+---
+
 ### Tabela de execução (docs-first → fatias posteriores)
 
 | Passo | Entregável | Status |
