@@ -36,8 +36,10 @@ Architecture (orchestrator vs fixed strings):
 not introduce ``ORDER BY`` (sorts can force full-table plans). Prefer dialect
 caps (``TOP`` / ``LIMIT`` / ``ROWNUM`` / ``SAMPLE``) and dictionary row hints only.
 
-**DBA attribution:** every emitted statement starts with the line comment
-``-- Data Boar Compliance Scan`` so operators can grep activity views.
+**DBA attribution:** column sampling ``TextClause`` SQL begins with the line
+comment ``-- Data Boar Compliance Scan``. Prefix-probe ``Select`` statements
+embed the same comment immediately after ``SELECT`` (SQLAlchemy ``prefix_with``)
+so DMVs show ``SELECT -- Data Boar Compliance Scan`` at the head of the text.
 
 Doctrinal references (behaviour-preserving comments — do not remove in refactors):
 
@@ -676,7 +678,16 @@ def compile_column_sample_plan_sql(
     *,
     dbapi: bool = False,
 ) -> str:
-    """Render plan SQL for audit/tests; optional DBAPI dialect (psycopg2/pymysql)."""
+    """Render SQL for audits, logs, and tests — not always identical to execution.
+
+    ``TextClause`` plans return the tagged string used on the wire. Core ``Select``
+    plans compile to a normalized string (literal binds, identifier ``%%`` undo for
+    parity with legacy ``text()``). That illustration can differ from the exact
+    statement the DBAPI driver receives (e.g. bind placeholders, dialect quirks);
+    use ``execute_column_sample_plan`` / driver hooks in tests when the wire SQL
+    must be asserted.
+    Optional ``dbapi=True`` selects a psycopg2/pymysql-style dialect for compile.
+    """
     q = plan.query
     if isinstance(q, TextClause):
         return str(q)

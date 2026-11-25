@@ -76,20 +76,28 @@ shared lock during a long scan — would violate clause 2 of §1.
 
 ## 4. Statement attribution (DBA-grep contract)
 
-Every emitted sampling statement begins with the line comment:
+Every emitted sampling statement carries the line comment
+`-- Data Boar Compliance Scan` at the **start of the SQL text** visible in
+activity views:
+
+- **Column sample** (`TextClause`): the comment is the first line, then the
+  body (e.g. `SELECT ... LIMIT n`).
+- **Prefix probe** (SQLAlchemy Core `Select`): the comment is inlined
+  **immediately after `SELECT`** (with a following newline), e.g.:
 
 ```sql
--- Data Boar Compliance Scan
-SELECT TOP (n) ... FROM ... WITH (NOLOCK)
+SELECT -- Data Boar Compliance Scan
+ TOP 5 substring("col", 1, 64) ... FROM ... WITH (NOLOCK)
 ```
 
 A DBA tailing `pg_stat_activity` / DMVs can identify Data Boar without
 reverse-engineering the query plan. This comment is **not** decorative; it is
 how a DBA decides whether to kill our session vs page the operator.
 
-The leading comment is enforced in
+The contract is enforced in
 [`connectors/sql_sampling.py`](../../../connectors/sql_sampling.py)
-(`_COMPLIANCE_SCAN_LEADING`) — do **not** remove it in refactors.
+(`_COMPLIANCE_SCAN_LEADING` / ``prefix_with`` on prefix probes) — do **not**
+remove it in refactors.
 
 ---
 
