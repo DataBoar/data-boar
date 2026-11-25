@@ -6,6 +6,7 @@
 #   ./scripts/quick-test.sh --path tests/test_foo.py
 #   ./scripts/quick-test.sh --path tests/test_foo.py --keyword test_bar
 #   ./scripts/quick-test.sh -k "content_type"
+#   ./scripts/quick-test.sh --skips-summary   # full tests/, quiet, list skip reasons (-rs)
 # Windows: prefer .\scripts\quick-test.ps1
 set -euo pipefail
 
@@ -14,6 +15,7 @@ cd "$REPO_ROOT" || exit 2
 
 PATH_ARG=""
 KEYWORD=""
+SKIPS_SUMMARY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -Path | --path)
@@ -32,9 +34,13 @@ while [[ $# -gt 0 ]]; do
       KEYWORD="$2"
       shift 2
       ;;
+    --skips-summary)
+      SKIPS_SUMMARY=1
+      shift
+      ;;
     -h | --help)
-      echo "Usage: $0 [--path PATH] [--keyword|-k PATTERN]"
-      echo "  (same intent as quick-test.ps1 -Path / -Keyword)"
+      echo "Usage: $0 [--path PATH] [--keyword|-k PATTERN] [--skips-summary]"
+      echo "  (same intent as quick-test.ps1 -Path / -Keyword / -SkipsSummary)"
       exit 0
       ;;
     *)
@@ -44,15 +50,24 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-args=(-v -W error --tb=short)
-if [[ -n "$PATH_ARG" ]]; then
-  args+=("$PATH_ARG")
+if [[ "$SKIPS_SUMMARY" -eq 1 ]]; then
+  args=(-q -W error -rs --tb=short)
+  target="${PATH_ARG:-tests}"
+  args+=("$target")
+  if [[ -n "$KEYWORD" ]]; then
+    args+=(-k "$KEYWORD")
+  fi
+  echo "=== quick-test: pytest skip summary (-rs) ===" >&2
+else
+  args=(-v -W error --tb=short)
+  if [[ -n "$PATH_ARG" ]]; then
+    args+=("$PATH_ARG")
+  fi
+  if [[ -n "$KEYWORD" ]]; then
+    args+=(-k "$KEYWORD")
+  fi
+  echo "=== quick-test: pytest (subset) ===" >&2
 fi
-if [[ -n "$KEYWORD" ]]; then
-  args+=(-k "$KEYWORD")
-fi
-
-echo "=== quick-test: pytest (subset) ===" >&2
 if [[ -n "$PATH_ARG" ]]; then
   echo "  Path: $PATH_ARG" >&2
 fi

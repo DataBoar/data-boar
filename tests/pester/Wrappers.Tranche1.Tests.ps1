@@ -15,6 +15,7 @@ Describe 'quick-test.ps1' {
         $raw = Get-ScriptRaw 'scripts/quick-test.ps1'
         $raw | Should -Match '\[string\]\$Path'
         $raw | Should -Match '\[string\]\$Keyword'
+        $raw | Should -Match '\[switch\]\$SkipsSummary'
         $raw | Should -Match 'uv run pytest'
         $raw | Should -Match 'if \(\$Path\)'
         $raw | Should -Match 'if \(\$Keyword\)'

@@ -6,25 +6,41 @@
 #   .\scripts\quick-test.ps1 -Path tests/test_foo.py    # single file
 #   .\scripts\quick-test.ps1 -Keyword "content_type"    # pytest -k "content_type"
 #   .\scripts\quick-test.ps1 -Path tests/test_foo.py -Keyword "test_bar"
+#   .\scripts\quick-test.ps1 -SkipsSummary   # full tests/, quiet, list skip reasons (-rs)
 
 param(
     [string]$Path = "",
-    [string]$Keyword = ""
+    [string]$Keyword = "",
+    [switch]$SkipsSummary
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Get-Item $PSScriptRoot).Parent.FullName
 Set-Location $repoRoot
 
-$pytestArgs = @("-v", "-W", "error", "--tb=short")
-if ($Path) {
-    $pytestArgs += $Path
+if ($SkipsSummary) {
+    $pytestArgs = @("-q", "-W", "error", "-rs", "--tb=short")
+    if ($Path) {
+        $pytestArgs += $Path
+    }
+    else {
+        $pytestArgs += "tests"
+    }
+    if ($Keyword) {
+        $pytestArgs += "-k", $Keyword
+    }
+    Write-Host "=== quick-test: pytest skip summary (-rs) ===" -ForegroundColor Cyan
 }
-if ($Keyword) {
-    $pytestArgs += "-k", $Keyword
+else {
+    $pytestArgs = @("-v", "-W", "error", "--tb=short")
+    if ($Path) {
+        $pytestArgs += $Path
+    }
+    if ($Keyword) {
+        $pytestArgs += "-k", $Keyword
+    }
+    Write-Host "=== quick-test: pytest (subset) ===" -ForegroundColor Cyan
 }
-
-Write-Host "=== quick-test: pytest (subset) ===" -ForegroundColor Cyan
 if ($Path) { Write-Host "  Path: $Path" }
 if ($Keyword) { Write-Host "  Keyword: $Keyword" }
 uv run pytest @pytestArgs

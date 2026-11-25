@@ -20,8 +20,8 @@
 | `check-all.sh` | Full gate (Linux / macOS; bash) — same steps as **`check-all.ps1`**; PII seeds via **`uv run python scripts/gatekeeper_audit.py`** (**`pwsh`** not required — issue **`#560`**); **`gate_change_tripwire.py --base origin/main`** after seeds (issue **`#1385`**, same as CI) | Same as **`check-all.ps1`** |
 | `lint-only.ps1` | Docs/style only | Same + pairing doc |
 | `lint-only.sh` | Same (Linux / macOS) | Same |
-| `quick-test.ps1` | Narrow pytest | Same + pairing doc |
-| `quick-test.sh` | Same (Linux / macOS) | Same |
+| `quick-test.ps1` | Narrow pytest; `-SkipsSummary` = full `tests/` with `-q -rs` (skip reasons; not `check-all`) | Same + pairing doc |
+| `quick-test.sh` | Same (Linux / macOS); `--skips-summary` | Same |
 | `pre-commit-and-tests.ps1` | Pre-commit + full pytest (thin; no gatekeeper) | **`check-all.ps1`** delegates here |
 | `pre-commit-and-tests.sh` | Same (Linux / macOS) | Pairing doc |
 | `preview-commit.ps1`, `commit-or-pr.ps1`, `create-pr.ps1` | Commit / PR | Same + **`docs/ops/COMMIT_AND_PR.md`** |
