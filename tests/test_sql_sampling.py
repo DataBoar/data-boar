@@ -490,6 +490,9 @@ def test_d2362_12b_oracle_lob_and_raw_labels():
     )
     assert p_raw.strategy_label == "prefix_probe_oracle_raw"
     assert "DBMS_LOB.SUBSTR" not in _sql_body(p_raw)
+    # #2370 S11: the RAW path reads only the first bytes too, never the whole column.
+    assert "UTL_RAW.SUBSTR" in _sql_body(p_raw)
+    assert ", 1, 64)" in _sql_body(p_raw)
 
 
 def _unquoted_sql_fragments(sql: str) -> str:
