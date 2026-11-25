@@ -287,11 +287,20 @@ class AzureBlobDriver:
         raw_auth = cfg.get("auth")
         auth: Mapping[str, Any] = raw_auth if isinstance(raw_auth, dict) else cfg
         sas_token = auth.get("sas_token_from_env")
-        use_entra_id = bool(
-            auth.get("client_id_from_env")
-            and auth.get("client_secret_from_env")
-            and auth.get("tenant_id_from_env")
+        # The driver does not obtain an Entra ID token yet (#2368). Accepting
+        # these keys would send requests without Authorization, and a public
+        # container would then scan anonymously and look complete (#2370 N1).
+        entra_keys = (
+            "client_id_from_env",
+            "client_secret_from_env",
+            "tenant_id_from_env",
         )
+        if any(auth.get(k) or cfg.get(k) for k in entra_keys):
+            raise DriverConfigError(
+                "Entra ID authentication is not supported yet for azure_blob "
+                "(#2368); use auth.sas_token_from_env"
+            )
+        use_entra_id = False
 
         return AzureBlobSettings(
             account_name=account_name,
