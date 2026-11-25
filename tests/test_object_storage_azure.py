@@ -228,6 +228,16 @@ def test_sas_mode_missing_resolved_token_raises_driver_config_error() -> None:
         driver.get_request(settings, creds, "corpus/a.txt", T0)
 
 
+def test_shared_key_missing_account_key_raises_driver_config_error() -> None:
+    driver = AzureBlobDriver()
+    settings = driver.settings(_cfg())
+    creds = ResolvedCredentials({"account_name_from_env": ACCOUNT})
+    with pytest.raises(DriverConfigError, match="account_key_from_env"):
+        driver.list_request(settings, creds, "corpus/", None, 5, T0)
+    with pytest.raises(DriverConfigError, match="account_key_from_env"):
+        driver.get_request(settings, creds, "corpus/a.txt", T0)
+
+
 def test_shared_key_list_and_get_still_set_authorization() -> None:
     driver = AzureBlobDriver()
     settings = driver.settings(_cfg())
