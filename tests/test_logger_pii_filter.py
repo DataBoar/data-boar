@@ -25,9 +25,6 @@ REPO = Path(__file__).resolve().parents[1]
 
 # Justified remaining log-call sites: Filter redacts; ADR-0036 decision 4.
 LOG_STR_E_ALLOWLIST: dict[tuple[str, str], str] = {
-    ("connectors/sql_connector.py", "sample"): (
-        "warning after save_failure; SanitizeLogFilter redacts err=%s"
-    ),
     ("core/detector.py", "_predict_ml_confidence"): (
         "ML fallback warning; SanitizeLogFilter redacts exception text"
     ),
@@ -53,7 +50,6 @@ EXPECTED_STR_E_COUNTS: Counter[tuple[str, str, str]] = Counter(
         # which runs sanitize_log_text before logging and storing (core/database.py).
         ("connectors/smb_connector.py", "_run_registered_session", "persist"): 3,
         ("connectors/snowflake_connector.py", "run", "persist"): 2,
-        ("connectors/sql_connector.py", "sample", "logger"): 1,
         ("connectors/sql_connector.py", "run", "persist"): 2,
         ("connectors/webdav_connector.py", "run", "persist"): 2,
         ("core/archives.py", "normalize_compressed_extensions", "inert"): 1,
@@ -175,7 +171,7 @@ def test_str_e_survey_matches_snapshot() -> None:
         f"only_in_expected={EXPECTED_STR_E_COUNTS - got}"
     )
     kind_totals = Counter(s.kind for s in sites)
-    assert kind_totals["logger"] == 2
+    assert kind_totals["logger"] == 1
     assert kind_totals["persist"] == 21  # +1 SMB walk onerror (#1447)
     assert kind_totals["inert"] == 14
 
