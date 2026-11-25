@@ -43,6 +43,10 @@ class RustRegexStageStatus:
         return {
             "active": self.active,
             "name": self.name,
+            # #2246 — ``DATA_BOAR_PREFILTER`` only gates ``core.pro_scan_path``; it does
+            # not disable this rust regex stage on the detector path.
+            "pro_prefilter_env_var": "DATA_BOAR_PREFILTER",
+            "pro_prefilter_env_controls": "pro_scan_path_only",
             "backend": self.backend,
             "tier": self.tier,
             "reason": self.reason,
