@@ -65,13 +65,11 @@ from sqlalchemy import (
     Table,
     bindparam,
     column,
-    event,
     func,
     select,
     table,
     text,
 )
-from sqlalchemy import exc as sa_exc
 from sqlalchemy.dialects import mssql as sa_mssql
 from sqlalchemy.dialects import mysql as sa_mysql
 from sqlalchemy.dialects import oracle as sa_oracle
@@ -658,29 +656,8 @@ def _dbapi_sampling_dialect(dialect: str):
 
 
 def _prefix_probe_compliance(stmt: Select) -> Select:
-    """Select probes get the compliance leading comment at execute time (#2373 B4)."""
-    return stmt
-
-
-def _compliance_label_on_driver(statement: str) -> bool:
-    return statement.lstrip().startswith(_COMPLIANCE_SCAN_LEADING.strip())
-
-
-def _prepend_compliance_label_for_driver_sql(
-    _conn,
-    _cursor,
-    statement,
-    parameters,
-    _context,
-    _executemany,
-):
-    if isinstance(statement, bytes):
-        text_stmt = statement.decode("utf-8", errors="replace")
-    else:
-        text_stmt = str(statement)
-    if _compliance_label_on_driver(text_stmt):
-        return statement, parameters
-    return f"{_COMPLIANCE_SCAN_LEADING.strip()}\n{text_stmt}", parameters
+    """Inline SQL comment before the statement body (``\\n`` so the rest is not commented out)."""
+    return stmt.prefix_with(_COMPLIANCE_SCAN_LEADING)
 
 
 def _unde_double_percent_in_quoted_identifiers(sql: str) -> str:
@@ -716,57 +693,18 @@ def compile_column_sample_plan_sql(
         compile_kw = {}
     else:
         compile_kw["literal_binds"] = True
-    body = " ".join(str(q.compile(dialect=d, compile_kwargs=compile_kw)).split())
+    body = str(q.compile(dialect=d, compile_kwargs=compile_kw))
     if body.endswith(" OFFSET 0"):
         body = body[: -len(" OFFSET 0")]
     body = _unde_double_percent_in_quoted_identifiers(body)
-    return _tag_sql(body)
-
-
-def _execute_select_with_compliance_label(connection, q: Select):
-    """Run a Core ``Select`` with the DBA grep leading comment on the driver SQL."""
-    hook_target = None
-    for target in (connection, getattr(connection, "engine", None)):
-        if target is None:
-            continue
-        try:
-            event.listen(
-                target,
-                "before_cursor_execute",
-                _prepend_compliance_label_for_driver_sql,
-                retval=True,
-            )
-            hook_target = target
-            break
-        except sa_exc.InvalidRequestError:
-            continue
-    if hook_target is not None:
-        try:
-            return connection.execute(q).fetchall()
-        finally:
-            event.remove(
-                hook_target,
-                "before_cursor_execute",
-                _prepend_compliance_label_for_driver_sql,
-            )
-    # SQLAlchemy MockEngine: no cursor events — compile once and prepend (tests only).
-    compiled = q.compile(dialect=connection.dialect)
-    sql = " ".join(str(compiled).split())
-    if not _compliance_label_on_driver(sql):
-        sql = f"{_COMPLIANCE_SCAN_LEADING.strip()}\n{sql}"
-    sql = _unde_double_percent_in_quoted_identifiers(sql)
-    result = connection.execute(text(sql), dict(compiled.params))
-    if result is None:
-        return []
-    return result.fetchall()
+    if isinstance(q, Select) and _COMPLIANCE_SCAN_LEADING in body:
+        return body.strip()
+    return _tag_sql(" ".join(body.split()))
 
 
 def execute_column_sample_plan(connection, plan: ColumnSamplePlan):
     """Run a column sample plan (``TextClause`` or Core ``Select``)."""
-    q = plan.query
-    if isinstance(q, Select):
-        return _execute_select_with_compliance_label(connection, q)
-    return connection.execute(q).fetchall()
+    return connection.execute(plan.query).fetchall()
 
 
 def _mssql_prefix_table(
