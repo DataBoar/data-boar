@@ -89,15 +89,32 @@ def test_settings_auth_modes() -> None:
         _cfg(account_key_from_env=None, sas_token_from_env="sv=2020&sig=synthetic")
     )
     assert sas.sas_token == "sv=2020&sig=synthetic"
-    entra = driver.settings(
-        _cfg(
-            account_key_from_env=None,
-            client_id_from_env="cid",
-            client_secret_from_env="sec",
-            tenant_id_from_env="tid",
-        )
-    )
-    assert entra.use_entra_id is True
+    assert sas.use_entra_id is False
+
+
+@pytest.mark.parametrize(
+    "entra_keys",
+    [
+        {
+            "client_id_from_env": "cid",
+            "client_secret_from_env": "sec",
+            "tenant_id_from_env": "tid",
+        },
+        {"client_id_from_env": "cid"},
+        {"tenant_id_from_env": "tid", "sas_token_from_env": "sv=2020&sig=x"},
+    ],
+)
+@pytest.mark.parametrize("in_auth", [False, True])
+def test_entra_id_keys_are_refused_until_2368(
+    entra_keys: dict[str, str], in_auth: bool
+) -> None:
+    """#2370 N1: the driver never obtains an Entra ID token, so a target with
+    Entra keys would send unauthenticated requests (a public container would
+    scan anonymously and look "complete"). Refuse it at config time."""
+    driver = AzureBlobDriver()
+    cfg = _cfg(auth=dict(entra_keys)) if in_auth else _cfg(**entra_keys)
+    with pytest.raises(DriverConfigError, match=r"Entra ID .*not supported.*#2368"):
+        driver.settings(cfg)
 
 
 def test_destination_and_display_path() -> None:
