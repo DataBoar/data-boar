@@ -53,6 +53,7 @@ _CRITICAL_MODULE_EXTRAS: tuple[str, ...] = (
     "api/webauthn_routes.py",
     "api/webauthn_html_gate.py",
     "core/integrity_signed_manifest.py",
+    "core/database.py",  # scan persistence (#2253)
 )
 
 
