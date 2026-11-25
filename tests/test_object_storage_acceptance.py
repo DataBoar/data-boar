@@ -47,6 +47,7 @@ from tests.object_storage_toy_driver import (
 from tests.s3_fake import (
     EMPTY_SHA256,
     EVIL_HOST,
+    _token_for,
     aws_doc_example_secret,
     GOOD_IP,
     METADATA_IP,
@@ -1018,6 +1019,44 @@ def test_selfcheck_listagem_virtual_pagina_e_decodifica_chaves():
     assert second.status_code == 200 and _keys(second) == ["corpus/z.txt"]
     assert fake.operations == ["ListObjectsV2", "ListObjectsV2"]
     assert fake.violations == [] and fake.auth_failures == []
+
+
+def test_selfcheck_knobs_hostis_rejeitam_continuation_token_obsoleto():
+    """S4 / PR #2361: hostile listing knobs must enforce the token the prior page returned."""
+    fake, c = _fresh(objects={"corpus/only.txt": b"x"})
+    fake.empty_pages_forever()
+    q = "/?list-type=2&prefix=corpus%2F&encoding-type=url"
+    first = _get(fake, c, q)
+    assert first.status_code == 200
+    assert [
+        e.text
+        for e in DefusedET.fromstring(first.content).iter()
+        if e.tag.endswith("IsTruncated")
+    ] == ["true"]
+    stale = _token_for(99_999)
+    second = _get(
+        fake,
+        c,
+        q + "&continuation-token=" + uri_encode(stale, keep_slash=False),
+    )
+    assert second.status_code == 200
+    assert any("stale continuation-token" in v for v in fake.violations)
+
+    fake2, c2 = _fresh(objects={"corpus/only.txt": b"x"})
+    fake2.empty_pages_forever()
+    good = _get(fake2, c2, q)
+    nxt = [
+        e.text
+        for e in DefusedET.fromstring(good.content).iter()
+        if e.tag.endswith("NextContinuationToken")
+    ][0]
+    ok = _get(
+        fake2,
+        c2,
+        q + "&continuation-token=" + uri_encode(nxt, keep_slash=False),
+    )
+    assert ok.status_code == 200
+    assert fake2.violations == []
 
 
 def test_selfcheck_estilo_por_caminho_com_porta_e_bucket_errado():
