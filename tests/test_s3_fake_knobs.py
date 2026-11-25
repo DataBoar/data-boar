@@ -31,7 +31,10 @@ def _list_with_token(
             f"{base_query}&continuation-token="
             f"{urllib.parse.quote(continuation_token, safe='')}"
         )
-    return fake._list(query, {}).read()
+    resp = fake._list(query, {})
+    # #2370 S12: every page before the safety cap must be a real 200 listing.
+    assert resp.status_code == 200
+    return resp.read()
 
 
 def _paginated_list(fake: FakeS3, base_query: str, page_count: int) -> list[bytes]:
@@ -47,7 +50,7 @@ def _paginated_list(fake: FakeS3, base_query: str, page_count: int) -> list[byte
 
 def test_self_empty_pages_forever() -> None:
     """Self-test: empty_pages_forever() returns empty pages with IsTruncated=true and new tokens.
-    Ends after safety cap of 2000 requests (IsTruncated=false)."""
+    Past the safety cap of 2000 requests the listing answers HTTP 599."""
     fake = FakeS3("test-bucket", {}, "host.example", "virtual", "us-east-1")
     fake.empty_pages_forever()
     assert fake._fake_empty_pages is True
@@ -62,7 +65,7 @@ def test_self_empty_pages_forever() -> None:
     _reset_list_count(fake)
 
     token: str | None = None
-    for i in range(2001):
+    for i in range(2000):
         if i > 0:
             content = _list_with_token(fake, "?list-type=2", token)
         else:
@@ -71,17 +74,18 @@ def test_self_empty_pages_forever() -> None:
         truncated = [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == [
             "true"
         ]
-        if i < 2000:
-            assert truncated, f"request {i} should be truncated"
-            token = _next_continuation_token(content)
-        else:
-            assert not truncated, f"request {i} should not be truncated (safety cap)"
+        assert truncated, f"request {i} should be truncated"
+        token = _next_continuation_token(content)
+    # #2370 S12: request 2001 hits the safety cap: HTTP 599 plus a violation.
+    resp = fake._list("?list-type=2", {})
+    assert resp.status_code == 599
+    assert len(fake.violations) == 1
 
 
 def test_self_one_entry_per_page_forever() -> None:
     """Self-test: one_entry_per_page_forever() returns one entry with IsTruncated=true and
     new tokens. Each entry is a unique key under the requested prefix with real content.
-    Ends after safety cap of 2000 requests (IsTruncated=false)."""
+    Past the safety cap of 2000 requests the listing answers HTTP 599."""
     fake = FakeS3("test-bucket", {}, "host.example", "virtual", "us-east-1")
     fake.one_entry_per_page_forever()
     assert fake._fake_one_entry is True
@@ -103,21 +107,20 @@ def test_self_one_entry_per_page_forever() -> None:
 
     _reset_list_count(fake)
     token = None
-    for i in range(2001):
+    for i in range(2000):
         content = _list_with_token(fake, base, token)
         page = ET.fromstring(content)
         truncated = [e.text for e in page.iter() if e.tag.endswith("IsTruncated")] == [
             "true"
         ]
-        if i < 2000:
-            assert truncated, f"request {i} should be truncated"
-            keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
-            assert keys == [f"corpus/page-{i + 1:06d}.txt"]
-            token = _next_continuation_token(content)
-        else:
-            assert not truncated, f"request {i} should not be truncated (safety cap)"
-            keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
-            assert keys == []
+        assert truncated, f"request {i} should be truncated"
+        keys = [e.text for e in page.iter() if e.tag.endswith("Key")]
+        assert keys == [f"corpus/page-{i + 1:06d}.txt"]
+        token = _next_continuation_token(content)
+    # #2370 S12: request 2001 hits the safety cap: HTTP 599 plus a violation.
+    resp = fake._list(base, {})
+    assert resp.status_code == 599
+    assert len(fake.violations) == 1
 
 
 def test_self_pages_script() -> None:
