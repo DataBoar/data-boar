@@ -25,8 +25,11 @@ from connectors.sql_sampling import (
     supports_prefix_probe,
 )
 
-_COMPLIANCE_PREFIX = "-- Data Boar Compliance Scan\n"
-_COMPLIANCE_INLINE = "-- Data Boar Compliance Scan\n"
+# ``TextClause`` sampling (_tag_sql): leading line comment only.
+_COMPLIANCE_LINE_PREFIX = "-- Data Boar Compliance Scan\n"
+# Core ``Select`` prefix probes: SQLAlchemy inlines the comment immediately after SELECT.
+_SELECT_COMPLIANCE_LEADING = "SELECT -- Data Boar Compliance Scan\n"
+_MSSQL_PREFIX_PROBE_LEADING = "SELECT -- Data Boar Compliance Scan\n TOP 5 substring("
 
 
 def _sql_where_tail(sql: str) -> str:
@@ -51,13 +54,11 @@ def _sql_body(plan, dialect: str | None = None) -> str:
     if plan.strategy_label.startswith("prefix_probe_"):
         d = dialect or _dialect_for_prefix_plan(plan)
         s = compile_column_sample_plan_sql(plan, d)
-        if _COMPLIANCE_INLINE in s:
-            return s.strip()
-        assert s.startswith(_COMPLIANCE_PREFIX)
-        return s[len(_COMPLIANCE_PREFIX) :].strip()
+        assert s.startswith(_SELECT_COMPLIANCE_LEADING)
+        return s[len(_SELECT_COMPLIANCE_LEADING) :].lstrip()
     s = str(plan.query)
-    assert s.startswith(_COMPLIANCE_PREFIX)
-    return s[len(_COMPLIANCE_PREFIX) :]
+    assert s.startswith(_COMPLIANCE_LINE_PREFIX)
+    return s[len(_COMPLIANCE_LINE_PREFIX) :]
 
 
 def test_resolve_sql_sample_limit_uses_config_when_env_unset():
@@ -479,8 +480,8 @@ def test_d2362_12_prefix_probe_mssql_oracle():
         limit=5,
         prefix_bytes=64,
     )
-    body_ms = _sql_body(p_ms)
-    assert _COMPLIANCE_INLINE in body_ms
+    body_ms = compile_column_sample_plan_sql(p_ms, "mssql")
+    assert body_ms.startswith(_MSSQL_PREFIX_PROBE_LEADING)
     assert "TOP 5 substring(" in body_ms
     assert "WITH (NOLOCK)" in body_ms
     assert ", 64)" in body_ms
@@ -625,21 +626,23 @@ def _driver_sql_sqlite_real(plan) -> str:
     return captured[-1]
 
 
-@pytest.mark.parametrize("dialect", ("postgresql", "mysql", "mssql", "oracle"))
+@pytest.mark.parametrize(
+    "dialect", ("sqlite", "postgresql", "mysql", "mssql", "oracle")
+)
 def test_prefix_probe_compiled_select_includes_compliance_label(dialect: str) -> None:
-    """#2373 B4: Core ``Select`` compile must embed the DBA comment + newline (no dialect=True drop)."""
+    """#2373 B4/B6: Core ``Select`` compile must start with DBA comment after SELECT."""
     plan = _build_min_prefix_plan(dialect)
     sa_dialect = _sqlalchemy_sampling_dialect(dialect)
     compile_kw = {} if dialect == "oracle" else {"literal_binds": True}
     compiled = str(plan.query.compile(dialect=sa_dialect, compile_kwargs=compile_kw))
-    assert _COMPLIANCE_INLINE in compiled
+    assert compiled.startswith(_SELECT_COMPLIANCE_LEADING)
 
 
 def test_prefix_probe_sqlite_driver_sql_includes_compliance_label() -> None:
     """#2373 B4: compliance label on SQL delivered to SQLite DBAPI (before_cursor_execute)."""
     plan = _build_min_prefix_plan("sqlite")
     driver_sql = _driver_sql_sqlite_real(plan)
-    assert _COMPLIANCE_INLINE in driver_sql
+    assert driver_sql.startswith(_SELECT_COMPLIANCE_LEADING)
 
 
 _PREFIX_HOSTILE_DIALECTS = (
@@ -681,7 +684,7 @@ def test_prefix_probe_percent_compiled_select_no_double_escaping(dialect: str) -
     compiled = str(
         plan.query.compile(dialect=sa_dialect, compile_kwargs={"literal_binds": True})
     )
-    assert _COMPLIANCE_INLINE in compiled
+    assert compiled.startswith(_SELECT_COMPLIANCE_LEADING)
     quoted = re.findall(r'"(?:[^"]|"")*"|`(?:``|[^`])*`', compiled)
     col_tokens = [
         t[1:-1].replace('""', '"').replace("%%", "%").replace("``", "`") for t in quoted
