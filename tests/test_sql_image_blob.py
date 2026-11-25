@@ -314,3 +314,48 @@ def test_D2362_22_parallel_matches_serial(docs_db: Path, tmp_path: Path):
     s_rows, _, _, _ = db_s.get_findings("serial-img")
     p_rows, _, _, _ = db_p.get_findings("parallel-img")
     assert sig(s_rows) == sig(p_rows)
+
+
+_HOSTILE_SESSION = "sess-hostile-ident"
+
+
+def test_D2362_23_hostile_sqlite_identifiers_png_no_leak(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """E2E: quoted hostile table/column names, PNG prefix probe, no byte leak (D2362-21 pattern)."""
+    db_path = tmp_path / "hostile_ident.sqlite"
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute('CREATE TABLE "tb; order" ("pic sel" BLOB, notes TEXT)')
+        conn.execute(
+            'INSERT INTO "tb; order" ("pic sel", notes) VALUES (?, ?)',
+            (_PNG, "notas operacionais"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    audit = tmp_path / "audit_hostile.db"
+    db = LocalDBManager(str(audit))
+    db.set_current_session_id(_HOSTILE_SESSION)
+    target = {
+        "type": "database",
+        "driver": "sqlite",
+        "database": str(db_path),
+        "name": "HostileIdentSQLite",
+    }
+    det = {"image_blob": {"enabled": True, "sampling_rows": 3}}
+    caplog.set_level(logging.DEBUG)
+    sql_conn = SQLConnector(
+        target, _LowScanner(), db, sample_limit=5, detection_config=det
+    )
+    sql_conn.run()
+    rows, _, _, _ = db.get_findings(_HOSTILE_SESSION)
+    imgs = _image_rows(rows)
+    assert imgs, "expected IMAGE_* finding for hostile BLOB column"
+    assert any((r.get("pattern_detected") or "").startswith("IMAGE_") for r in imgs)
+    leak = caplog.text + str(db.get_findings(_HOSTILE_SESSION))
+    assert "ffd8ff" not in leak.lower()
+    assert "%PDF" not in leak
+    assert _PNG_B64[:32] not in leak
+    assert _PNG[:8].hex() not in leak.lower()

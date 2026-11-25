@@ -1,5 +1,8 @@
 """Tests for SQL column sampling helpers (non-null filter, env cap, dialect SQL shape)."""
 
+import re
+
+import pytest
 from sqlalchemy.sql.elements import quoted_name
 
 from connectors.sql_sampling import (
@@ -7,6 +10,9 @@ from connectors.sql_sampling import (
     SamplingManager,
     SqlColumnSampleQueryBuilder,
     TableSamplingMetadata,
+    _ansi_quoted_table,
+    _mysql_table_ref,
+    _oracle_table_ref,
     column_sample_sql_for_cursor,
     oracle_sql_identifier,
     resolve_sql_sample_limit,
@@ -416,8 +422,6 @@ def test_d2362_11_quoted_identifiers_match_column_sample():
 
 
 def test_d2362_12_duckdb_not_supported():
-    import pytest
-
     # D2362-12
     assert supports_prefix_probe("duckdb") is False
     with pytest.raises(ValueError, match="prefix probe not supported"):
@@ -486,3 +490,127 @@ def test_d2362_12b_oracle_lob_and_raw_labels():
     )
     assert p_raw.strategy_label == "prefix_probe_oracle_raw"
     assert "DBMS_LOB.SUBSTR" not in _sql_body(p_raw)
+
+
+def _unquoted_sql_fragments(sql: str) -> str:
+    """Remove dialect-quoted identifiers so hostile names cannot hide in literals."""
+    s = sql
+    s = re.sub(r'"(?:[^"]|"")*"', " ", s)
+    s = re.sub(r"`(?:``|[^`])*`", " ", s)
+    return s
+
+
+def _where_col_token(body: str, dialect: str) -> str:
+    d = dialect.lower()
+    pat_is_null = r'WHERE ("(?:[^"]|"")+"|\S+) IS NOT NULL'
+    if d in ("mysql", "mariadb"):
+        m = re.search(r"WHERE (`(?:``|[^`])+`) IS NOT NULL", body, re.IGNORECASE)
+        assert m, f"no WHERE col token in: {body!r}"
+        return m.group(1)
+    if d == "oracle":
+        matches = list(re.finditer(pat_is_null, body, re.IGNORECASE))
+        assert matches, f"no WHERE col token in: {body!r}"
+        return matches[0].group(1)
+    m = re.search(r'WHERE ("(?:[^"]|"")+") IS NOT NULL', body, re.IGNORECASE)
+    assert m, f"no WHERE col token in: {body!r}"
+    return m.group(1)
+
+
+def _expected_table_ref(
+    dialect: str,
+    *,
+    safe_schema: str,
+    safe_table: str,
+    schema: str | None,
+    table_raw: str,
+) -> str:
+    if dialect in ("mysql", "mariadb"):
+        return _mysql_table_ref(safe_schema, safe_table, schema)
+    if dialect == "oracle":
+        schema_key = schema or safe_schema
+        return _oracle_table_ref(schema_key, table_raw, schema)
+    return _ansi_quoted_table(safe_schema, safe_table, schema)
+
+
+def _oracle_kwargs(col_raw: str, table_raw: str, schema: str) -> dict:
+    return {
+        "raw_col": col_raw,
+        "raw_table": table_raw,
+        "raw_schema": schema,
+    }
+
+
+_PREFIX_HOSTILE_DIALECTS = (
+    "sqlite",
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "mssql",
+    "oracle",
+)
+
+_PREFIX_HOSTILE_IDENTIFIERS = (
+    ('a"b', "t1"),
+    ("a'b", "t2"),
+    ("a;b", "t3"),
+    ("col space", "tb space"),
+    ("select", "order"),
+    ("SeLeCt", "TbLe"),
+)
+
+
+@pytest.mark.parametrize("dialect", _PREFIX_HOSTILE_DIALECTS)
+@pytest.mark.parametrize("col_raw,table_raw", _PREFIX_HOSTILE_IDENTIFIERS)
+def test_d2362_prefix_probe_hostile_identifiers_match_sampler(
+    dialect: str, col_raw: str, table_raw: str
+):
+    # Prefix-read SQL must quote identifiers like build_column_sample (no raw splice).
+    schema = "pub" if dialect != "sqlite" else None
+    safe_col = col_raw.replace('"', '""')
+    safe_table = table_raw.replace('"', '""')
+    safe_schema = (schema or "").replace('"', '""')
+    extra = (
+        _oracle_kwargs(col_raw, table_raw, schema or "") if dialect == "oracle" else {}
+    )
+    pref = SamplingManager.build_column_prefix_sample(
+        dialect,
+        safe_col=safe_col,
+        safe_table=safe_table,
+        safe_schema=safe_schema,
+        schema=schema,
+        limit=4,
+        prefix_bytes=32,
+        **extra,
+    )
+    full = SamplingManager.build_column_sample(
+        dialect,
+        safe_col=safe_col,
+        safe_table=safe_table,
+        safe_schema=safe_schema,
+        schema=schema,
+        limit=4,
+        **extra,
+    )
+    body_pref = _sql_body(pref)
+    body_full = _sql_body(full)
+    assert _where_col_token(body_pref, dialect) == _where_col_token(body_full, dialect)
+    tref = _expected_table_ref(
+        dialect,
+        safe_schema=safe_schema,
+        safe_table=safe_table,
+        schema=schema,
+        table_raw=table_raw,
+    )
+    assert tref in body_pref
+    assert tref in body_full
+    if dialect == "oracle":
+        col_ref = oracle_sql_identifier(col_raw)
+        assert col_ref in body_pref
+        assert col_ref in body_full
+    unq = _unquoted_sql_fragments(body_pref)
+    assert col_raw not in unq
+    assert table_raw not in unq
+    if dialect == "sqlite":
+        assert (
+            f'substr("{safe_col}"' in body_pref or f'substr("{safe_col}",' in body_pref
+        )
