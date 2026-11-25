@@ -3,6 +3,9 @@
 import re
 
 import pytest
+from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_mock_engine
+from sqlalchemy.dialects import oracle as sa_oracle
 from sqlalchemy.sql.elements import quoted_name
 
 from connectors.sql_sampling import (
@@ -15,6 +18,7 @@ from connectors.sql_sampling import (
     _oracle_table_ref,
     column_sample_sql_for_cursor,
     compile_column_sample_plan_sql,
+    execute_column_sample_plan,
     oracle_sql_identifier,
     resolve_sql_sample_limit,
     resolve_statement_timeout_ms_for_sampling,
@@ -478,7 +482,9 @@ def test_d2362_12_prefix_probe_mssql_oracle():
         prefix_bytes=64,
     )
     body_ora = _sql_body(p_ora)
-    assert "ROWNUM <= :lim" in body_ora or "ROWNUM <= " in body_ora
+    assert "ROWNUM <= :lim" in body_ora
+    compiled_ora = p_ora.query.compile(dialect=sa_oracle.dialect())
+    assert compiled_ora.params["lim"] == 5
 
 
 def test_d2362_12b_oracle_lob_and_raw_labels():
@@ -509,6 +515,14 @@ def test_d2362_12b_oracle_lob_and_raw_labels():
     body_raw = _sql_body(p_raw)
     assert "UTL_RAW.SUBSTR" in body_raw
     assert "LEAST(UTL_RAW.LENGTH(" in body_raw.upper()
+    compiled_raw = p_raw.query.compile(dialect=sa_oracle.dialect())
+    raw_sql = " ".join(str(compiled_raw).split())
+    assert re.search(
+        r"LEAST\s*\(\s*UTL_RAW\.LENGTH\s*\([^)]+\)\s*,\s*:prefix_bytes\s*\)",
+        raw_sql,
+        re.IGNORECASE,
+    )
+    assert compiled_raw.params["prefix_bytes"] == 64
 
 
 def _unquoted_sql_fragments(sql: str) -> str:
@@ -559,6 +573,90 @@ def _oracle_kwargs(col_raw: str, table_raw: str, schema: str) -> dict:
     }
 
 
+_PREFIX_PROBE_DRIVER_DIALECT_URLS: dict[str, str] = {
+    "sqlite": "sqlite+pysqlite://",
+    "postgresql": "postgresql+psycopg2://",
+    "mysql": "mysql+pymysql://",
+    "mssql": "mssql+pyodbc://",
+    "oracle": "oracle+cx_oracle://",
+}
+
+
+def _build_min_prefix_plan(dialect: str):
+    schema = "pub" if dialect != "sqlite" else None
+    kw: dict = {}
+    if dialect == "oracle":
+        kw = _oracle_kwargs("C", "T", schema or "S")
+    return SamplingManager.build_column_prefix_sample(
+        dialect,
+        safe_col="c",
+        safe_table="t",
+        safe_schema=(schema or "").replace('"', '""'),
+        schema=schema,
+        limit=3,
+        prefix_bytes=16,
+        **kw,
+    )
+
+
+def _driver_sql_from_mock_execute(plan, dialect: str) -> str:
+    """Capture the SQL string SQLAlchemy would send to the DBAPI (no live server)."""
+    captured: list[str] = []
+
+    def _record(sql, *_args, **_kwargs) -> None:
+        captured.append(str(sql))
+
+    url = _PREFIX_PROBE_DRIVER_DIALECT_URLS[dialect]
+    engine = create_mock_engine(url, executor=_record)
+    conn = engine.connect()
+    try:
+        execute_column_sample_plan(conn, plan)
+    finally:
+        conn.close()
+    assert captured, f"no driver SQL recorded for {dialect}"
+    return captured[0]
+
+
+def _driver_sql_sqlite_real(plan) -> str:
+    captured: list[str] = []
+    engine = create_engine("sqlite:///:memory:")
+
+    def _capture_bound(_conn, _cursor, statement, parameters, _context, _executemany):
+        captured.append(statement)
+        return statement, parameters
+
+    event.listen(engine, "before_cursor_execute", _capture_bound, retval=True)
+    conn = engine.connect()
+    try:
+        conn.execute(text("CREATE TABLE t (c TEXT)"))
+        conn.execute(text("INSERT INTO t (c) VALUES ('xy')"))
+        execute_column_sample_plan(conn, plan)
+    finally:
+        event.remove(engine, "before_cursor_execute", _capture_bound)
+        conn.close()
+        engine.dispose()
+    assert captured
+    return captured[-1]
+
+
+_COMPLIANCE_LABEL = "-- Data Boar Compliance Scan"
+
+
+@pytest.mark.parametrize("dialect", tuple(_PREFIX_PROBE_DRIVER_DIALECT_URLS))
+def test_prefix_probe_driver_sql_includes_compliance_label(dialect: str) -> None:
+    """#2373 B4: compliance leading comment must reach the DBAPI statement, not only audit compile."""
+    plan = _build_min_prefix_plan(dialect)
+    driver_sql = _driver_sql_from_mock_execute(plan, dialect)
+    assert driver_sql.lstrip().startswith(_COMPLIANCE_LABEL)
+
+
+def test_prefix_probe_sqlite_driver_sql_includes_compliance_label() -> None:
+    """#2373 B4: same contract on a real in-memory SQLite cursor."""
+    plan = _build_min_prefix_plan("sqlite")
+    driver_sql = _driver_sql_sqlite_real(plan)
+    assert driver_sql.lstrip().startswith(_COMPLIANCE_LABEL)
+
+
 _PREFIX_HOSTILE_DIALECTS = (
     "sqlite",
     "postgresql",
@@ -581,24 +679,40 @@ _PREFIX_HOSTILE_IDENTIFIERS = (
 )
 
 
-@pytest.mark.parametrize(
-    "dialect", ("postgresql", "mysql", "mariadb", "mssql", "sqlite")
-)
-def test_prefix_probe_percent_column_no_double_escaping(dialect: str):
-    """#2373 B2: DBAPI SQL must reference a%b once (not compile→text() doubling)."""
-    safe_col = "a%b"
+@pytest.mark.parametrize("dialect", ("postgresql", "mysql", "mariadb", "mssql"))
+def test_prefix_probe_percent_column_driver_sql_no_double_escaping(
+    dialect: str,
+) -> None:
+    """#2373 S5: percent in column name must reach the driver once (mock DBAPI capture)."""
+    schema = "pub"
     plan = SamplingManager.build_column_prefix_sample(
         dialect,
-        safe_col=safe_col,
+        safe_col="a%b",
         safe_table="t",
-        safe_schema="pub",
-        schema="pub" if dialect != "sqlite" else None,
+        safe_schema=schema,
+        schema=schema,
         limit=3,
         prefix_bytes=16,
     )
-    sql = compile_column_sample_plan_sql(plan, dialect)
-    assert '"a%b"' in sql or "`a%b`" in sql or 'substr("a%b"' in sql
-    assert "a%%b" not in sql
+    driver_sql = _driver_sql_from_mock_execute(plan, dialect)
+    assert "a%b" in driver_sql
+    assert "a%%b" not in driver_sql
+
+
+def test_prefix_probe_percent_column_sqlite_driver_sql_no_double_escaping() -> None:
+    """#2373 S5: SQLite in-memory driver statement for ``a%b`` column."""
+    plan = SamplingManager.build_column_prefix_sample(
+        "sqlite",
+        safe_col="a%b",
+        safe_table="t",
+        safe_schema="",
+        schema=None,
+        limit=3,
+        prefix_bytes=16,
+    )
+    driver_sql = _driver_sql_sqlite_real(plan)
+    assert "a%b" in driver_sql
+    assert "a%%b" not in driver_sql
 
 
 @pytest.mark.parametrize("dialect", _PREFIX_HOSTILE_DIALECTS)
