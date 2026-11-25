@@ -17,6 +17,12 @@ from core.integrity_anchor import (
     reset_integrity_anchor_for_tests,
     resolve_critical_modules,
 )
+from tests.integrity_persistence_criterion import (
+    imports_legacy_db,
+    is_persistence_source,
+    runtime_modules_importing_legacy_db,
+    runtime_persistence_modules,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,7 +30,10 @@ _TAMPER_CLASS_PATHS = (
     "connectors/sql_connector.py",
     "core/licensing/verify.py",
     "connectors/sql_sampling.py",
+    "core/database.py",
 )
+
+_PERSISTENCE_MODULE = "core/database.py"
 
 
 @pytest.fixture(autouse=True)
@@ -120,3 +129,58 @@ def test_validate_config_emits_runtime_trust_line(tmp_path):
     assert r.returncode == 0, r.stderr + r.stdout
     assert "runtime-trust:" in r.stdout
     assert "Validating config:" in r.stdout
+
+
+# --- #2253: the scan persistence module is covered by the signed manifest ---------------------
+
+
+def test_d2253_1_persistence_module_is_in_the_signed_list():
+    """D2253-1: the module is listed and hashed (never 'missing')."""
+    assert _PERSISTENCE_MODULE in CRITICAL_MODULES
+    hashes = compute_module_hashes()
+    assert _PERSISTENCE_MODULE in hashes
+    assert hashes[_PERSISTENCE_MODULE] != "missing"
+
+
+def test_d2253_2_change_in_the_persistence_module_is_tampered(tmp_path, monkeypatch):
+    """D2253-2: a change in the module makes the signed manifest report tampered.
+
+    The key must already be in the computed hashes before the mutation: the
+    test must not pass by adding a key the manifest never had.
+    """
+    cfg = _cfg(tmp_path)
+    ensure_integrity_anchor(cfg)
+    drifted = compute_module_hashes()
+    assert _PERSISTENCE_MODULE in drifted
+    drifted[_PERSISTENCE_MODULE] = "0" * 64
+    monkeypatch.setattr("core.integrity_anchor.compute_module_hashes", lambda: drifted)
+    reset_integrity_anchor_for_tests()
+    snap = ensure_integrity_anchor(cfg)
+    assert snap["integrity_state"] == "tampered"
+    assert _PERSISTENCE_MODULE in snap["mismatched_files"]
+    assert alpha_version_suffix() == "-alpha"
+
+
+def test_d2253_3_every_runtime_persistence_module_is_signed():
+    """D2253-3: the criterion finds no persistence module outside the signed list,
+    and no runtime module imports the legacy ``db`` package."""
+    found = runtime_persistence_modules(_REPO_ROOT)
+    assert found, "the criterion found no persistence module at all"
+    assert found <= set(CRITICAL_MODULES), sorted(found - set(CRITICAL_MODULES))
+    assert runtime_modules_importing_legacy_db(_REPO_ROOT) == set()
+
+
+def test_d2253_4_criterion_classifies_tables_and_writers():
+    """D2253-4: self-test of the criterion on synthetic sources."""
+    assert is_persistence_source('class X:\n    __tablename__ = "t"\n') is True
+    assert is_persistence_source('class X:\n    __tablename__: str = "t"\n') is True
+    assert is_persistence_source("def save_failure(a, b, c):\n    pass\n") is True
+    assert (
+        is_persistence_source("class M:\n    def save_finding(self):\n        pass\n")
+        is True
+    )
+    assert is_persistence_source("def save(a):\n    pass\n") is False
+    assert is_persistence_source('TABLE = "__tablename__"\n') is False
+    assert imports_legacy_db("import db\n") is True
+    assert imports_legacy_db("from db.database import X\n") is True
+    assert imports_legacy_db("from core.db_utils import X\nimport dbm\n") is False
