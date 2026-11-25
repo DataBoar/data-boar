@@ -31,12 +31,12 @@ The signing key may be stored as an AES-encrypted PKCS#8 PEM. The issuer
    export DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD='your-passphrase'
    ```
 
-2. **Interactive prompt** — in a TTY with no env var set, the issuer asks
-   `License signing key passphrase:` and reads it without echo.
+2. **Interactive prompt** — in a TTY **without** the env var set, the issuer asks
+   `License signing key passphrase:` and reads it without echo. **If there is no
+   TTY (e.g. piped stdin), the issuer exits with code 1** — this is why the TTY
+   check must come *before* `getpass`. An encrypted key with neither the env var
+   nor a TTY exits with an actionable message (code 1) — never a raw traceback.
 3. **Unencrypted key** — no passphrase needed (backward-compatible).
-
-An encrypted key with neither the env var nor a TTY exits with an actionable
-message (never a raw traceback).
 
 ## 2. Issue a license for THIS machine
 
