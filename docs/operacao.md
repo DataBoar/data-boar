@@ -4,7 +4,8 @@ Modo: supervisionado
 Desde: 2026-11-11
 Decidido por: usuario
 Duelo: não
-Dev externo: opencode (plano B: pi) — só nas tarefas #2264 (ocultar Bearer e URLs pré-autenticadas nos logs) e #2270 (sugestões S1 a S8 da revisão), depois do desenho do arquiteto e dos testes do QA; a 2206.10 e as demais seguem com o backend-dev-senior. Codex ou Hermes só leitura, como segunda opinião. Cursor segue eventual: só em tarefa crítica (o PM propõe com justificativa escrita na issue; o operador confirma) ou quando o autor pedir. Ordem do operador de 2026-11-18.
+Dev externo: opencode (plano B: pi) — em tudo o que der para ir por harness externo, inclusive a fila do v1.8.1 (ordem do operador de 2026-11-26: "é para ir pelo harness ext como tudo o q der"). Nas tarefas #2264 e #2270, depois do desenho do arquiteto e dos testes do QA. Cursor segue eventual: só em tarefa crítica (o PM propõe com justificativa escrita na issue; o operador confirma) ou quando o autor pedir. Todo patch de dev externo passa, antes do merge, por uma segunda opinião somente leitura de um harness diferente do que escreveu (hoje, em geral, o Hermes).
+Harness por papel: todos os papéis (arquiteto, QA, devs, revisor, cyber, documentador e os demais) são agnósticos de harness e podem ir por opencode, Cursor, codex, agy, grok, pi, zero ou outro, à escolha do operador (ordem de 2026-11-26). Só o adversarial está combinado com o Hermes, para dar diversidade, e o operador pode mudar isso também. Quem audita ou revisa segue somente leitura.
 Pausa: não
 
 Este arquivo é a fonte do modo do projeto: uma sessão nova do PM lê **este** arquivo no `main`, não a memória. Só o operador muda o modo ("desliga o modo supervisionado") e só ele muda a linha `Dev externo`.
