@@ -15,8 +15,10 @@ Este arquivo é a fonte do modo do projeto: uma sessão nova do PM lê **este** 
 - **Push e abertura de PR** seguem a ordem do operador; o PM mostra o escopo antes de empurrar, quando o tema é novo.
 - **Uma PR épica por tema**, com `Closes #N` (uma palavra-chave por linha). `Refs` só quando fechar a issue for de fato impossível, com a linha "Why not Closes". Cada PR reroda o pipeline inteiro: agrupar o trabalho de um tema numa PR só.
 - **Commits assinados (SSH)**, sem `Co-Authored-By` nem trailer de sessão de ferramenta (os hooks do repo recusam). `scripts/check-all.sh` verde, lido pela linha `CHECK_ALL_EXIT`, antes de qualquer push.
-- **Arquivos de gate** (`.github/workflows/**`, `.github/actions/**`, `scripts/gate_*`, `.pre-commit-config.yaml`) só em PR dedicada, por último, e com o selo do operador. O fluxo está na skill `pedir-selo`: ensaio `attest-kombi <PR> -r <worktree> -n`, comando colado na janela `selos:<repo>` do tmux sem Enter, aviso por todos os canais. O PM nunca roda o selo de verdade e **não faz push depois do pedido** (invalida o selo). O check `SSHSIG attestation when gated` só reavalia em abrir, sincronizar, reabrir ou mudar rótulo: depois do selo, um `gh run rerun` do workflow de atestação resolve, sem push.
-- **Worktrees fora do `/tmp`** (que é memória): `~/Projects/dev/data-boar-wt-<tema>`. O clone principal é read-only para o PM: `git fetch` e leitura, nunca `reset`, `pull` ou commit.
+- **Arquivos de gate** (`.github/workflows/**`, `.github/actions/**`, `scripts/gate_*`, `.pre-commit-config.yaml`) só em PR dedicada, por último, e com o selo do operador. O fluxo está na skill `pedir-selo`: ensaio `attest-kombi <PR> -n` com o clone canônico limpo no branch da PR, comando colado na janela `selos:<repo>` do tmux sem Enter, aviso por todos os canais. O PM nunca roda o selo de verdade e **não faz push depois do pedido** (invalida o selo). O check `SSHSIG attestation when gated` só reavalia em abrir, sincronizar, reabrir ou mudar rótulo: depois do selo, um `gh run rerun` do workflow de atestação resolve, sem push.
+- **NUNCA worktree, e nunca cópia ou clone do repositório** (ordem do operador, 19 e 24/nov/2026), em nenhuma pasta. Vale para o PM, subagentes, revisores e devs externos, inclusive o `--worktree`/`-w` de qualquer harness, e vence qualquer skill ou documento que mande o contrário. O trabalho é feito num **branch** no clone canônico (`git switch -c <branch>`); para trocar de branch, a árvore fica limpa antes (commit no branch). Um agente por branch. Antes de trocar o branch, confira que nenhum outro agente está usando o clone.
+- **Consolidar e agregar**: antes de criar arquivo, branch ou PR, procurar o que já existe e estender. `/tmp` é memória: só temporário pequeno, apagado por quem criou.
+- **Escrita no clone**: o PM tem escrita por ordem do operador (19/nov/2026), sob todas as regras deste arquivo. Nunca `reset --hard` nem descarte de trabalho alheio.
 - **Novas funcionalidades nascem Enterprise** (regra pública do projeto); só descem de tier por decisão do operador, com validação.
 - **Honestidade comercial**: evidência, não conclusão jurídica; nenhuma capacidade ou desempenho afirmado sem artefato. Este repositório é público: nenhum parceiro, cliente, preço, plano comercial ou vetor sob embargo entra em issue, PR, documento ou commit.
 - **Corrigir o que está errado, não só deixar verde**: sem correção frágil, sem teste flaky, sem relaxar uma verificação para passar.
@@ -39,7 +41,7 @@ Nenhuma bloqueia o fluxo; o PM segue com o que não depende delas.
 | Assunto | Situação |
 | --- | --- |
 | Alvo do delta de wheels do wheelhouse | Reconstruir para a tag `v1.8.0` ou para o `main`? Recomendação: a tag, pelo conjunto testado; reconstruir para o `main` quando a 1.8.1 for cortada |
-| Remoção de worktrees e branches já mesclados e dos stashes | Inventário feito, nada removido. Backup com `git bundle` antes de qualquer remoção |
+| Remoção de branches já mesclados e dos stashes | Inventário feito, nada removido. Backup com `git bundle` antes de qualquer remoção |
 | Branches antigos sem PR | O operador marca "PR" ou "descartar" |
 | Pins do dependabot desde o GA | Cerca de 40 mudaram no `main`; afeta o alvo do wheelhouse |
 
