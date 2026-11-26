@@ -1,6 +1,6 @@
 # Plano do projeto Data Boar
 
-**Atualizado:** 2026-11-18 (base: `origin/main` 87e169fa, após o merge da PR #2271)
+**Atualizado:** 2026-11-26 (só a fila do v1.8.1). O restante é de 2026-11-18 (base: `origin/main` 87e169fa, após o merge da PR #2271)
 **Fontes:** milestones e issues do GitHub (`DataBoar/data-boar`), `docs/plans/PLANS_TODO.md` e `docs/plans/PLAN_M365_GRAPH_CONNECTORS.md`.
 **Papel deste arquivo:** visão de gestão por entregável (milestone). O detalhe de cada plano técnico continua em `docs/plans/PLAN_*.md`, e `PLANS_TODO.md` segue como espelho de execução. Este arquivo não os substitui.
 
@@ -41,11 +41,30 @@ Legenda: [V] verificado (GitHub ou execução) · [H] hipótese ou não verifica
 
 Conferência: 249 + 31 + 10 + 467 = 757 fechadas; 303 + 11 + 1 = 315 abertas; total 1.072.
 
+## Fila atual do v1.8.1: recorte tático (26/nov/2026)
+
+Recorte operacional, subordinado a `docs/plans/PLANS_TODO.md` (fonte única de situação e sequência dos planos); se divergirem, vale o `PLANS_TODO` e este arquivo se corrige. A ordem abaixo ainda não foi confrontada linha a linha com ele. Estados conferidos no GitHub em 26/nov [V]: 33 issues fechadas e 34 abertas no v1.8.1 (49%; uma das abertas é a de registro, #2224). Os indicadores da seção 1 e as seções 2 a 6 seguem com a foto de 18/nov.
+
+| Ordem | Entrega | Issues e PRs | Estado | Quem |
+|---:|---|---|---|---|
+| 1 | Guia de integração (EN e pt-BR, linha 43) ainda diz que Azure Blob e GCS são Pro; são Enterprise. Conferir `docs/desenho/2306.md` e a ADR-0064. Na mesma PR: este plano, `operacao.md`, auditorias, visão e custos | #2306 (Refs) | Revisão pós-merge da #2381: corrigir | opencode; branch, commit e push com o operador |
+| 2 | Paridade do prefiltro: corrigir o estágio Rust sem estreitar o Python; teto de testes pulados sem subir; conferir 5 achados da segunda opinião | PR #2378 (#2186, #2246) | CI vermelho em `697e9a57` | opencode; Hermes revisa |
+| 3 | Correções de segurança (detalhe reservado): CI vermelho e revisão a refazer no SHA certo | PR #2379 (#2239, #2259, #2253) | CI vermelho em `cc287fa5` | opencode; Hermes revisa; merge do operador |
+| 4 | Dependências numa PR própria, com selo; Python 3.15 (#2314) vai para o v1.8.2 | PRs #2315 a #2318 | Não iniciada | operador autoriza |
+| 5 | Faxina de SMB, testes e CI; o que tocar gate vai em PR separada, com selo | #2238, #2305, #2249, #2267, #2295 | Não iniciada | opencode |
+| 6 | Invariantes do produto (P0); parte depende de decisão do operador | #2364 | Não iniciada | arquiteto, depois dev |
+| 7 | Limite por varredura; depois fechar o épico de object storage | #2313, #2306 | Não entregue | dev |
+| 8 | Empacotamento | #2189, #2156 | Não iniciada | dev |
+
+**Depois do v1.8.1:** autenticação do Azure (#2369, #2368), logo depois de a demo ir para a VPS (estado não conferido [H]); arquitetura #2366, #2367, #2365; #2371; PostgreSQL e pgvector (#1731, #1732, #1734) e #2297.
+
+**Decisões do operador em aberto:** tirar do v1.8.1 os itens de pesquisa, comerciais e de processo (#2321 a #2325, #2297 a #2299, #1731, #1732, #1734, #1446, #2140, #2303, #2276); destino de #2376, #2273 e #2183; repin do benchmark (#2186); subpacotes da #2185; alvo do delta do wheelhouse; branches e stashes antigos (backup antes de remover).
+
 ## 2. Épico em andamento: leitor Microsoft 365 via Graph (#2206, milestone v1.8.2)
 
 | ID | Entrega | Estado |
 |---|---|---|
-| 2206.0 (#2260) | Fase 0: prova real em modo delegado contra OneDrive pessoal | Provada na T14 e na VPS [V]; a issue ainda está aberta e deve ser fechada com a evidência |
+| 2206.0 (#2260) | Fase 0: prova real em modo delegado contra OneDrive pessoal | Provada na máquina de desenvolvimento e na VPS [V]; a issue ainda está aberta e deve ser fechada com a evidência |
 | 2206.1 (#2261) | Fase 1: leitor `sharepoint_online`, modo delegado, Enterprise | Concluída: PR #2265 mesclada em 17/nov [V] |
 | 2206.7 (#2269) | Correção do cache do token (só toca arquivo com marcador do Boar) | Concluída: PR #2271 mesclada em 18/nov [V] |
 | 2206.2 (#2262) | Fase 1c: app-only para tenant de trabalho | Desenho local (`design/m365-app-only`); decisões O-1 a O-7 do operador pendentes; sem prova real, por falta de tenant [H] |
@@ -105,7 +124,7 @@ Itens P1 abertos [V]:
 
 - O fluxo é supervisionado: só o operador mescla e sela; o `main` exige commit assinado e PR.
 - O app-only não tem prova real: depende de um tenant de trabalho [H].
-- O desempenho do pool de arquivos na VPS (1 vCPU) não mostra paralelismo de CPU; ensaiar no T14 [V].
+- O desempenho do pool de arquivos na VPS (1 vCPU) não mostra paralelismo de CPU; ensaiar na máquina de desenvolvimento [V].
 - `core/database.py` está fora do manifesto de integridade (#2253) e não deve ser alegado como coberto [V].
 
 ## 8. Perguntas ao cliente

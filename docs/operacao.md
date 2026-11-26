@@ -4,7 +4,8 @@ Modo: supervisionado
 Desde: 2026-11-11
 Decidido por: usuario
 Duelo: não
-Dev externo: opencode (plano B: pi) — só nas tarefas #2264 (ocultar Bearer e URLs pré-autenticadas nos logs) e #2270 (sugestões S1 a S8 da revisão), depois do desenho do arquiteto e dos testes do QA; a 2206.10 e as demais seguem com o backend-dev-senior. Codex ou Hermes só leitura, como segunda opinião. Cursor segue eventual: só em tarefa crítica (o PM propõe com justificativa escrita na issue; o operador confirma) ou quando o autor pedir. Ordem do operador de 2026-11-18.
+Dev externo: opencode (plano B: pi) — em tudo o que der para ir por harness externo, inclusive a fila do v1.8.1 (ordem do operador de 2026-11-26: "é para ir pelo harness ext como tudo o q der"). Nas tarefas #2264 e #2270, depois do desenho do arquiteto e dos testes do QA. Cursor segue eventual: só em tarefa crítica (o PM propõe com justificativa escrita na issue; o operador confirma) ou quando o autor pedir. Todo patch de dev externo passa, antes do merge, por uma segunda opinião somente leitura de um harness diferente do que escreveu (hoje, em geral, o Hermes).
+Harness por papel: todos os papéis (arquiteto, QA, devs, revisor, cyber, documentador e os demais) são agnósticos de harness e podem ir por opencode, Cursor, codex, agy, grok, pi, zero ou outro, à escolha do operador (ordem de 2026-11-26). Só o adversarial está combinado com o Hermes, para dar diversidade, e o operador pode mudar isso também. Quem audita ou revisa segue somente leitura.
 Pausa: não
 
 Este arquivo é a fonte do modo do projeto: uma sessão nova do PM lê **este** arquivo no `main`, não a memória. Só o operador muda o modo ("desliga o modo supervisionado") e só ele muda a linha `Dev externo`.
@@ -24,26 +25,28 @@ Este arquivo é a fonte do modo do projeto: uma sessão nova do PM lê **este** 
 - **Corrigir o que está errado, não só deixar verde**: sem correção frágil, sem teste flaky, sem relaxar uma verificação para passar.
 - **Não tocar** em PRs de outros agentes ou autores.
 
-## Estado do fluxo (2026-11-11)
+## Documentos: quem responde o quê
 
-| Item | Situação |
+| Documento | Responde |
 | --- | --- |
-| #2174 (badge do SBOM) | Selada; checks verdes. Falta o merge do operador |
-| #2219 (RoPA, SARIF/SIEM e hub multi-instância) | Aberta, CI verde. Merge do operador |
-| #2221 (wheel cp314t, diagnóstico e plano do wheelhouse) | Aberta; CI sendo corrigido |
-| #2220 (endurecimento do apt nos workflows) | Aberta; PR de gate dedicada, por último |
-| #2190, #2191, #2192 (dependabot de workflows) | Aguardam a decisão do operador: selar ou fechar |
+| `docs/plans/PLANS_TODO.md` (com `PLANS_HUB.md` e `PLAN_*.md`) | Estratégia, situação dos planos e sequência oficial do backlog (inglês) |
+| `docs/plano.md` | Tático e operacional: o que vem agora na versão corrente, em que ordem e com quem |
+| `docs/operacao.md` (este) | Como agir: modo, pausa, autorizações e regras; sem estado de tarefas |
+| `AGENTS.md` e `.cursor/rules/` | Contrato dos agentes, palavras de sessão e guardrails |
+| GitHub | Estado vivo de issues, PRs e CI; vence os documentos |
 
-## Decisões pendentes do operador
+## Skills por momento
 
-Nenhuma bloqueia o fluxo; o PM segue com o que não depende delas.
-
-| Assunto | Situação |
+| Momento | Skill |
 | --- | --- |
-| Alvo do delta de wheels do wheelhouse | Reconstruir para a tag `v1.8.0` ou para o `main`? Recomendação: a tag, pelo conjunto testado; reconstruir para o `main` quando a 1.8.1 for cortada |
-| Remoção de branches já mesclados e dos stashes | Inventário feito, nada removido. Backup com `git bundle` antes de qualquer remoção |
-| Branches antigos sem PR | O operador marca "PR" ou "descartar" |
-| Pins do dependabot desde o GA | Cerca de 40 mudaram no `main`; afeta o alvo do wheelhouse |
+| Abrir sessão, liberar tarefa, fechar rodada | `coordenar-fluxo` |
+| Plano, visão e perguntas ao cliente | `planejar` |
+| Dev externo | `operar-dev-externo` e `operar-opencode` |
+| Segunda opinião somente leitura | `operar-hermes` |
+| Revisão de código e de segurança | `revisar-pr`, `revisar-seguranca` |
+| Selo de arquivos de gate | `pedir-selo` |
+| Auditoria e acompanhamento | `auditar-projeto`, `acompanhar-projeto` |
+| Registro das passagens | `registrar-evento` |
 
 ## Custo
 
