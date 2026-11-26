@@ -1356,7 +1356,7 @@ O tipo `object_storage` usa **um driver por provedor**; os drivers entregues sã
     secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
 ```
 
-**Testado contra o Amazon S3 real em 2026-11-24** apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
+**Testado contra o Amazon S3 real em 2026-11-25** (sessão `882f4d7642da_20261125_172825`, ver [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)) apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
 
 ### Exemplo — Armazenamento de Blobs do Azure (driver: azure_blob)
 
@@ -1376,7 +1376,7 @@ Um SAS de container com somente leitura e listagem (`sp=rl`, `sr=c`) é a creden
 
 Menor privilégio: um SAS de container com apenas leitura (`r`) e listagem (`l`) basta para a varredura e é mais seguro que a chave da conta, pois não permite sobrescrever nem excluir dados quando assim restrito. O SAS deve usar somente HTTPS e ter data de expiração. Hoje só o SAS funciona. `account_key_from_env` (Shared Key) tem um defeito conhecido na assinatura, e a Azure recusa o acesso ([#2369](https://github.com/DataBoar/data-boar/issues/2369)); Entra ID ainda não é suportado ([#2368](https://github.com/DataBoar/data-boar/issues/2368)).
 
-**Testado contra o Azure Blob Storage real em 2026-11-24** apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
+**Testado contra o Azure Blob Storage real em 2026-11-25** (sessão `882f4d7642da_20261125_172825`, ver [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)) apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
 
 ### Exemplo — MinIO / endpoint compatível genérico (não testado contra appliances de fornecedor)
 
