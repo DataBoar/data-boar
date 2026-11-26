@@ -1356,7 +1356,7 @@ O tipo `object_storage` usa **um driver por provedor**; os drivers entregues sã
     secret_access_key_from_env: DATA_BOAR_S3_SECRET_ACCESS_KEY
 ```
 
-**Testado contra o Amazon S3 real em 2026-11-24** apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
+**Testado contra o Amazon S3 real em 2026-11-25** (sessão `882f4d7642da_20261125_172825`, ver [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)) apenas com dados sintéticos, usando um usuário IAM somente leitura cuja política permite `s3:ListBucket` restrito ao prefixo alvo e `s3:GetObject` em `<prefix>*`; com essa política o alvo **deve** definir `prefix:` (sem ela a AWS responde AccessDenied, o que vem da política, não do driver). Veja o exemplo de política de menor privilégio nesta seção (por volta da linha 1380). Valide na sua conta antes de produção.
 
 ### Exemplo — Armazenamento de Blobs do Azure (driver: azure_blob)
 
@@ -1376,7 +1376,7 @@ Um SAS de container com somente leitura e listagem (`sp=rl`, `sr=c`) é a creden
 
 Menor privilégio: um SAS de container com apenas leitura (`r`) e listagem (`l`) basta para a varredura e é mais seguro que a chave da conta, pois não permite sobrescrever nem excluir dados quando assim restrito. O SAS deve usar somente HTTPS e ter data de expiração. Hoje só o SAS funciona. `account_key_from_env` (Shared Key) tem um defeito conhecido na assinatura, e a Azure recusa o acesso ([#2369](https://github.com/DataBoar/data-boar/issues/2369)); Entra ID ainda não é suportado ([#2368](https://github.com/DataBoar/data-boar/issues/2368)).
 
-**Testado contra o Azure Blob Storage real em 2026-11-24** apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
+**Testado contra o Azure Blob Storage real em 2026-11-25** (sessão `882f4d7642da_20261125_172825`, ver [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)) apenas com dados sintéticos, usando SAS de container com `sp=rl`, `sr=c` e `spr=https` no container alvo. Defina `prefix:` quando o SAS ou o escopo de listagem exigir. Valide na sua conta antes de produção.
 
 ### Exemplo — MinIO / endpoint compatível genérico (não testado contra appliances de fornecedor)
 
@@ -1410,7 +1410,7 @@ Substitua `<ACCOUNT_ID>` pelo id da conta Cloudflare. **Não testado contra o Cl
 - **Cobertura parcial vs “sem achados”:** **Target coverage** pode mostrar `PARTIAL` com a planilha de achados vazia — isso **não** é atestado de higiene. Por padrão, **nomes de objetos não varridos** aparecem só como **contagens**; use `report_object_names: true` no alvo se precisar dos nomes na cobertura (achados sempre carregam o caminho do objeto quando há hit).
 - **LGPD / GDPR:** varrer um bucket do cliente processa **dados pessoais dele**. Base legal, finalidade, retenção e DPA continuam com o **cliente**; o Data Boar faz leitura e classificação técnicas.
 - **Postura de evidência:** os relatórios descrevem o que foi lido sob a sua config — **evidência para triagem, não conclusão jurídica** e sem proteção contra multa regulatória.
-- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3: prova do operador contra o serviço real em **2026-11-24** com usuário IAM somente leitura. Cloudflare R2 e MinIO: **não testados contra o serviço real**.
+- **Evidência:** o CI usa um S3 simulado. Prova do operador contra **SeaweedFS 4.54** (Podman, TLS) em **2026-11-20** com corpus sintético em [object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.pt_BR.md). Amazon S3: prova do operador contra o serviço real em **2026-11-25** (sessão `882f4d7642da_20261125_172825`, ver [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)) com usuário IAM somente leitura. Cloudflare R2 e MinIO: **não testados contra o serviço real**.
 
 ### IAM — menor privilégio (AWS)
 
@@ -1440,8 +1440,8 @@ Notas:
 - Sem `prefix` no alvo, omita o bloco `Condition` e use `arn:aws:s3:::<bucket>/*` em `GetObject`.
 - Objetos SSE-KMS exigem **`kms:Decrypt`** na CMK do bucket.
 - Nunca conceda **`s3:*`** genérico nem ações de escrita/exclusão para auditoria somente leitura.
-- **Cloudflare R2:** prefira token de API com escopo **Object Read** no bucket.
-- **MinIO:** política JSON equivalente no bucket ou usuário.
+- **Cloudflare R2:** prefira token de API com escopo **Object Read** no bucket. **Não testado contra o serviço real.**
+- **MinIO:** política JSON equivalente no bucket ou usuário. **Não testado contra o serviço real.**
 
 Semântica das ações IAM: [Actions, resources, and condition keys for Amazon S3](https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazons3.html) (documentação AWS; confira no console IAM da sua organização antes do deploy).
 

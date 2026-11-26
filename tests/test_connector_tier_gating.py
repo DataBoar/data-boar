@@ -48,6 +48,10 @@ def _clean_guard():
         ("connector_hubspot", Tier.PRO),
         ("connector_sharepoint", Tier.PRO),
         ("connector_dataverse", Tier.PRO),
+        # #2306/#2307 — cloud object storage
+        ("connector_s3_object_storage", Tier.ENTERPRISE),
+        ("connector_azure_blob", Tier.ENTERPRISE),
+        ("connector_gcs", Tier.ENTERPRISE),
         ("connector_webdav", Tier.PRO),
         ("connector_smb", Tier.PRO),
         ("connector_cifs", Tier.PRO),

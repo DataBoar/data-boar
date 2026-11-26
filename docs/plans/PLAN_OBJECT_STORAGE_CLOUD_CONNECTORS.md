@@ -1,8 +1,8 @@
 # Plan: Object storage connectors (S3-class, Azure Blob, GCS)
 
-<!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob and GCS later as drivers; Enterprise tier. -->
+<!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob delivered with container SAS; GCS later as driver; Enterprise tier. -->
 
-**Status:** In progress (Phase 1, S3 and S3-compatible read connector, merged on `main` by PR [#2350](https://github.com/DataBoar/data-boar/pull/2350) on 2026-11-22; Phase 2, Azure Blob, in design: [#2307](https://github.com/DataBoar/data-boar/issues/2307); GCS not started)
+**Status:** In progress (Phase 1, S3 and S3-compatible read connector, merged on `main` by PR [#2350](https://github.com/DataBoar/data-boar/pull/2350) on 2026-11-22; Phase 2, Azure Blob driver `azure_blob` with container SAS **delivered** ([#2307](https://github.com/DataBoar/data-boar/issues/2307)); Entra ID ([#2368](https://github.com/DataBoar/data-boar/issues/2368)) and Shared Key ([#2369](https://github.com/DataBoar/data-boar/issues/2369)) pending; GCS not started)
 **Date:** 2026-03-26
 **Authors:** Fabio Leitao
 **Priority:** H2
@@ -43,7 +43,7 @@ S3-compatible was delivered in Phase 1 (#2306, PR #2350).
 | #   | To-do                                                                                                                   | Status    |
 | -   | -----                                                                                                                   | ------    |
 | 2.1 | Validate **MinIO** / custom `endpoint_url` + path-style vs virtual-hosted; document quirks. **Pending: MinIO image repos no longer public, upstream archived (source-only); local proof done with SeaweedFS 4.54 (see ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md).** | ⬜ Pending |
-| 2.2 | **Azure Blob:** `driver: azure_blob`, connection string or managed identity story (research); same finding shape as S3. | ⬜ Pending |
+| 2.2 | **Azure Blob:** `driver: azure_blob` with container SAS **delivered** ([#2307](https://github.com/DataBoar/data-boar/issues/2307)); Entra ID ([#2368](https://github.com/DataBoar/data-boar/issues/2368)) and Shared Key ([#2369](https://github.com/DataBoar/data-boar/issues/2369)) pending. | ✅ SAS / ⬜ Entra ID / ⬜ Shared Key |
 
 ### Phase 3 — **Google Cloud Storage**
 
@@ -64,7 +64,7 @@ S3-compatible was delivered in Phase 1 (#2306, PR #2350).
 
 ## Pitch / README
 
-**S3-class object storage** is in the README “data soup” paragraph on epic branch (**#2306**); after local **SeaweedFS 4.54** evidence ([#2312](https://github.com/DataBoar/data-boar/issues/2312)), README polish may cite that proof while **Amazon S3 / R2 / MinIO appliance** stay “not tested against the real service”. Trim “not implemented” rows in [PLANS_TODO.md](PLANS_TODO.md) when the epic PR merges.
+**S3-class object storage** is in the README "data soup" paragraph on epic branch (**#2306**); after local **SeaweedFS 4.54** evidence ([#2312](https://github.com/DataBoar/data-boar/issues/2312)) and **real Amazon S3 proof** on **2026-11-25** (session `882f4d7642da_20261125_172825`, see [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)), README polish may cite those proofs while **R2 / MinIO appliance** stay "not tested against the real service". Trim "not implemented" rows in [PLANS_TODO.md](PLANS_TODO.md) when the epic PR merges.
 
 ---
 
