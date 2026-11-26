@@ -24,26 +24,28 @@ Este arquivo é a fonte do modo do projeto: uma sessão nova do PM lê **este** 
 - **Corrigir o que está errado, não só deixar verde**: sem correção frágil, sem teste flaky, sem relaxar uma verificação para passar.
 - **Não tocar** em PRs de outros agentes ou autores.
 
-## Estado do fluxo (2026-11-11)
+## Documentos: quem responde o quê
 
-| Item | Situação |
+| Documento | Responde |
 | --- | --- |
-| #2174 (badge do SBOM) | Selada; checks verdes. Falta o merge do operador |
-| #2219 (RoPA, SARIF/SIEM e hub multi-instância) | Aberta, CI verde. Merge do operador |
-| #2221 (wheel cp314t, diagnóstico e plano do wheelhouse) | Aberta; CI sendo corrigido |
-| #2220 (endurecimento do apt nos workflows) | Aberta; PR de gate dedicada, por último |
-| #2190, #2191, #2192 (dependabot de workflows) | Aguardam a decisão do operador: selar ou fechar |
+| `docs/plans/PLANS_TODO.md` (com `PLANS_HUB.md` e `PLAN_*.md`) | Estratégia, situação dos planos e sequência oficial do backlog (inglês) |
+| `docs/plano.md` | Tático e operacional: o que vem agora na versão corrente, em que ordem e com quem |
+| `docs/operacao.md` (este) | Como agir: modo, pausa, autorizações e regras; sem estado de tarefas |
+| `AGENTS.md` e `.cursor/rules/` | Contrato dos agentes, palavras de sessão e guardrails |
+| GitHub | Estado vivo de issues, PRs e CI; vence os documentos |
 
-## Decisões pendentes do operador
+## Skills por momento
 
-Nenhuma bloqueia o fluxo; o PM segue com o que não depende delas.
-
-| Assunto | Situação |
+| Momento | Skill |
 | --- | --- |
-| Alvo do delta de wheels do wheelhouse | Reconstruir para a tag `v1.8.0` ou para o `main`? Recomendação: a tag, pelo conjunto testado; reconstruir para o `main` quando a 1.8.1 for cortada |
-| Remoção de branches já mesclados e dos stashes | Inventário feito, nada removido. Backup com `git bundle` antes de qualquer remoção |
-| Branches antigos sem PR | O operador marca "PR" ou "descartar" |
-| Pins do dependabot desde o GA | Cerca de 40 mudaram no `main`; afeta o alvo do wheelhouse |
+| Abrir sessão, liberar tarefa, fechar rodada | `coordenar-fluxo` |
+| Plano, visão e perguntas ao cliente | `planejar` |
+| Dev externo | `operar-dev-externo` e `operar-opencode` |
+| Segunda opinião somente leitura | `operar-hermes` |
+| Revisão de código e de segurança | `revisar-pr`, `revisar-seguranca` |
+| Selo de arquivos de gate | `pedir-selo` |
+| Auditoria e acompanhamento | `auditar-projeto`, `acompanhar-projeto` |
+| Registro das passagens | `registrar-evento` |
 
 ## Custo
 
