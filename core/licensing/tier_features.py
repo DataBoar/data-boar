@@ -14,10 +14,11 @@ STRATEGY (internal — not yet public):
 CONNECTOR BOUNDARY (operator decision, ratified 2026-06-11 — #843):
   Open-core stays useful: filesystem, self-hosted SQL/NoSQL (sqlite/postgres/
   mysql/mongo/redis), compressed files, and the generic REST connector are
-  Community. The gate bites only on MANAGED CORPORATE infrastructure:
-  PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle (plus
-  the cloud connectors already mapped: Snowflake, SAP, S3, Azure Blob, GCS)
-  are Pro. Gating only bites in licensing.mode: enforced — Tier.OPEN
+  Community. The gate bites only on MANAGED CORPORATE infrastructure.
+  PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle,
+  Snowflake and SAP are Pro. S3, S3-compatible storage (#2306), Azure Blob
+  (#2307) and GCS are Enterprise.
+  Gating only bites in licensing.mode: enforced — Tier.OPEN
   (enforcement off) stays free for dev and lab.
 
 Do NOT expose tier names or pricing publicly until branding decision is made.
@@ -96,7 +97,7 @@ FEATURE_TIER_MAP: dict[str, Tier] = {
     "connector_s3_object_storage": Tier.ENTERPRISE,
     "connector_s3_compatible": Tier.ENTERPRISE,
     "connector_azure_blob": Tier.ENTERPRISE,
-    "connector_gcs": Tier.PRO,
+    "connector_gcs": Tier.ENTERPRISE,
     # Managed corporate infrastructure connectors (#843 boundary)
     "connector_powerbi": Tier.PRO,
     "connector_hubspot": Tier.PRO,  # managed SaaS CRM (#1229)

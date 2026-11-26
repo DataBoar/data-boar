@@ -16,7 +16,7 @@
 ## Context
 
 The `FEATURE_TIER_MAP` (`core/licensing/tier_features.py`) tiered some cloud
-connectors (Snowflake/SAP = Pro; S3 and S3-compatible object storage = Enterprise per #2306; Azure Blob = Enterprise per #2307; GCS Pro-reserved), but the implemented corporate
+connectors (Snowflake/SAP = Pro; S3 and S3-compatible object storage = Enterprise per #2306; Azure Blob = Enterprise per #2307; GCS Enterprise), but the implemented corporate
 connectors stayed OUT of the map — de facto free in open-core: PowerBI,
 SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle. Worse, the
 connector registry did not call `require_feature` at instantiation, so there
@@ -28,7 +28,7 @@ route level only).
 | Tier | Connectors |
 | ---- | ---------- |
 | **Open-core** | filesystem · self-hosted SQL/NoSQL (sqlite/pg/mysql/mongo/redis) · compressed · generic REST |
-| **Pro** | PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle + Snowflake/SAP/GCS |
+| **Pro** | PowerBI, SharePoint, Dataverse, WebDAV, SMB/CIFS, NFS, MSSQL, Oracle + Snowflake/SAP |
 | **Enterprise** | plugin/partner remediation · CMDB connectors · findings-sink to corp DB · scheduled-scan UI · S3 and S3-compatible object storage (#2306) · Azure Blob (#2307) |
 
 Principles (non-negotiable): open-core stays useful (never gate "scan your
