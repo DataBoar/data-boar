@@ -1260,7 +1260,7 @@ Replace `<ACCOUNT_ID>` with your Cloudflare account id. **Not tested against the
 - **Partial coverage vs “no findings”:** **Target coverage** can show `PARTIAL` even when the findings sheet is empty — that is not a clean bill of health. By default, **unscanned object names** appear only as **counts** in coverage output; set `report_object_names: true` on the target when you need names in the coverage sheet (findings always carry the object path for hits).
 - **LGPD / GDPR:** scanning a customer bucket processes **their** personal data. Lawful basis, purpose limitation, retention, and DPA terms stay with the **customer**; Data Boar performs technical read and classification only.
 - **Evidence posture:** reports describe what was read under your config — **evidence for triage, not a legal conclusion** and not protection against regulatory fines.
-- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3: operator proof against real service on **2026-11-24** with read-only IAM user. Cloudflare R2 and MinIO: **not tested against the real service**.
+- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3: operator proof against real service on **2026-11-25** (session `882f4d7642da_20261125_172825`, see [#2312](https://github.com/DataBoar/data-boar/issues/2312#issuecomment-7177171006)) with read-only IAM user. Cloudflare R2 and MinIO: **not tested against the real service**.
 
 ### IAM — least privilege (AWS)
 
@@ -1290,8 +1290,8 @@ Notes:
 - Without a `prefix` on the target, omit the `Condition` block and use `arn:aws:s3:::<bucket>/*` for `GetObject`.
 - SSE-KMS objects need **`kms:Decrypt`** on the CMK used by the bucket.
 - Never grant blanket **`s3:*`** or any write/delete action for audit-only use.
-- **Cloudflare R2:** prefer an API token scoped to **Object Read** on the bucket.
-- **MinIO:** attach an equivalent JSON policy on the bucket or user.
+- **Cloudflare R2:** prefer an API token scoped to **Object Read** on the bucket. **Not tested against the real service.**
+- **MinIO:** attach an equivalent JSON policy on the bucket or user. **Not tested against the real service.**
 
 IAM action semantics: [Actions, resources, and condition keys for Amazon S3](https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazons3.html) (AWS documentation; verify against your org's IAM console before deploy).
 
