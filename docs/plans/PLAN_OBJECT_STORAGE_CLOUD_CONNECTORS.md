@@ -1,6 +1,6 @@
 # Plan: Object storage connectors (S3-class, Azure Blob, GCS)
 
-<!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob and GCS later as drivers; Enterprise tier. -->
+<!-- plans-hub-summary: Read-only object storage connector: provider-neutral common layer with S3 and S3-compatible drivers first, env-only credentials, pinned host per target, per-target limits with partial-coverage reporting; Azure Blob delivered with container SAS; GCS later as driver; Enterprise tier. -->
 
 **Status:** In progress (Phase 1, S3 and S3-compatible read connector, merged on `main` by PR [#2350](https://github.com/DataBoar/data-boar/pull/2350) on 2026-11-22; Phase 2, Azure Blob driver `azure_blob` with container SAS **delivered** ([#2307](https://github.com/DataBoar/data-boar/issues/2307)); Entra ID ([#2368](https://github.com/DataBoar/data-boar/issues/2368)) and Shared Key ([#2369](https://github.com/DataBoar/data-boar/issues/2369)) pending; GCS not started)
 **Date:** 2026-03-26
