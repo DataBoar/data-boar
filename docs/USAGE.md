@@ -1260,7 +1260,7 @@ Replace `<ACCOUNT_ID>` with your Cloudflare account id. **Not tested against the
 - **Partial coverage vs “no findings”:** **Target coverage** can show `PARTIAL` even when the findings sheet is empty — that is not a clean bill of health. By default, **unscanned object names** appear only as **counts** in coverage output; set `report_object_names: true` on the target when you need names in the coverage sheet (findings always carry the object path for hits).
 - **LGPD / GDPR:** scanning a customer bucket processes **their** personal data. Lawful basis, purpose limitation, retention, and DPA terms stay with the **customer**; Data Boar performs technical read and classification only.
 - **Evidence posture:** reports describe what was read under your config — **evidence for triage, not a legal conclusion** and not protection against regulatory fines.
-- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3 and Cloudflare R2 are supported; validate in your account before production.
+- **Evidence:** CI uses a simulated S3. Operator proof against **SeaweedFS 4.54** (Podman, TLS) on **2026-11-20** with the synthetic corpus is in [object_storage_seaweedfs_2306_5_2026-11-20.md](ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md). Amazon S3: operator proof against real service on **2026-11-24** with read-only IAM user. Cloudflare R2 and MinIO: **not tested against the real service**.
 
 ### IAM — least privilege (AWS)
 

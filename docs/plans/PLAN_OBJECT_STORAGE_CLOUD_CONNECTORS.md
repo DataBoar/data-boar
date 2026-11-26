@@ -42,7 +42,7 @@ S3-compatible was delivered in Phase 1 (#2306, PR #2350).
 
 | #   | To-do                                                                                                                   | Status    |
 | -   | -----                                                                                                                   | ------    |
-| 2.1 | Validate **MinIO** / custom `endpoint_url` + path-style vs virtual-hosted; document quirks.                             | ⬜ Pending |
+| 2.1 | Validate **MinIO** / custom `endpoint_url` + path-style vs virtual-hosted; document quirks. **Pending: MinIO image repos no longer public, upstream archived (source-only); local proof done with SeaweedFS 4.54 (see ops/evidence/object_storage_seaweedfs_2306_5_2026-11-20.md).** | ⬜ Pending |
 | 2.2 | **Azure Blob:** `driver: azure_blob`, connection string or managed identity story (research); same finding shape as S3. | ⬜ Pending |
 
 ### Phase 3 — **Google Cloud Storage**
