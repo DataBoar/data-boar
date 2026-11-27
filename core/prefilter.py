@@ -14,8 +14,8 @@ from typing import Protocol, runtime_checkable
 from utils.luhn_card import text_contains_luhn_valid_card
 
 # Keep aligned with ``boar_fast_filter::FastFilter::try_new`` (#2186 / #1984).
-_CPF_CANDIDATE_RX = re.compile(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")
-_EMAIL_CANDIDATE_RX = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+_CPF_CANDIDATE_RX = re.compile(r"\b\d{3}\D?\d{3}\D?\d{3}\D?\d{2}\b")
+_EMAIL_CANDIDATE_RX = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
 
 
 @runtime_checkable
