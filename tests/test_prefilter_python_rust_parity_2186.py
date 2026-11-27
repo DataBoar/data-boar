@@ -7,8 +7,10 @@ or benchmark parity is meaningless.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import os
+from pathlib import Path
 
 import pytest
 
@@ -32,6 +34,38 @@ if importlib.util.find_spec("boar_fast_filter") is None:
     )
 
 boar_fast_filter = importlib.import_module("boar_fast_filter")
+
+# A present-but-STALE compiled extension must not pass silently: build.rs bakes the
+# sha256 of these same files into the module at compile time. The frame (relative
+# path, NUL, bytes, NUL) must match rust/boar_fast_filter/build.rs byte for byte.
+_CRATE_ROOT = Path(__file__).resolve().parents[1] / "rust" / "boar_fast_filter"
+
+
+def _crate_source_hash() -> str:
+    src = _CRATE_ROOT / "src"
+    rel_paths = [
+        "Cargo.toml",
+        *(p.relative_to(_CRATE_ROOT).as_posix() for p in src.rglob("*.rs")),
+    ]
+    digest = hashlib.sha256()
+    for rel in sorted(rel_paths):
+        digest.update(rel.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update((_CRATE_ROOT / rel).read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+if os.environ.get("BOAR_REQUIRE_RUST") == "1":
+    _expected = _crate_source_hash()
+    _actual = getattr(boar_fast_filter, "__src_hash__", None)
+    if _actual != _expected:
+        pytest.fail(
+            f"boar_fast_filter is STALE: compiled __src_hash__={_actual!r}, "
+            f"source sha256={_expected!r}. Rebuild with: uv run maturin develop "
+            "--release --manifest-path rust/boar_fast_filter/Cargo.toml",
+            pytrace=False,
+        )
 
 # (line, kept_by_contract)
 _PREFILTER_PARITY_LINES: list[tuple[str, bool]] = [

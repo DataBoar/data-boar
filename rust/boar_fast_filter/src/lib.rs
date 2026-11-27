@@ -176,6 +176,9 @@ fn guest_accepts_host_trust(trust_level: &str) -> bool {
 
 #[pymodule]
 fn boar_fast_filter(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Baked by build.rs from the crate sources; the parity test compares it with
+    // a fresh sha256 so a present-but-stale extension fails loud (#2186).
+    m.add("__src_hash__", env!("__SRC_HASH__"))?;
     m.add_class::<FastFilter>()?;
     m.add_class::<RegexStageEngine>()?;
     m.add_function(wrap_pyfunction!(guest_accepts_host_trust, m)?)?;
