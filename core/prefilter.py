@@ -26,6 +26,7 @@ class PreFilter(Protocol):
 
     def filter_candidates(self, payloads: list[str]) -> list[str]:
         """Return only strings likely to contain sensitive candidates."""
+        ...
 
 
 class OpenCorePreFilter:
