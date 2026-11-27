@@ -150,9 +150,11 @@ if ! _ensure_login_tool_path_keep_pinned_uv; then
 fi
 
 # Rust guard (same commands as check-all.ps1: fmt --check, check, test --quiet)
+# Export once at script scope: a subshell-scoped export triggers SC2030/SC2031 and
+# would be lost for the later maturin build (#2186).
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 echo "Running Rust guard (cargo fmt, check, test)..." >&2
 if ! (
-  export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
   cd "$REPO_ROOT/rust/boar_fast_filter" || exit 1
   cargo fmt -- --check && cargo check && cargo test --quiet
 ); then
@@ -165,7 +167,6 @@ printf '\033[32m%s\033[0m\n' "Rust Guard... Passed" >&2
 # silently importorskip'ing; this is the operator's LOUD-parity decision (cicatrix in #2186).
 echo "Running Rust build (maturin develop --release into venv)..." >&2
 if ! (
-  export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
   export CARGO_NET_OFFLINE=true
   cd "$REPO_ROOT" || exit 1
   # "not installed" is the ONLY tolerated uninstall outcome; every other error fails the gate.
