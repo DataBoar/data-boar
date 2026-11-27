@@ -1,0 +1,8 @@
+# #1934: `uses: $/...` (self-repository, exigido pelo zizmor) ainda não é
+# conhecido pelo actionlint 1.7.6. Ignora SÓ esse erro; qualquer outro achado
+# do actionlint continua valendo. Remover quando o actionlint suportar `$/`.
+paths:
+  .github/workflows/**/*.yml:
+    ignore:
+      - 'specifying action "\$/\.github/[^"]+" in invalid format because ref is missing'
+      - 'reusable workflow call "\$/\.github/[^"]+" at "uses" is not following the format'
