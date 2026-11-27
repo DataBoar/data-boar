@@ -356,7 +356,7 @@ jobs:
           persist-credentials: false
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
 
   # Windows native path (#1427 / PLAN_WINDOWS_CI_ENABLEMENT) — unblocks MSI/winget #1467.
   # MVP: one Python, pytest, pip install smoke, headless --demo equivalent (no dashboard hang).
