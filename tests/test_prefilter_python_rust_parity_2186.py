@@ -7,11 +7,31 @@ or benchmark parity is meaningless.
 
 from __future__ import annotations
 
+import importlib.util
+import os
+
 import pytest
 
 from core.prefilter import OpenCorePreFilter
 
-boar_fast_filter = pytest.importorskip("boar_fast_filter")
+# Two environments (#2186): GitHub CI has no maturin build, so a missing extension
+# stays a declared skip there. Local/Buildbot runs export BOAR_REQUIRE_RUST=1 via
+# scripts/check-all.sh (cicatrix: the parity test used to skip silently there), so the
+# same missing extension must FAIL LOUD instead of hiding the parity regression.
+if importlib.util.find_spec("boar_fast_filter") is None:
+    if os.environ.get("BOAR_REQUIRE_RUST") == "1":
+        pytest.fail(
+            "boar_fast_filter is missing with BOAR_REQUIRE_RUST=1; the #2186 "
+            "parity test must not skip silently. Rebuild with: uv run maturin "
+            "develop --release --manifest-path rust/boar_fast_filter/Cargo.toml",
+            pytrace=False,
+        )
+    pytest.skip(
+        "boar_fast_filter not built; parity runs in Buildbot (#2186)",
+        allow_module_level=True,
+    )
+
+boar_fast_filter = importlib.import_module("boar_fast_filter")
 
 # (line, kept_by_contract)
 _PREFILTER_PARITY_LINES: list[tuple[str, bool]] = [
