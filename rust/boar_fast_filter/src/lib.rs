@@ -93,8 +93,8 @@ impl FastFilter {
     /// Pure-Rust constructor (no Python dependency). Returns the underlying
     /// regex error directly so it can be unit-tested without a Python interpreter.
     pub fn try_new() -> Result<Self, regex::Error> {
-        let cpf_pattern = Regex::new(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")?;
-        let email_pattern = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")?;
+        let cpf_pattern = Regex::new(r"\b\d{3}\D?\d{3}\D?\d{3}\D?\d{2}\b")?;
+        let email_pattern = Regex::new(r"[^\s@]+@[^\s@]+\.[^\s@]+")?;
         // Keep this string identical to utils.luhn_card.CREDIT_CARD_PATTERN (#1984).
         let credit_card_pattern = Regex::new(
             r"\b(?:\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}|3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}|3(?:0[0-5]\d|[68]\d{2})[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{2})\b",
@@ -176,6 +176,9 @@ fn guest_accepts_host_trust(trust_level: &str) -> bool {
 
 #[pymodule]
 fn boar_fast_filter(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Baked by build.rs from the crate sources; the parity test compares it with
+    // a fresh sha256 so a present-but-stale extension fails loud (#2186).
+    m.add("__src_hash__", env!("__SRC_HASH__"))?;
     m.add_class::<FastFilter>()?;
     m.add_class::<RegexStageEngine>()?;
     m.add_function(wrap_pyfunction!(guest_accepts_host_trust, m)?)?;
@@ -312,9 +315,10 @@ mod tests {
 
     #[test]
     fn skips_amex_failing_luhn() {
-        // Spaces keep the 15-digit run from also matching the CPF prefilter.
+        // Contiguous digits keep the 15-digit run outside the bounded CPF
+        // prefilter; only the failing Luhn check decides this case.
         let f = ff();
-        let batch = s(&["amex 3782 822463 10006"]);
+        let batch = s(&["amex 378282246310006"]);
         assert!(f.filter_batch_pure(&batch).is_empty());
     }
 

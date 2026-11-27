@@ -150,9 +150,11 @@ if ! _ensure_login_tool_path_keep_pinned_uv; then
 fi
 
 # Rust guard (same commands as check-all.ps1: fmt --check, check, test --quiet)
+# Export once at script scope: a subshell-scoped export triggers SC2030/SC2031 and
+# would be lost for the later maturin build (#2186).
+export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 echo "Running Rust guard (cargo fmt, check, test)..." >&2
 if ! (
-  export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
   cd "$REPO_ROOT/rust/boar_fast_filter" || exit 1
   cargo fmt -- --check && cargo check && cargo test --quiet
 ); then
@@ -160,6 +162,34 @@ if ! (
   exit 1
 fi
 printf '\033[32m%s\033[0m\n' "Rust Guard... Passed" >&2
+
+# #2186: rebuild the Python extension into the venv so the parity test runs instead of
+# silently importorskip'ing; this is the operator's LOUD-parity decision (cicatrix in #2186).
+echo "Running Rust build (maturin develop --release into venv)..." >&2
+if ! (
+  export CARGO_NET_OFFLINE=true
+  cd "$REPO_ROOT" || exit 1
+  # "not installed" is the ONLY tolerated uninstall outcome; every other error fails the gate.
+  if uninstall_out=$(uv pip uninstall boar_fast_filter 2>&1); then
+    :
+  elif [[ "$uninstall_out" == *"not installed"* ]]; then
+    :
+  else
+    printf '%s\n' "$uninstall_out" >&2
+    exit 1
+  fi
+  cd "$REPO_ROOT/rust/boar_fast_filter" || exit 1
+  cargo clean -p boar_fast_filter --release || exit 1
+  cd "$REPO_ROOT" || exit 1
+  uv run maturin develop --release --manifest-path rust/boar_fast_filter/Cargo.toml
+); then
+  printf '\033[31m%s\033[0m\n' "Rust Build... Failed" >&2
+  exit 1
+fi
+printf '\033[32m%s\033[0m\n' "Rust Build... Passed" >&2
+
+# #2186: pre-commit-and-tests.sh inherits this, so pytest fails LOUD if the extension is absent.
+export BOAR_REQUIRE_RUST=1
 
 echo "=== check-all.sh: lint + tests (repo: $REPO_ROOT) ===" >&2
 

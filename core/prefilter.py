@@ -11,7 +11,10 @@ import re
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
-_CPF_CANDIDATE_RX = re.compile(r"\d{3}\D?\d{3}\D?\d{3}\D?\d{2}")
+from utils.luhn_card import text_contains_luhn_valid_card
+
+# Keep aligned with ``boar_fast_filter::FastFilter::try_new`` (#2186 / #1984).
+_CPF_CANDIDATE_RX = re.compile(r"\b\d{3}\D?\d{3}\D?\d{3}\D?\d{2}\b")
 _EMAIL_CANDIDATE_RX = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+")
 
 
@@ -23,14 +26,16 @@ class PreFilter(Protocol):
 
     def filter_candidates(self, payloads: list[str]) -> list[str]:
         """Return only strings likely to contain sensitive candidates."""
+        ...
 
 
 class OpenCorePreFilter:
     """
     Basic regex-based candidate filter (Open Core baseline).
 
-    Keeps rows that look like CPF-shape or e-mail; all others are dropped before
-    deeper validation.
+    Keeps rows that match the Rust ``FastFilter`` triad: bounded CPF-shaped text,
+    e-mail, or a Luhn-valid payment-card family (``utils.luhn_card``); rows that
+    fail all three are dropped before deeper validation.
     """
 
     name = "open_core_regex_prefilter_v1"
@@ -88,6 +93,8 @@ class OpenCorePreFilter:
         if not value:
             return False
         if _CPF_CANDIDATE_RX.search(value) or _EMAIL_CANDIDATE_RX.search(value):
+            return True
+        if text_contains_luhn_valid_card(value):
             return True
         lowered = value.lower()
         if any(term in lowered for term in self._profile_terms):
