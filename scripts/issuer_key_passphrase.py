@@ -93,13 +93,13 @@ def _warn_when_passphrase_env_is_set() -> None:
     """Report the ignored variable once per process. Only presence is read.
 
     The variable NAME is reported, never its value: presence is checked with
-    ``in os.environ`` so no password data can flow into the log path (CodeQL
+    ``os.environ.get()`` so no password data can flow into the log path (CodeQL
     high, PR #2379).
     """
     global _ignored_env_warned
     if _ignored_env_warned:
         return
-    if PASSPHRASE_ENV_IGNORED in os.environ:
+    if os.environ.get(PASSPHRASE_ENV_IGNORED) is not None:
         _ignored_env_warned = True
         print(_IGNORED_WARNING, file=sys.stderr)
 
