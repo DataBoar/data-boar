@@ -30,16 +30,50 @@ _UNDECRYPTABLE = "Could not decrypt the signing key: wrong passphrase or damaged
 
 _ignored_env_warned = False
 
+# Platform flag resolved once at import; tests monkeypatch it to exercise the
+# Windows path on POSIX hosts.
+_IS_WINDOWS = os.name == "nt"
+
 
 class IssuerPassphraseError(Exception):
     """Fixed message written by us; never carries the passphrase or the PEM."""
 
 
+def _windows_stdin_is_console() -> bool:
+    """True only when stdin is the console input buffer (``CONIN$``).
+
+    On Windows ``os.isatty`` lies for ``NUL`` (``subprocess.DEVNULL``): NUL is
+    a character device, so a CI child looks interactive and ``getpass`` then
+    blocks forever on the runner console (#2239, PR #2379). ``GetConsoleMode``
+    succeeds only for real console handles, so it is the honest "a human can
+    type" check. Fails closed whenever the console API is unavailable.
+    """
+    import ctypes
+
+    try:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    except (AttributeError, OSError):
+        # Non-Windows host (no ``ctypes.WinDLL``) or DLL load failure.
+        return False
+    get_std_handle = kernel32.GetStdHandle
+    get_std_handle.restype = ctypes.c_void_p
+    get_std_handle.argtypes = [ctypes.c_void_p]
+    get_console_mode = kernel32.GetConsoleMode
+    get_console_mode.restype = ctypes.c_int
+    get_console_mode.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    stdin_handle = get_std_handle(ctypes.c_void_p(-10))  # STD_INPUT_HANDLE
+    if not stdin_handle or stdin_handle == ctypes.c_void_p(-1).value:
+        return False  # NULL or INVALID_HANDLE_VALUE
+    mode = ctypes.c_uint32()
+    return bool(get_console_mode(stdin_handle, ctypes.byref(mode)))
+
+
 def stdin_is_interactive() -> bool:
     """True only when a real console is attached (never block under pytest/CI).
 
-    On Windows, ``subprocess.DEVNULL`` as stdin can still make
-    ``sys.stdin.isatty()`` return True; prefer ``os.isatty(fileno)``.
+    On Windows, ``subprocess.DEVNULL`` as stdin can still make ``os.isatty``
+    report True (NUL is a character device): there the console API decides
+    instead of ``isatty`` (#2239, PR #2379).
     """
     if os.environ.get("CI", "").strip().lower() in {"1", "true", "yes"}:
         return False
@@ -47,6 +81,8 @@ def stdin_is_interactive() -> bool:
         fd = sys.stdin.fileno()
     except (AttributeError, OSError, ValueError):
         return False
+    if _IS_WINDOWS:
+        return _windows_stdin_is_console()
     try:
         return bool(os.isatty(fd))
     except OSError:
@@ -54,11 +90,16 @@ def stdin_is_interactive() -> bool:
 
 
 def _warn_when_passphrase_env_is_set() -> None:
-    """Report the ignored variable once per process. Only presence is read."""
+    """Report the ignored variable once per process. Only presence is read.
+
+    The variable NAME is reported, never its value: presence is checked with
+    ``in os.environ`` so no password data can flow into the log path (CodeQL
+    high, PR #2379).
+    """
     global _ignored_env_warned
     if _ignored_env_warned:
         return
-    if os.environ.get(PASSPHRASE_ENV_IGNORED, "").strip():
+    if PASSPHRASE_ENV_IGNORED in os.environ:
         _ignored_env_warned = True
         print(_IGNORED_WARNING, file=sys.stderr)
 
