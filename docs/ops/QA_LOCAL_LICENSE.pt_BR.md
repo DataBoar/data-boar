@@ -33,12 +33,12 @@ A chave de assinatura pode ficar como um PEM PKCS#8 cifrado com AES. O emissor
    export DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD='sua-passphrase'
    ```
 
-2. **Prompt interativo** — em um TTY sem a variável definida, o emissor pergunta
-   `License signing key passphrase:` e lê sem exibir o que é digitado.
+2. **Prompt interativo** — em um TTY **sem** a variável definida, o emissor pergunta
+   `License signing key passphrase:` e lê sem exibir o que é digitado. **Se não houver
+   TTY (ex.: stdin pipado), o emissor sai com código 1** — é por isso que a verificação
+   de TTY deve acontecer *antes* do `getpass`. Uma chave cifrada sem a variável de
+   ambiente e sem TTY encerra com código 1 — mensagem acionável, nunca traceback cru.
 3. **Chave sem cifra** — não precisa de passphrase (compatível com o fluxo atual).
-
-Uma chave cifrada sem a variável de ambiente e sem TTY encerra com uma mensagem
-acionável (nunca um traceback cru).
 
 ## 2. Emitir licença para ESTA máquina
 

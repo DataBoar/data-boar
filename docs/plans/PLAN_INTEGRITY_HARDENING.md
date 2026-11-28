@@ -43,6 +43,18 @@ A path belongs in the anchor when tamper would, without detection:
 - `--reverify-integrity` operator flag
 - Optional extension-module hashing (`boar_fast_filter`)
 
+## Phase 3 — módulo de persistência coberto pelo manifesto assinado
+
+**Status:** Nova fase — `core/database.py` passou a integrar a lista assinada dos módulos críticos (PR #2253).
+
+**Ritual de release:** o manifesto (`INVENTORY.txt`) é reassinado no ritual da release, fora da PR. O operador confirma a nova assinatura em TTY durante o processo de release. **Não inclua esta mudança em PR — o reassinamento ocorre no ritual da release.**
+
+**Teste:** `tests/integrity_persistence_criterion.py` — valida que `core/database.py` é reconhecido como fonte de persistência (declara `__tablename__` ou funções `save_finding`/`save_failure`).
+
+**Referência:** commit `172fd60b` ("fix(integrity): #2253 módulo de persistência entra no manifesto assinado").
+
+**Próximo passo após esta fase:** rode `python scripts/plans_hub_sync.py --write` e `python scripts/plans-stats.py --write`.
+
 ## Acceptance
 
 - [x] `connectors/*.py` and `core/licensing/*.py` auto-included in anchor baseline
