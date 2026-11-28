@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 PASSPHRASE_ENV_IGNORED = "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD"
 
 _IGNORED_WARNING = (
-    f"Warning: {PASSPHRASE_ENV_IGNORED} is set and ignored: "
+    "Warning: license issuer private key password env var is set and ignored: "
     "the signing key passphrase is read only from the terminal prompt."
 )
 _NO_TTY = (

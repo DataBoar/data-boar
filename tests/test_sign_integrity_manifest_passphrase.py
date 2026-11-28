@@ -261,5 +261,5 @@ def test_ignored_passphrase_env_warns_on_presence_alone(monkeypatch, capsys):
     assert mod.resolve_issuer_key_password(clean_pem, prompt="p: ") is None
     assert mod.resolve_issuer_key_password(clean_pem, prompt="p: ") is None
     err = capsys.readouterr().err
-    assert f"{PASSWORD_ENV} is set and ignored" in err
+    assert "license issuer private key password env var is set and ignored" in err
     assert err.count("is set and ignored") == 1
