@@ -248,7 +248,7 @@ PASSWORD_ENV = "DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD"
 
 _TTY_REQUIRED = "run this command in an interactive terminal"
 _IGNORED_WARNING = (
-    "Warning: DATA_BOAR_LICENSE_ISSUER_PRIVATE_KEY_PASSWORD is set and ignored: "
+    "Warning: license issuer private key password env var is set and ignored: "
     "the signing key passphrase is read only from the terminal prompt."
 )
 
